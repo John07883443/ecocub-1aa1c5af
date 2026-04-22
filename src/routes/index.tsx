@@ -99,13 +99,12 @@ function HomePage() {
           <p className="mb-4 inline-block text-xs font-medium uppercase tracking-[0.3em] text-accent">
             EcoCub · Московская область
           </p>
-          <h1 className="max-w-5xl text-4xl font-bold uppercase leading-[1.02] tracking-tight md:text-6xl lg:text-7xl">
-            Дома, спроектированные<br />как техника.<br />
-            <span className="text-accent">Построенные как капитальные.</span>
+          <h1 className="max-w-5xl text-5xl font-bold uppercase leading-[0.98] tracking-tight md:text-7xl lg:text-8xl">
+            Капитальные.<br />
+            <span className="text-accent">Технологичные.</span>
           </h1>
-          <p className="mt-8 max-w-2xl text-base text-white/85 md:text-lg">
-            Hi-tech модули из бетона. Сборка на участке за 5 дней. Гарантия 50 лет.
-            От 105 000 ₽ за м² в комплектации под предчистовую отделку.
+          <p className="mt-8 max-w-xl text-base text-white/85 md:text-lg">
+            Дома из бетона с заводским качеством. Сборка на участке за 5 дней.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
