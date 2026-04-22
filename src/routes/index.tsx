@@ -93,26 +93,37 @@ function HomePage() {
       {/* HERO */}
       <section className="relative min-h-[100svh] w-full overflow-hidden bg-primary text-primary-foreground">
         <HeroSlider />
-        <Container className="relative flex min-h-[100svh] flex-col justify-end pb-20 pt-32 md:pb-28 md:pt-40">
-          <p className="mb-4 inline-block text-xs font-medium uppercase tracking-[0.3em] text-accent">
+        {/* Top label — не перекрывает дом */}
+        <Container className="pointer-events-none absolute inset-x-0 top-0 z-10 pt-28 md:pt-32">
+          <p className="pointer-events-auto inline-block text-xs font-medium uppercase tracking-[0.3em] text-accent">
             EcoCub · Московская область
           </p>
-          <h1 className="max-w-5xl text-5xl font-bold uppercase leading-[0.98] tracking-tight md:text-7xl lg:text-8xl">
-            Капитальные.<br />
-            <span className="text-accent">Технологичные.</span>
-          </h1>
-          <p className="mt-8 max-w-xl text-base text-white/85 md:text-lg">
-            Дома из бетона с заводским качеством. Сборка на участке за 5 дней.
-          </p>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Link to="/portfolio">Смотреть проекты <ArrowRight /></Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white hover:text-primary">
-              <Link to="/technology">Технология</Link>
-            </Button>
-          </div>
         </Container>
+
+        {/* Bottom panel — заголовок и CTA в нижней зоне, дом сверху не перекрыт */}
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-10 pt-24 md:pb-14 md:pt-32">
+          <Container>
+            <div className="grid items-end gap-8 md:grid-cols-12">
+              <h1 className="md:col-span-7 text-4xl font-bold uppercase leading-[0.95] tracking-tight md:text-6xl lg:text-7xl">
+                Капитальные.{" "}
+                <span className="text-accent">Технологичные.</span>
+              </h1>
+              <div className="md:col-span-5">
+                <p className="max-w-md text-sm text-white/85 md:text-base">
+                  Дома из бетона с заводским качеством. Сборка на участке за 5 дней.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    <Link to="/portfolio">Смотреть проекты <ArrowRight /></Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white hover:text-primary">
+                    <Link to="/technology">Технология</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Container>
+        </div>
       </section>
 
       {/* BRAND SPECS — "дом как техника" */}

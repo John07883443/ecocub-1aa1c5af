@@ -45,14 +45,14 @@ export function HeroSlider() {
               <img
                 src={s.src}
                 alt={s.alt}
-                className="h-full w-full object-cover opacity-70"
+                className="h-full w-full object-cover"
                 loading="eager"
               />
             </div>
           ))}
         </div>
       </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/80" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
       <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2 md:bottom-8">
         {slides.map((s, i) => (
           <button
