@@ -34,18 +34,24 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Производство модульных бетонных домов в Московской области. Капитальные дома из бетона под ключ за 90 дней. Цены, проекты, портфолио.",
+          "Производство модульных бетонных и каркасных домов в Московской области. Виллы Hi-Tech под ключ за 90 дней. Цены, проекты, портфолио.",
       },
       { name: "author", content: "EcoCub" },
-      { property: "og:title", content: "EcoCub — современные дома под ключ" },
+      { property: "og:title", content: "EcoCub — современные дома под ключ в Подмосковье" },
       {
         property: "og:description",
         content:
-          "Модульные бетонные дома от производителя в Московской области. Капитальный дом за 90 дней.",
+          "Модульные бетонные дома, каркасные Scandi и виллы Hi-Tech от производителя в Московской области.",
       },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "ru_RU" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "EcoCub — современные дома под ключ в Подмосковье" },
+      { name: "description", content: "Site Migrator clones websites from platforms like Tilda to a modern React + TanStack Start framework." },
+      { property: "og:description", content: "Site Migrator clones websites from platforms like Tilda to a modern React + TanStack Start framework." },
+      { name: "twitter:description", content: "Site Migrator clones websites from platforms like Tilda to a modern React + TanStack Start framework." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/514aca7c-fe6f-47ac-b412-62472ce3ed88/id-preview-1854803b--11a56c57-baa4-4049-9002-d7a0650d363e.lovable.app-1776869666158.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/514aca7c-fe6f-47ac-b412-62472ce3ed88/id-preview-1854803b--11a56c57-baa4-4049-9002-d7a0650d363e.lovable.app-1776869666158.png" },
     ],
     links: [
       {
