@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VillasRouteImport } from './routes/villas'
 import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PresentationRouteImport } from './routes/presentation'
@@ -21,11 +20,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 
-const VillasRoute = VillasRouteImport.update({
-  id: '/villas',
-  path: '/villas',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TechnologyRoute = TechnologyRouteImport.update({
   id: '/technology',
   path: '/technology',
@@ -86,7 +80,6 @@ export interface FileRoutesByFullPath {
   '/presentation': typeof PresentationRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/villas': typeof VillasRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
@@ -99,7 +92,6 @@ export interface FileRoutesByTo {
   '/presentation': typeof PresentationRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/villas': typeof VillasRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
@@ -113,7 +105,6 @@ export interface FileRoutesById {
   '/presentation': typeof PresentationRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/villas': typeof VillasRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
@@ -128,7 +119,6 @@ export interface FileRouteTypes {
     | '/presentation'
     | '/sitemap.xml'
     | '/technology'
-    | '/villas'
     | '/blog/$slug'
     | '/projects/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -141,7 +131,6 @@ export interface FileRouteTypes {
     | '/presentation'
     | '/sitemap.xml'
     | '/technology'
-    | '/villas'
     | '/blog/$slug'
     | '/projects/$slug'
   id:
@@ -154,7 +143,6 @@ export interface FileRouteTypes {
     | '/presentation'
     | '/sitemap.xml'
     | '/technology'
-    | '/villas'
     | '/blog/$slug'
     | '/projects/$slug'
   fileRoutesById: FileRoutesById
@@ -168,19 +156,11 @@ export interface RootRouteChildren {
   PresentationRoute: typeof PresentationRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TechnologyRoute: typeof TechnologyRoute
-  VillasRoute: typeof VillasRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/villas': {
-      id: '/villas'
-      path: '/villas'
-      fullPath: '/villas'
-      preLoaderRoute: typeof VillasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/technology': {
       id: '/technology'
       path: '/technology'
@@ -273,9 +253,17 @@ const rootRouteChildren: RootRouteChildren = {
   PresentationRoute: PresentationRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TechnologyRoute: TechnologyRoute,
-  VillasRoute: VillasRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

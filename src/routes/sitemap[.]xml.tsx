@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SITE_URL = "https://eco-cub.ru";
 
-const staticRoutes = ["", "/concrete", "/villas", "/technology", "/portfolio", "/blog", "/presentation", "/contacts"];
+const staticRoutes = ["", "/concrete", "/technology", "/portfolio", "/blog", "/presentation", "/contacts"];
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {

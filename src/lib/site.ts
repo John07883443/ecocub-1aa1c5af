@@ -22,7 +22,6 @@ export type NavItem = { label: string; to: string };
 
 export const mainNav: NavItem[] = [
   { label: "Бетонные дома", to: "/concrete" },
-  { label: "Виллы Hi-Tech", to: "/villas" },
   { label: "Технология", to: "/technology" },
   { label: "Портфолио", to: "/portfolio" },
   { label: "Блог", to: "/blog" },
