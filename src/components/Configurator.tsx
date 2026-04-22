@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Box, Boxes, Building2 } from "lucide-react";
+import { ArrowRight, Box, Boxes, Blocks } from "lucide-react";
 import { Container } from "@/components/Container";
 
 const configs = [
@@ -20,7 +20,7 @@ const configs = [
     desc: "Семейный дом для круглогодичного проживания с тремя спальнями.",
   },
   {
-    icon: Building2,
+    icon: Blocks,
     name: "Villa",
     modules: "8 модулей",
     area: "288 м²",
