@@ -58,7 +58,8 @@ export function ContactForm({
   const isDark = variant === "dark";
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema as any),
     defaultValues: {
       name: "",
       phone: "",
