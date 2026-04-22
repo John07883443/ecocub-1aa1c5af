@@ -111,7 +111,7 @@ function HomePage() {
               </h1>
               <div className="md:col-span-5">
                 <p className="max-w-md text-sm text-white/85 md:text-base">
-                  Дома из бетона с заводским качеством. Сборка на участке за 5 дней.
+                  Дома из бетона с заводским качеством. Сборка на участке от 5 дней.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
