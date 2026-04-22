@@ -14,6 +14,7 @@ import { InteriorsGallery } from "@/components/InteriorsGallery";
 import { BlogCard, type BlogCardData } from "@/components/BlogCard";
 import { BrandSpecs } from "@/components/BrandSpecs";
 import { Configurator } from "@/components/Configurator";
+import { HeroSlider } from "@/components/HeroSlider";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
@@ -91,10 +92,7 @@ function HomePage() {
     <PageLayout headerVariant="dark">
       {/* HERO */}
       <section className="relative min-h-[100svh] w-full overflow-hidden bg-primary text-primary-foreground">
-        <div className="absolute inset-0">
-          <img src="/images/hero-villa.jpg" alt="Современный монолитно-модульный дом EcoCub из бетона" className="h-full w-full object-cover opacity-70" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/80" />
-        </div>
+        <HeroSlider />
         <Container className="relative flex min-h-[100svh] flex-col justify-end pb-20 pt-32 md:pb-28 md:pt-40">
           <p className="mb-4 inline-block text-xs font-medium uppercase tracking-[0.3em] text-accent">
             EcoCub · Московская область
