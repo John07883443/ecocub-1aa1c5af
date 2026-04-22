@@ -7,11 +7,11 @@ import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
 export const Route = createFileRoute("/portfolio")({
   head: () => ({
     meta: [
-      { title: "Портфолио проектов EcoCub — модульные дома и виллы под ключ" },
+      { title: "Портфолио проектов EcoCub — модульные бетонные дома под ключ" },
       {
         name: "description",
         content:
-          "Готовые проекты домов EcoCub: бетонные модули Weekend и Family, виллы SkyRiver. Площади, цены, планировки.",
+          "Готовые проекты бетонных домов EcoCub: модули Weekend, Family и SkyRiver. Площади, цены, планировки.",
       },
       {
         property: "og:title",
@@ -65,7 +65,7 @@ function PortfolioPage() {
           </h1>
           <p className="mt-6 max-w-2xl text-base text-muted-foreground">
             Готовые проекты EcoCub — от компактного Weekend One на 36 м² до
-            флагманской виллы SkyRiver на 165 м². Все дома можно адаптировать
+            флагманского SkyRiver на 165 м². Все дома можно адаптировать
             под ваш участок и пожелания.
           </p>
         </Container>
