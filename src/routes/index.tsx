@@ -200,8 +200,8 @@ function HomePage() {
       <Section className="bg-primary text-primary-foreground">
         <Container>
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="relative aspect-square overflow-hidden">
-              <img src="/images/tech-section.jpg" alt="Разрез монолитного модуля EcoCub: бетон М400, оцинкованная сталь, ПСБ-С35" className="h-full w-full object-contain mix-blend-screen" />
+            <div className="relative">
+              <LayeredSection />
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">05 · Технология</p>

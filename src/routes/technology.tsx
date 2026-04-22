@@ -64,8 +64,8 @@ function TechnologyPage() {
       <Section className="bg-background">
         <Container>
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="relative aspect-square overflow-hidden rounded-sm bg-secondary">
-              <img src="/images/tech-section.jpg" alt="Послойный разрез монолитного модуля EcoCub" className="h-full w-full object-contain p-6" />
+            <div className="relative rounded-sm bg-primary p-6 text-primary-foreground">
+              <LayeredSection />
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Из чего сделан модуль</p>
