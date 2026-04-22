@@ -16,6 +16,7 @@ import { BrandSpecs } from "@/components/BrandSpecs";
 import { Configurator } from "@/components/Configurator";
 import { HeroSlider } from "@/components/HeroSlider";
 import { LayeredSection } from "@/components/LayeredSection";
+
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
