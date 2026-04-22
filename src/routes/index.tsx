@@ -260,7 +260,7 @@ function HomePage() {
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p) => <ProjectCard key={p.slug} project={p} />)}
+            {projects.map((p: ProjectCardData) => <ProjectCard key={p.slug} project={p} />)}
           </div>
         </Container>
       </Section>
@@ -305,7 +305,7 @@ function HomePage() {
               </Link>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
-              {posts.map((p) => <BlogCard key={p.slug} post={p} />)}
+              {posts.map((p: BlogCardData) => <BlogCard key={p.slug} post={p} />)}
             </div>
           </Container>
         </Section>
