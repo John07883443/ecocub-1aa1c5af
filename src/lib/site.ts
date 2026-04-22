@@ -1,6 +1,8 @@
 export const site = {
   name: "EcoCub",
   tagline: "Монолитно-модульные дома из бетона под ключ за 90 дней",
+  brandTagline: "Engineered to last 120 years.",
+  brandPromise: "Designed and engineered by EcoCub",
   phone: "+7 (969) 466-09-32",
   phoneHref: "tel:+79694660932",
   phoneSecondary: "+7 (980) 875-86-43",
