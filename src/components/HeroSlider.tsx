@@ -45,7 +45,7 @@ export function HeroSlider() {
               <img
                 src={s.src}
                 alt={s.alt}
-                className="h-full w-full object-cover opacity-70"
+                className="h-full w-full object-cover"
                 loading="eager"
               />
             </div>
