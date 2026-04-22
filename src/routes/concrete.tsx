@@ -82,13 +82,12 @@ function ConcretePage() {
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
             Серия Concrete
           </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-bold uppercase md:text-6xl">
-            Модульные бетонные дома
+          <h1 className="mt-3 max-w-4xl text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-6xl">
+            Капитальный дом<br />из бетона за 90 дней
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-white/85">
-            Производство и установка модульных домов из бетона в Московской
-            области. Готовность от 90 дней, круглогодичное проживание, гарантия
-            25 лет.
+            Hi-tech модули из бетона М400. Заводское качество, сборка на участке за 5 дней,
+            гарантия 50 лет. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
           </p>
         </Container>
       </section>

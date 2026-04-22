@@ -163,6 +163,13 @@ function TechnologyPage() {
         </Container>
       </Section>
 
+      {/* ENGINEERING */}
+      <Section className="bg-background">
+        <Container>
+          <EngineeringFeatures />
+        </Container>
+      </Section>
+
       {/* CTA */}
       <Section className="bg-primary text-primary-foreground">
         <Container>
