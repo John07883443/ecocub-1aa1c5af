@@ -75,7 +75,7 @@ export const Route = createFileRoute("/projects/$slug")({
       ],
     };
   },
-  errorComponent: ({ error }) => (
+  errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
       <Container className="py-32 text-center text-destructive">
         Ошибка: {error.message}

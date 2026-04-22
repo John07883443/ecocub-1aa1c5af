@@ -65,7 +65,7 @@ export const Route = createFileRoute("/")({
       posts: (postsRes.data ?? []) as BlogCardData[],
     };
   },
-  errorComponent: ({ error, reset }) => (
+  errorComponent: ({ error, reset }: { error: Error; reset: () => void }) => (
     <PageLayout>
       <Container className="py-32 text-center">
         <p className="text-destructive">Ошибка: {error.message}</p>

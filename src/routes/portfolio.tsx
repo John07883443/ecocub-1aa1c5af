@@ -35,7 +35,7 @@ export const Route = createFileRoute("/portfolio")({
     if (error) throw error;
     return { projects: (data ?? []) as ProjectCardData[] };
   },
-  errorComponent: ({ error }) => (
+  errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
       <Container className="py-32 text-center text-destructive">
         Ошибка: {error.message}
