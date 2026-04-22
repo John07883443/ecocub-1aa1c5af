@@ -60,16 +60,8 @@ export function HeroSlider() {
             <div key={s.src} className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary">
               <img
                 src={s.src}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full scale-105 object-cover opacity-35 blur-2xl"
-                loading={index === 0 ? "eager" : "lazy"}
-              />
-              <div className="absolute inset-0 bg-black/20" />
-              <img
-                src={s.src}
                 alt={s.alt}
-                className="relative z-[1] h-full w-full object-contain px-3 py-12 sm:px-6 md:px-10 md:py-16"
+                className="absolute inset-0 h-full w-full object-cover"
                 loading={index === 0 ? "eager" : "lazy"}
               />
             </div>
