@@ -99,7 +99,13 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-2 border-t border-primary-foreground/10 pt-6 text-xs text-primary-foreground/50 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 border-t border-primary-foreground/10 pt-8">
+          <p className="text-center text-xl font-bold uppercase tracking-tight text-white/90 md:text-2xl">
+            {site.brandTagline}
+          </p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-2 text-xs text-primary-foreground/50 sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} EcoCub. Все права защищены.</span>
           <span>Современные дома в Подмосковье</span>
         </div>

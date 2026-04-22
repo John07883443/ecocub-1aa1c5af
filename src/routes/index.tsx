@@ -12,6 +12,8 @@ import { WhatsIncluded } from "@/components/WhatsIncluded";
 import { StagesCooperation } from "@/components/StagesCooperation";
 import { InteriorsGallery } from "@/components/InteriorsGallery";
 import { BlogCard, type BlogCardData } from "@/components/BlogCard";
+import { BrandSpecs } from "@/components/BrandSpecs";
+import { Configurator } from "@/components/Configurator";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
@@ -26,7 +28,7 @@ export const Route = createFileRoute("/")({
       {
         name: "keywords",
         content:
-          "модульные дома из бетона, монолитно-модульный дом, дом из бетона под ключ, капитальный дом быстро, современные дома Московская область, дом для круглогодичного проживания, альтернатива газобетону, виллы хай-тек",
+          "модульные дома из бетона, монолитно-модульный дом, дом из бетона под ключ, капитальный дом быстро, hi-tech дом из бетона, модульный дом конструктор, энергоэффективный дом A+++, современный дом в стиле хай-тек Подмосковье, современные дома Московская область, дом для круглогодичного проживания, альтернатива газобетону, виллы хай-тек",
       },
       { property: "og:title", content: "EcoCub — монолитно-модульные дома из бетона за 90 дней" },
       {
@@ -97,12 +99,13 @@ function HomePage() {
           <p className="mb-4 inline-block text-xs font-medium uppercase tracking-[0.3em] text-accent">
             EcoCub · Московская область
           </p>
-          <h1 className="max-w-4xl text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">
-            Монолитно-модульные<br />дома из бетона
+          <h1 className="max-w-5xl text-4xl font-bold uppercase leading-[1.02] tracking-tight md:text-6xl lg:text-7xl">
+            Дома, спроектированные<br />как техника.<br />
+            <span className="text-accent">Построенные как капитальные.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-base text-white/85 md:text-lg">
-            Капитальный дом под ключ за 90 дней. Заводское качество, гарантия 50 лет,
-            фиксированная смета. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
+          <p className="mt-8 max-w-2xl text-base text-white/85 md:text-lg">
+            Hi-tech модули из бетона. Сборка на участке за 5 дней. Гарантия 50 лет.
+            От 105 000 ₽ за м² в комплектации под предчистовую отделку.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -114,6 +117,9 @@ function HomePage() {
           </div>
         </Container>
       </section>
+
+      {/* BRAND SPECS — "дом как техника" */}
+      <BrandSpecs />
 
       {/* COMPETITORS */}
       <Section className="bg-background">
@@ -177,6 +183,9 @@ function HomePage() {
           </div>
         </Container>
       </Section>
+
+      {/* CONFIGURATOR */}
+      <Configurator />
 
       {/* TECHNOLOGY */}
       <Section className="bg-primary text-primary-foreground">

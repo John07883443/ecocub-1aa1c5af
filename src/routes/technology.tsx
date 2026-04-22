@@ -3,6 +3,7 @@ import { ArrowRight, ShieldCheck, Layers, Flame, Thermometer } from "lucide-reac
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { TechnologyComparison } from "@/components/TechnologyComparison";
+import { EngineeringFeatures } from "@/components/EngineeringFeatures";
 import { ContactForm } from "@/components/ContactForm";
 import { Button } from "@/components/ui/button";
 
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/technology")({
       },
       {
         name: "keywords",
-        content: "технология строительства домов, бетонный модульный дом vs газобетон, альтернатива кирпичному дому, ЖБИ панели против модульного бетона, монолит на участке сравнение",
+        content: "технология строительства домов, бетонный модульный дом vs газобетон, альтернатива кирпичному дому, ЖБИ панели против модульного бетона, монолит на участке сравнение, hi-tech дом из бетона, энергоэффективный дом A+++, модульный дом конструктор, передовая инженерия дома",
       },
       { property: "og:title", content: "Технология ECO·CUB — сравнение с кирпичом, газобетоном, монолитом" },
       { property: "og:description", content: "Бетон М400, оцинкованная сталь, утеплитель ПСБ-С35. Гарантия 50 лет, срок службы более 120 лет." },
@@ -159,6 +160,13 @@ function TechnologyPage() {
               </Button>
             </div>
           </div>
+        </Container>
+      </Section>
+
+      {/* ENGINEERING */}
+      <Section className="bg-background">
+        <Container>
+          <EngineeringFeatures />
         </Container>
       </Section>
 
