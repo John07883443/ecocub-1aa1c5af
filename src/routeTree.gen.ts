@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VillasRouteImport } from './routes/villas'
-import { Route as ScandiRouteImport } from './routes/scandi'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as ContactsRouteImport } from './routes/contacts'
@@ -21,11 +20,6 @@ import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 const VillasRoute = VillasRouteImport.update({
   id: '/villas',
   path: '/villas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScandiRoute = ScandiRouteImport.update({
-  id: '/scandi',
-  path: '/scandi',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PresentationRoute = PresentationRouteImport.update({
@@ -65,7 +59,6 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
-  '/scandi': typeof ScandiRoute
   '/villas': typeof VillasRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
@@ -75,7 +68,6 @@ export interface FileRoutesByTo {
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
-  '/scandi': typeof ScandiRoute
   '/villas': typeof VillasRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
@@ -86,7 +78,6 @@ export interface FileRoutesById {
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
-  '/scandi': typeof ScandiRoute
   '/villas': typeof VillasRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
@@ -98,7 +89,6 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/portfolio'
     | '/presentation'
-    | '/scandi'
     | '/villas'
     | '/projects/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -108,7 +98,6 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/portfolio'
     | '/presentation'
-    | '/scandi'
     | '/villas'
     | '/projects/$slug'
   id:
@@ -118,7 +107,6 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/portfolio'
     | '/presentation'
-    | '/scandi'
     | '/villas'
     | '/projects/$slug'
   fileRoutesById: FileRoutesById
@@ -129,7 +117,6 @@ export interface RootRouteChildren {
   ContactsRoute: typeof ContactsRoute
   PortfolioRoute: typeof PortfolioRoute
   PresentationRoute: typeof PresentationRoute
-  ScandiRoute: typeof ScandiRoute
   VillasRoute: typeof VillasRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
 }
@@ -141,13 +128,6 @@ declare module '@tanstack/react-router' {
       path: '/villas'
       fullPath: '/villas'
       preLoaderRoute: typeof VillasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scandi': {
-      id: '/scandi'
-      path: '/scandi'
-      fullPath: '/scandi'
-      preLoaderRoute: typeof ScandiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/presentation': {
@@ -201,7 +181,6 @@ const rootRouteChildren: RootRouteChildren = {
   ContactsRoute: ContactsRoute,
   PortfolioRoute: PortfolioRoute,
   PresentationRoute: PresentationRoute,
-  ScandiRoute: ScandiRoute,
   VillasRoute: VillasRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
 }
