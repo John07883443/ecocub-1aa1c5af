@@ -1,206 +1,249 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, Hammer, Ruler, Award } from "lucide-react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { ArrowRight, ShieldCheck, Clock, Layers, Hammer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { Button } from "@/components/ui/button";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
 import { ContactForm } from "@/components/ContactForm";
+import { PriceCalculator } from "@/components/PriceCalculator";
+import { CompanyTimeline } from "@/components/CompanyTimeline";
+import { WhatsIncluded } from "@/components/WhatsIncluded";
+import { StagesCooperation } from "@/components/StagesCooperation";
+import { InteriorsGallery } from "@/components/InteriorsGallery";
+import { BlogCard, type BlogCardData } from "@/components/BlogCard";
 import { site } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "EcoCub — современные дома под ключ в Московской области" },
+      { title: "Современные дома из бетона в Московской области — модульные дома под ключ за 90 дней | EcoCub" },
       {
         name: "description",
         content:
-          "Производитель модульных бетонных домов и каркасных Eco Wood в Подмосковье. Hi-Tech виллы под ключ за 90 дней. Цены, проекты, портфолио.",
+          "Монолитно-модульные дома из бетона от производителя в Московской области. Капитальный дом за 90 дней, гарантия 50 лет. От 105 000 ₽/м². Альтернатива кирпичу, газобетону и монолиту с фиксированной сметой.",
       },
       {
-        property: "og:title",
-        content: "EcoCub — современные дома под ключ",
+        name: "keywords",
+        content:
+          "модульные дома из бетона, монолитно-модульный дом, дом из бетона под ключ, капитальный дом быстро, современные дома Московская область, дом для круглогодичного проживания, альтернатива газобетону, виллы хай-тек",
       },
+      { property: "og:title", content: "EcoCub — монолитно-модульные дома из бетона за 90 дней" },
       {
         property: "og:description",
         content:
-          "Модульные бетонные дома, каркас Scandi и виллы Hi-Tech от производителя в Московской области.",
+          "Капитальный дом из бетона под ключ от 105 000 ₽/м². Производство в Московской области. Гарантия 50 лет, срок службы более 120 лет.",
       },
-      { property: "og:image", content: "/images/hero.png" },
-      { name: "twitter:image", content: "/images/hero.png" },
+      { property: "og:image", content: "/images/hero-villa.jpg" },
+      { name: "twitter:image", content: "/images/hero-villa.jpg" },
     ],
   }),
   loader: async () => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
-      .eq("published", true)
-      .order("display_order", { ascending: true })
-      .limit(6);
-    if (error) throw error;
-    return { projects: (data ?? []) as ProjectCardData[] };
+    const [projectsRes, postsRes] = await Promise.all([
+      supabase
+        .from("projects")
+        .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
+        .eq("published", true)
+        .order("display_order", { ascending: true })
+        .limit(6),
+      supabase
+        .from("blog_posts")
+        .select("slug,title,excerpt,cover_image,category,reading_time,published_at")
+        .eq("published", true)
+        .order("published_at", { ascending: false })
+        .limit(3),
+    ]);
+    if (projectsRes.error) throw projectsRes.error;
+    if (postsRes.error) throw postsRes.error;
+    return {
+      projects: (projectsRes.data ?? []) as ProjectCardData[],
+      posts: (postsRes.data ?? []) as BlogCardData[],
+    };
   },
   errorComponent: ({ error, reset }) => (
     <PageLayout>
       <Container className="py-32 text-center">
         <p className="text-destructive">Ошибка: {error.message}</p>
-        <Button onClick={reset} className="mt-4">
-          Попробовать снова
-        </Button>
+        <Button onClick={reset} className="mt-4">Попробовать снова</Button>
       </Container>
     </PageLayout>
   ),
+  notFoundComponent: () => {
+    notFound();
+    return null;
+  },
   component: HomePage,
 });
 
-const series = [
-  {
-    title: "Бетонные модульные дома",
-    desc: "Долговечная конструкция из бетона, заводская сборка, готовность за 90 дней.",
-    image: "/images/section-concrete.png",
-    to: "/concrete",
-  },
-  {
-    title: "Каркасные Eco Wood",
-    desc: "Сканди-каркас одноэтажные дома для круглогодичного проживания.",
-    image: "/images/section-scandi.png",
-    to: "/scandi",
-  },
-  {
-    title: "Виллы Hi-Tech",
-    desc: "Премиальные модульные виллы под ключ с панорамным остеклением.",
-    image: "/images/section-villa.png",
-    to: "/villas",
-  },
-] as const;
-
-const advantages = [
-  {
-    icon: Hammer,
-    title: "Своё производство",
-    desc: "Контроль качества на каждом этапе — от бетонных модулей до отделки",
-  },
-  {
-    icon: Ruler,
-    title: "Готовый проект за 90 дней",
-    desc: "Заводская сборка модулей и быстрый монтаж на участке",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Под ключ",
-    desc: "Фундамент, коммуникации, отделка — всё включено в смету",
-  },
-  {
-    icon: Award,
-    title: "Гарантия 25 лет",
-    desc: "На бетонную конструкцию модулей и инженерные системы",
-  },
+const competitors = [
+  { vs: "vs Кирпич", stat: "В 6 раз быстрее", desc: "90 дней против 1,5 лет на стройплощадке" },
+  { vs: "vs Газобетон", stat: "Прочнее в 12 раз", desc: "Бетон М400 не даёт усадки и не боится влаги" },
+  { vs: "vs Монолит на участке", stat: "Не зависит от погоды", desc: "Заводская сборка круглый год" },
+  { vs: "vs ЖБИ-панели", stat: "Дешевле и теплее", desc: "Утепление снаружи, теплопередача 4,1" },
 ];
 
 function HomePage() {
-  const { projects } = Route.useLoaderData();
+  const { projects, posts } = Route.useLoaderData();
 
   return (
     <PageLayout headerVariant="dark">
       {/* HERO */}
       <section className="relative min-h-[100svh] w-full overflow-hidden bg-primary text-primary-foreground">
         <div className="absolute inset-0">
-          <img
-            src="/images/hero.png"
-            alt="Современный модульный дом EcoCub в Московской области"
-            className="h-full w-full object-cover opacity-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/70" />
+          <img src="/images/hero-villa.jpg" alt="Современный монолитно-модульный дом EcoCub из бетона" className="h-full w-full object-cover opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/80" />
         </div>
         <Container className="relative flex min-h-[100svh] flex-col justify-end pb-20 pt-32 md:pb-28 md:pt-40">
           <p className="mb-4 inline-block text-xs font-medium uppercase tracking-[0.3em] text-accent">
             EcoCub · Московская область
           </p>
           <h1 className="max-w-4xl text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">
-            Современные дома
-            <br />
-            под ключ
+            Монолитно-модульные<br />дома из бетона
           </h1>
-          <p className="mt-6 max-w-2xl text-base text-white/80 md:text-lg">
-            Модульные бетонные дома, каркасные Eco Wood и виллы в стиле Hi-Tech
-            от производителя. Готовность от 90 дней. Гарантия 25 лет.
+          <p className="mt-6 max-w-2xl text-base text-white/85 md:text-lg">
+            Капитальный дом под ключ за 90 дней. Заводское качество, гарантия 50 лет,
+            фиксированная смета. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
-            <Button
-              asChild
-              size="lg"
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-            >
-              <Link to="/portfolio">
-                Смотреть проекты
-                <ArrowRight />
-              </Link>
+            <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Link to="/portfolio">Смотреть проекты <ArrowRight /></Link>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-white/40 bg-transparent text-white hover:bg-white hover:text-primary"
-            >
-              <Link to="/contacts">Получить расчёт</Link>
+            <Button asChild size="lg" variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white hover:text-primary">
+              <Link to="/technology">Технология</Link>
             </Button>
           </div>
         </Container>
       </section>
 
-      {/* ADVANTAGES */}
+      {/* COMPETITORS */}
       <Section className="bg-background">
         <Container>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {advantages.map((a) => (
-              <div key={a.title} className="flex flex-col">
-                <a.icon className="size-8 text-accent" />
-                <h3 className="mt-4 text-lg font-semibold">{a.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{a.desc}</p>
+          <div className="mb-12 max-w-3xl">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Сравнение технологий</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Капитальный дом — без долгостроя</h2>
+            <p className="mt-4 text-muted-foreground">
+              Мы конкурируем не с каркасниками, а с кирпичом, газобетоном, монолитом
+              и ЖБИ-панелями — но строим в разы быстрее и с фиксированной сметой.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {competitors.map((c) => (
+              <div key={c.vs} className="flex flex-col rounded-sm border border-border bg-card p-6">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{c.vs}</p>
+                <p className="mt-3 text-2xl font-bold text-accent">{c.stat}</p>
+                <p className="mt-2 flex-1 text-sm text-muted-foreground">{c.desc}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-8">
+            <Link to="/technology" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline">
+              Полная таблица сравнения <ArrowRight className="size-4" />
+            </Link>
           </div>
         </Container>
       </Section>
 
-      {/* SERIES */}
+      {/* COMPANY TIMELINE */}
       <Section className="bg-secondary">
         <Container>
           <div className="mb-12 max-w-3xl">
-            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-              Серии домов
-            </p>
-            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">
-              Три формата современного дома
-            </h2>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">О компании</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Производство в Подмосковье</h2>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {series.map((s) => (
-              <Link
-                key={s.to}
-                to={s.to}
-                className="group relative block aspect-[4/5] overflow-hidden rounded-sm bg-primary"
-              >
-                <img
-                  src={s.image}
-                  alt={s.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover opacity-70 transition-all duration-700 group-hover:scale-105 group-hover:opacity-90"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                  <h3 className="text-2xl font-semibold uppercase">
-                    {s.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-white/80">{s.desc}</p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent">
-                    Смотреть
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                  </span>
+          <CompanyTimeline />
+        </Container>
+      </Section>
+
+      {/* LEGO */}
+      <Section className="bg-background">
+        <Container>
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Принцип LEGO</p>
+              <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Соберите свой дом из готовых модулей</h2>
+              <p className="mt-6 text-base text-muted-foreground">
+                Каждый модуль ECO·CUB — это готовая комната с потолками 3,15 м, инженерией
+                и отделкой, произведённая на заводе. На участке модули собираются в дом
+                краном за 5 дней. Хотите больше места — добавьте модуль. Гибкая планировка
+                под ваши задачи.
+              </p>
+              <Button asChild className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90" size="lg">
+                <Link to="/technology">Подробнее о технологии <ArrowRight /></Link>
+              </Button>
+            </div>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-secondary">
+              <img src="/images/lego-truck.png" alt="Принцип LEGO: модули EcoCub доставляются на участок" className="h-full w-full object-contain p-8" />
+            </div>
+          </div>
+        </Container>
+      </Section>
+
+      {/* TECHNOLOGY */}
+      <Section className="bg-primary text-primary-foreground">
+        <Container>
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div className="relative aspect-square overflow-hidden rounded-sm bg-white/5">
+              <img src="/images/tech-section.jpg" alt="Разрез монолитного модуля EcoCub: бетон М400, оцинкованная сталь, ПСБ-С35" className="h-full w-full object-contain p-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">05 · Технология</p>
+              <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Бетон М400 + сталь + утеплитель</h2>
+              <p className="mt-6 text-base text-white/80">
+                Монолитные модули из бетона М400 с оцинкованной арматурой и утеплителем
+                ПСБ-С35. Сопротивление теплопередаче — 4,1 (м²·°C)/Вт. Класс пожаробезопасности
+                К0 — негорючие материалы. Подходит для круглогодичного проживания без
+                дополнительного утепления.
+              </p>
+              <div className="mt-8 grid grid-cols-2 gap-6">
+                <div>
+                  <ShieldCheck className="size-6 text-accent" />
+                  <p className="mt-3 text-2xl font-bold">50 лет</p>
+                  <p className="text-sm text-white/70">гарантия на конструкцию</p>
                 </div>
-              </Link>
-            ))}
+                <div>
+                  <Clock className="size-6 text-accent" />
+                  <p className="mt-3 text-2xl font-bold">{">"}120 лет</p>
+                  <p className="text-sm text-white/70">срок службы</p>
+                </div>
+                <div>
+                  <Layers className="size-6 text-accent" />
+                  <p className="mt-3 text-2xl font-bold">К0</p>
+                  <p className="text-sm text-white/70">класс пожаробезопасности</p>
+                </div>
+                <div>
+                  <Hammer className="size-6 text-accent" />
+                  <p className="mt-3 text-2xl font-bold">5 дней</p>
+                  <p className="text-sm text-white/70">монтаж на участке</p>
+                </div>
+              </div>
+            </div>
           </div>
+        </Container>
+      </Section>
+
+      {/* CALCULATOR */}
+      <Section className="bg-background">
+        <Container>
+          <div className="mb-12 max-w-3xl">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Прозрачная цена</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Посчитайте свой дом за минуту</h2>
+            <p className="mt-4 text-muted-foreground">
+              Базовая цена 105 000 ₽ за м² в комплектации под предчистовую отделку — одна
+              ставка для всех проектов. Никаких «доплатите ещё» по ходу стройки.
+            </p>
+          </div>
+          <PriceCalculator />
+        </Container>
+      </Section>
+
+      {/* WHATS INCLUDED */}
+      <Section className="bg-secondary">
+        <Container>
+          <div className="mb-12 max-w-3xl">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Что входит в стоимость</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Полная комплектация под ключ</h2>
+          </div>
+          <WhatsIncluded />
         </Container>
       </Section>
 
@@ -209,63 +252,83 @@ function HomePage() {
         <Container>
           <div className="mb-12 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-                Проекты
-              </p>
-              <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">
-                Готовые решения
-              </h2>
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Проекты</p>
+              <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Готовые решения</h2>
             </div>
-            <Link
-              to="/portfolio"
-              className="hidden items-center gap-1 text-sm font-medium text-foreground transition-colors hover:text-accent md:inline-flex"
-            >
-              Все проекты
-              <ArrowRight className="size-4" />
+            <Link to="/portfolio" className="hidden items-center gap-1 text-sm font-medium hover:text-accent md:inline-flex">
+              Все проекты <ArrowRight className="size-4" />
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p: ProjectCardData) => (
-              <ProjectCard key={p.slug} project={p} />
-            ))}
+            {projects.map((p) => <ProjectCard key={p.slug} project={p} />)}
           </div>
         </Container>
       </Section>
+
+      {/* INTERIORS */}
+      <Section className="bg-secondary">
+        <Container>
+          <div className="mb-12 max-w-3xl">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">07 · Интерьеры</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Дизайн интерьеров</h2>
+            <p className="mt-4 text-muted-foreground">
+              Потолки 3,15 м и панорамные окна позволяют реализовать любые дизайнерские решения.
+            </p>
+          </div>
+          <InteriorsGallery />
+        </Container>
+      </Section>
+
+      {/* STAGES */}
+      <Section className="bg-background">
+        <Container>
+          <div className="mb-12 max-w-3xl">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Этапы сотрудничества</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">5 шагов до ключей</h2>
+            <p className="mt-4 text-muted-foreground">Прозрачный процесс с фиксированной сметой и оплатой 60% / 30% / 10%.</p>
+          </div>
+          <StagesCooperation />
+        </Container>
+      </Section>
+
+      {/* BLOG */}
+      {posts.length > 0 && (
+        <Section className="bg-secondary">
+          <Container>
+            <div className="mb-12 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Блог</p>
+                <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Из наших статей</h2>
+              </div>
+              <Link to="/blog" className="hidden items-center gap-1 text-sm font-medium hover:text-accent md:inline-flex">
+                Все статьи <ArrowRight className="size-4" />
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              {posts.map((p) => <BlogCard key={p.slug} post={p} />)}
+            </div>
+          </Container>
+        </Section>
+      )}
 
       {/* CTA FORM */}
       <Section className="bg-primary text-primary-foreground">
         <Container>
           <div className="grid gap-12 lg:grid-cols-2">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-                Связаться
-              </p>
-              <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">
-                Подберём проект под ваш участок
-              </h2>
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Связаться</p>
+              <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Подберём проект под ваш участок</h2>
               <p className="mt-6 max-w-md text-base text-white/70">
-                Оставьте заявку — менеджер свяжется в течение часа, подберёт
-                подходящий проект и пришлёт расчёт.
+                Оставьте заявку — менеджер свяжется в течение часа, подберёт подходящий
+                проект и пришлёт расчёт.
               </p>
               <div className="mt-8 space-y-2 text-sm text-white/80">
-                <a
-                  href={site.phoneHref}
-                  className="block text-2xl font-semibold text-white"
-                >
-                  {site.phone}
-                </a>
-                <a href={`mailto:${site.email}`} className="block">
-                  {site.email}
-                </a>
+                <a href={site.phoneHref} className="block text-2xl font-semibold text-white">{site.phone}</a>
+                <a href={`mailto:${site.email}`} className="block">{site.email}</a>
               </div>
             </div>
             <div className="rounded-sm bg-white/5 p-6 md:p-8">
-              <ContactForm
-                variant="dark"
-                formType="contact"
-                sourcePage="/"
-                submitLabel="Получить расчёт"
-              />
+              <ContactForm variant="dark" formType="contact" sourcePage="/" submitLabel="Получить расчёт" />
             </div>
           </div>
         </Container>

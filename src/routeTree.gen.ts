@@ -10,16 +10,30 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VillasRouteImport } from './routes/villas'
+import { Route as TechnologyRouteImport } from './routes/technology'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as ContactsRouteImport } from './routes/contacts'
 import { Route as ConcreteRouteImport } from './routes/concrete'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 
 const VillasRoute = VillasRouteImport.update({
   id: '/villas',
   path: '/villas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnologyRoute = TechnologyRouteImport.update({
+  id: '/technology',
+  path: '/technology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PresentationRoute = PresentationRouteImport.update({
@@ -42,6 +56,11 @@ const ConcreteRoute = ConcreteRouteImport.update({
   path: '/concrete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -52,71 +71,103 @@ const ProjectsSlugRoute = ProjectsSlugRouteImport.update({
   path: '/projects/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
   '/concrete': typeof ConcreteRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/technology': typeof TechnologyRoute
   '/villas': typeof VillasRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
   '/concrete': typeof ConcreteRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/technology': typeof TechnologyRoute
   '/villas': typeof VillasRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
   '/concrete': typeof ConcreteRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/technology': typeof TechnologyRoute
   '/villas': typeof VillasRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/blog'
     | '/concrete'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
+    | '/sitemap.xml'
+    | '/technology'
     | '/villas'
+    | '/blog/$slug'
     | '/projects/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/blog'
     | '/concrete'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
+    | '/sitemap.xml'
+    | '/technology'
     | '/villas'
+    | '/blog/$slug'
     | '/projects/$slug'
   id:
     | '__root__'
     | '/'
+    | '/blog'
     | '/concrete'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
+    | '/sitemap.xml'
+    | '/technology'
     | '/villas'
+    | '/blog/$slug'
     | '/projects/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BlogRoute: typeof BlogRouteWithChildren
   ConcreteRoute: typeof ConcreteRoute
   ContactsRoute: typeof ContactsRoute
   PortfolioRoute: typeof PortfolioRoute
   PresentationRoute: typeof PresentationRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TechnologyRoute: typeof TechnologyRoute
   VillasRoute: typeof VillasRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
 }
@@ -128,6 +179,20 @@ declare module '@tanstack/react-router' {
       path: '/villas'
       fullPath: '/villas'
       preLoaderRoute: typeof VillasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technology': {
+      id: '/technology'
+      path: '/technology'
+      fullPath: '/technology'
+      preLoaderRoute: typeof TechnologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/presentation': {
@@ -158,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConcreteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -172,18 +244,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
+    }
   }
 }
 
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BlogRoute: BlogRouteWithChildren,
   ConcreteRoute: ConcreteRoute,
   ContactsRoute: ContactsRoute,
   PortfolioRoute: PortfolioRoute,
   PresentationRoute: PresentationRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TechnologyRoute: TechnologyRoute,
   VillasRoute: VillasRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
