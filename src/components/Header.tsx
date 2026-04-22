@@ -33,7 +33,7 @@ export function Header({ variant = "light" }: HeaderProps) {
           />
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex">
+        <nav className="hidden items-center gap-6 lg:flex">
           {mainNav.map((item) => (
             <Link
               key={item.to}
