@@ -180,7 +180,7 @@ function ProjectPage() {
                     Особенности
                   </h3>
                   <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                    {project.features.map((f) => (
+                    {project.features.map((f: string) => (
                       <li
                         key={f}
                         className="flex items-start gap-2 text-sm text-foreground/80"
@@ -225,7 +225,7 @@ function ProjectPage() {
               Галерея
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {project.gallery.map((src) => (
+              {project.gallery.map((src: string) => (
                 <div
                   key={src}
                   className="aspect-[4/3] overflow-hidden rounded-sm bg-muted"

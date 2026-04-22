@@ -74,7 +74,7 @@ function PortfolioPage() {
       <Section>
         <Container>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p) => (
+            {projects.map((p: ProjectCardData) => (
               <ProjectCard key={p.slug} project={p} />
             ))}
           </div>
