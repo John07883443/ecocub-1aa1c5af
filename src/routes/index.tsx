@@ -118,6 +118,9 @@ function HomePage() {
         </Container>
       </section>
 
+      {/* BRAND SPECS — "дом как техника" */}
+      <BrandSpecs />
+
       {/* COMPETITORS */}
       <Section className="bg-background">
         <Container>
@@ -180,6 +183,9 @@ function HomePage() {
           </div>
         </Container>
       </Section>
+
+      {/* CONFIGURATOR */}
+      <Configurator />
 
       {/* TECHNOLOGY */}
       <Section className="bg-primary text-primary-foreground">
