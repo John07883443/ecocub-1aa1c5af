@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_posts: {
+        Row: {
+          category: Database["public"]["Enums"]["blog_category"]
+          content: string
+          cover_image: string | null
+          created_at: string
+          display_order: number
+          excerpt: string | null
+          id: string
+          published: boolean
+          published_at: string | null
+          reading_time: number
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["blog_category"]
+          content: string
+          cover_image?: string | null
+          created_at?: string
+          display_order?: number
+          excerpt?: string | null
+          id?: string
+          published?: boolean
+          published_at?: string | null
+          reading_time?: number
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["blog_category"]
+          content?: string
+          cover_image?: string | null
+          created_at?: string
+          display_order?: number
+          excerpt?: string | null
+          id?: string
+          published?: boolean
+          published_at?: string | null
+          reading_time?: number
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_config: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value_numeric: number | null
+          value_text: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value_numeric?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value_numeric?: number | null
+          value_text?: string | null
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           area_m2: number | null
@@ -155,6 +230,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      blog_category: "tech" | "cases" | "comparison" | "news"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -283,6 +359,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      blog_category: ["tech", "cases", "comparison", "news"],
     },
   },
 } as const
