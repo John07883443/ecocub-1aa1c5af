@@ -25,16 +25,10 @@ const schema = z.object({
     .max(30)
     .regex(/^[+0-9\s\-()]+$/, "Неверный формат"),
   email: z
-    .string()
-    .trim()
-    .email("Неверный email")
-    .max(200)
-    .optional()
-    .or(z.literal("")),
+    .union([z.email("Неверный email").max(200), z.literal("")])
+    .optional(),
   message: z.string().trim().max(2000).optional(),
-  consent: z.literal(true, {
-    errorMap: () => ({ message: "Нужно согласие" }),
-  }),
+  consent: z.literal(true, { error: "Нужно согласие" }),
 });
 
 type FormValues = z.infer<typeof schema>;
