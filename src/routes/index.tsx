@@ -101,10 +101,10 @@ function HomePage() {
         </Container>
 
         {/* Bottom panel — заголовок и CTA в нижней зоне, дом сверху не перекрыт */}
-        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-10 pt-24 md:pb-14 md:pt-32">
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-12 pt-24 md:pb-16 md:pt-32">
           <Container>
             <div className="grid items-end gap-8 md:grid-cols-12">
-              <h1 className="md:col-span-7 text-[1.75rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase leading-[1.05] tracking-tight">
+              <h1 className="md:col-span-7 text-[1.75rem] sm:text-5xl md:text-5xl lg:text-6xl font-bold uppercase leading-[1.05] tracking-tight">
                 Капитальные.
                 <br />
                 <span className="text-accent">Технологичные.</span>
