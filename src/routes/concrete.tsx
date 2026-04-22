@@ -42,7 +42,7 @@ export const Route = createFileRoute("/concrete")({
     if (error) throw error;
     return { projects: (data ?? []) as ProjectCardData[] };
   },
-  errorComponent: ({ error }) => (
+  errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
       <Container className="py-32 text-center text-destructive">
         {error.message}
