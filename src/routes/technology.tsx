@@ -6,6 +6,9 @@ import { TechnologyComparison } from "@/components/TechnologyComparison";
 import { EngineeringFeatures } from "@/components/EngineeringFeatures";
 import { ContactForm } from "@/components/ContactForm";
 import { LayeredSection } from "@/components/LayeredSection";
+import { LayeredSectionA } from "@/components/LayeredSectionA";
+import { LayeredSectionB } from "@/components/LayeredSectionB";
+import { LayeredSectionC } from "@/components/LayeredSectionC";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/technology")({
