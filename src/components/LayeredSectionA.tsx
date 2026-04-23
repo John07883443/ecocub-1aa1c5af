@@ -50,7 +50,7 @@ export function LayeredSectionA() {
           className="pointer-events-none absolute inset-[8%] rounded-full bg-accent/10 blur-3xl"
         />
         <img
-          src="/images/tech-section-clean-transparent.png"
+          src="/images/wall-section-v2.png"
           alt="Послойный разрез монолитного модуля EcoCub"
           className="relative h-full w-full object-contain"
         />
