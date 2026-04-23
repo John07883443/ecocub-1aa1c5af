@@ -67,10 +67,51 @@ function TechnologyPage() {
       {/* MATERIALS */}
       <Section className="bg-background">
         <Container>
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="relative rounded-sm bg-primary p-6 text-primary-foreground">
+      {/* MATERIALS — DESIGN COMPARISON (3 варианта на сравнение) */}
+      <Section className="bg-background">
+        <Container>
+          <div className="mb-12 max-w-3xl">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Сравнение дизайна · временно</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">Три варианта блока «Технология»</h2>
+            <p className="mt-4 text-muted-foreground">
+              Внизу — три варианта подачи послойного разреза. Выберите тот, что нравится — оставлю один и удалю остальные.
+            </p>
+          </div>
+
+          {/* Текущий (для сравнения) */}
+          <div className="mb-16">
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Сейчас · текущий вариант</p>
+            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
               <LayeredSection />
             </div>
+          </div>
+
+          {/* Variant A */}
+          <div className="mb-16">
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант A · Спецификация сбоку</p>
+            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
+              <LayeredSectionA />
+            </div>
+          </div>
+
+          {/* Variant B */}
+          <div className="mb-16">
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант B · Выноски по краям</p>
+            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
+              <LayeredSectionB />
+            </div>
+          </div>
+
+          {/* Variant C */}
+          <div className="mb-16">
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант C · Вертикальный разрез</p>
+            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
+              <LayeredSectionC />
+            </div>
+          </div>
+
+          {/* Оригинальный список фич — оставляем */}
+          <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Из чего сделан модуль</p>
               <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">Три слоя капитальности</h2>
@@ -113,11 +154,15 @@ function TechnologyPage() {
                 </div>
               </div>
             </div>
+            <div className="rounded-sm bg-secondary p-6 md:p-10">
+              <p className="text-sm text-muted-foreground">
+                Подсказка: пройдитесь по всем четырём блокам выше (текущий + A/B/C) и в чате напишите «беру A» / «беру B» / «беру C» — оставлю выбранный, остальное удалю.
+              </p>
+            </div>
           </div>
         </Container>
       </Section>
 
-      {/* COMPARISON TABLE */}
       <Section className="bg-secondary">
         <Container>
           <div className="mb-10 max-w-3xl">
