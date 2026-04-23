@@ -64,9 +64,6 @@ function TechnologyPage() {
         </Container>
       </section>
 
-      {/* MATERIALS */}
-      <Section className="bg-background">
-        <Container>
       {/* MATERIALS — DESIGN COMPARISON (3 варианта на сравнение) */}
       <Section className="bg-background">
         <Container>
