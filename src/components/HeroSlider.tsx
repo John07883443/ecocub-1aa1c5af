@@ -83,7 +83,7 @@ export function HeroSlider() {
                   srcSet={`${s.base}-768.webp 768w, ${s.base}-1600.webp 1600w`}
                   sizes="100vw"
                   alt={s.alt}
-                  className="absolute inset-x-0 top-0 h-[62svh] w-full object-contain [object-position:50%_0%] md:inset-0 md:h-full md:object-cover md:[object-position:50%_50%]"
+                  className="absolute inset-x-0 top-0 h-[62svh] w-full object-cover [object-position:50%_0%] md:inset-0 md:h-full md:[object-position:50%_50%]"
                   loading={index === 0 ? "eager" : "lazy"}
                   decoding={index === 0 ? "sync" : "async"}
                   {...(index === 0 ? { fetchPriority: "high" as const } : {})}
