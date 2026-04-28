@@ -104,7 +104,7 @@ export function HeroSlider() {
         type="button"
         aria-label="Предыдущий слайд"
         onClick={scrollPrev}
-        className="absolute left-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 md:left-6 md:size-12"
+        className="absolute left-3 top-[38%] z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 md:left-6 md:top-1/2 md:size-12"
       >
         <ChevronLeft className="size-5 md:size-6" strokeWidth={1.25} />
       </button>
@@ -112,7 +112,7 @@ export function HeroSlider() {
         type="button"
         aria-label="Следующий слайд"
         onClick={scrollNext}
-        className="absolute right-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 md:right-6 md:size-12"
+        className="absolute right-3 top-[38%] z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 md:right-6 md:top-1/2 md:size-12"
       >
         <ChevronRight className="size-5 md:size-6" strokeWidth={1.25} />
       </button>
