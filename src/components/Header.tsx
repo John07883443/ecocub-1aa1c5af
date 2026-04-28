@@ -24,12 +24,12 @@ export function Header({ variant = "light" }: HeaderProps) {
           : "sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur"
       }
     >
-      <Container className="flex h-16 items-center justify-between md:h-20">
+      <Container className="flex h-20 items-center justify-between md:h-28">
         <Link to="/" className="flex items-center gap-2">
           <img
             src={isDark ? logoWhite : logoBlack}
             alt="EcoCub"
-            className="h-8 w-auto md:h-9"
+            className="h-16 w-auto md:h-18"
           />
         </Link>
 
