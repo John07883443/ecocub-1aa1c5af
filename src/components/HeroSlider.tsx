@@ -3,33 +3,38 @@ import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const slides = [
+type Slide = {
+  base: string; // e.g. "/images/hero-villa"
+  alt: string;
+};
+
+const slides: Slide[] = [
   {
-    src: "/images/hero-villa.jpg",
+    base: "/images/hero-villa",
     alt: "Современная вилла EcoCub с деревянной отделкой и террасой на закате",
   },
   {
-    src: "/images/hero-villa-2.jpg",
+    base: "/images/hero-villa-2",
     alt: "Минималистичный бетонный дом EcoCub с панорамным остеклением в лесу",
   },
   {
-    src: "/images/hero-villa-3.jpg",
+    base: "/images/hero-villa-3",
     alt: "Одноэтажная вилла EcoCub с тёплым вечерним светом и открытой кухней",
   },
   {
-    src: "/images/hero-villa-4.jpg",
+    base: "/images/hero-villa-4",
     alt: "Угловая вилла EcoCub с большой террасой и панорамными окнами",
   },
   {
-    src: "/images/hero-villa-5.jpg",
+    base: "/images/hero-villa-5",
     alt: "Современная белая вилла EcoCub с крытой террасой и лаунж-зоной",
   },
   {
-    src: "/images/hero-villa-6.jpg",
+    base: "/images/hero-villa-6",
     alt: "Лаконичный дом EcoCub в сосновом лесу с мягкой вечерней подсветкой",
   },
   {
-    src: "/images/hero-villa-7.jpg",
+    base: "/images/hero-villa-7",
     alt: "Современная бетонная вилла EcoCub с тёплой архитектурной подсветкой на закате",
   },
 ];
@@ -70,12 +75,16 @@ export function HeroSlider() {
       <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
         <div className="flex h-full">
           {slides.map((s, index) => (
-            <div key={s.src} className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary">
+            <div key={s.base} className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary">
               <img
-                src={s.src}
+                src={`${s.base}-1600.webp`}
+                srcSet={`${s.base}-768.webp 768w, ${s.base}-1600.webp 1600w`}
+                sizes="100vw"
                 alt={s.alt}
                 className="absolute inset-0 h-full w-full object-cover"
                 loading={index === 0 ? "eager" : "lazy"}
+                decoding={index === 0 ? "sync" : "async"}
+                {...(index === 0 ? { fetchPriority: "high" as const } : {})}
               />
             </div>
           ))}
@@ -104,7 +113,7 @@ export function HeroSlider() {
       <div className="absolute bottom-6 left-1/2 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap justify-center gap-2 md:bottom-8">
         {slides.map((s, i) => (
           <button
-            key={s.src}
+            key={s.base}
             type="button"
             aria-label={`Слайд ${i + 1}`}
             onClick={() => {
