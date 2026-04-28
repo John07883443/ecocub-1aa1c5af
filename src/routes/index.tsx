@@ -39,8 +39,8 @@ export const Route = createFileRoute("/")({
         content:
           "Капитальный дом из бетона под ключ от 105 000 ₽/м². Производство в Московской области. Гарантия 50 лет, срок службы более 120 лет.",
       },
-      { property: "og:image", content: "/images/hero-villa.jpg" },
-      { name: "twitter:image", content: "/images/hero-villa.jpg" },
+      { property: "og:image", content: "/images/hero-villa-1600.webp" },
+      { name: "twitter:image", content: "/images/hero-villa-1600.webp" },
     ],
   }),
   loader: async () => {
