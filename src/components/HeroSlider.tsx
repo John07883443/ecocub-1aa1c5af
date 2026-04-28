@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const slides = [
   {
@@ -52,6 +53,18 @@ export function HeroSlider() {
     };
   }, [emblaApi]);
 
+  const scrollPrev = useCallback(() => {
+    if (!emblaApi) return;
+    autoplay.current.reset();
+    emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (!emblaApi) return;
+    autoplay.current.reset();
+    emblaApi.scrollNext();
+  }, [emblaApi]);
+
   return (
     <>
       <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
@@ -69,13 +82,35 @@ export function HeroSlider() {
         </div>
       </div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-transparent" />
+
+      {/* Arrows */}
+      <button
+        type="button"
+        aria-label="Предыдущий слайд"
+        onClick={scrollPrev}
+        className="group absolute left-3 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-accent/60 hover:bg-black/40 md:left-6 md:size-14"
+      >
+        <ChevronLeft className="size-5 transition-transform duration-300 group-hover:-translate-x-0.5 md:size-6" strokeWidth={1.5} />
+      </button>
+      <button
+        type="button"
+        aria-label="Следующий слайд"
+        onClick={scrollNext}
+        className="group absolute right-3 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-accent/60 hover:bg-black/40 md:right-6 md:size-14"
+      >
+        <ChevronRight className="size-5 transition-transform duration-300 group-hover:translate-x-0.5 md:size-6" strokeWidth={1.5} />
+      </button>
+
       <div className="absolute bottom-6 left-1/2 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap justify-center gap-2 md:bottom-8">
         {slides.map((s, i) => (
           <button
             key={s.src}
             type="button"
             aria-label={`Слайд ${i + 1}`}
-            onClick={() => emblaApi?.scrollTo(i)}
+            onClick={() => {
+              autoplay.current.reset();
+              emblaApi?.scrollTo(i);
+            }}
             className={`h-1 rounded-full transition-all ${
               i === selected ? "w-8 bg-accent" : "w-5 bg-white/40 hover:bg-white/70"
             }`}
