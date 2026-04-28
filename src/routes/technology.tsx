@@ -5,10 +5,7 @@ import { Container, Section } from "@/components/Container";
 import { TechnologyComparison } from "@/components/TechnologyComparison";
 import { EngineeringFeatures } from "@/components/EngineeringFeatures";
 import { ContactForm } from "@/components/ContactForm";
-import { LayeredSection } from "@/components/LayeredSection";
 import { LayeredSectionA } from "@/components/LayeredSectionA";
-import { LayeredSectionB } from "@/components/LayeredSectionB";
-import { LayeredSectionC } from "@/components/LayeredSectionC";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/technology")({
@@ -68,42 +65,17 @@ function TechnologyPage() {
       <Section className="bg-background">
         <Container>
           <div className="mb-12 max-w-3xl">
-            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Сравнение дизайна · временно</p>
-            <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">Три варианта блока «Технология»</h2>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Анатомия стены</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">Послойный разрез модуля</h2>
             <p className="mt-4 text-muted-foreground">
-              Внизу — три варианта подачи послойного разреза. Выберите тот, что нравится — оставлю один и удалю остальные.
+              Симметричный «сэндвич» 210 мм: бетон М400 на оцинкованном каркасе с обеих сторон, ядро — ПСБ-С35 100 мм.
             </p>
-          </div>
-
-          {/* Текущий (для сравнения) */}
-          <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Сейчас · текущий вариант</p>
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
-              <LayeredSection />
-            </div>
           </div>
 
           {/* Variant A */}
           <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант A · Спецификация сбоку</p>
             <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
               <LayeredSectionA />
-            </div>
-          </div>
-
-          {/* Variant B */}
-          <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант B · Выноски по краям</p>
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
-              <LayeredSectionB />
-            </div>
-          </div>
-
-          {/* Variant C */}
-          <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант C · Вертикальный разрез</p>
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
-              <LayeredSectionC />
             </div>
           </div>
 
@@ -153,7 +125,7 @@ function TechnologyPage() {
             </div>
             <div className="rounded-sm bg-secondary p-6 md:p-10">
               <p className="text-sm text-muted-foreground">
-                Подсказка: пройдитесь по всем четырём блокам выше (текущий + A/B/C) и в чате напишите «беру A» / «беру B» / «беру C» — оставлю выбранный, остальное удалю.
+                Все слои работают как единое целое: бетон даёт прочность, оцинкованная сталь — несущий каркас, ПСБ-С35 — теплоизоляцию выше норм СНиП.
               </p>
             </div>
           </div>
