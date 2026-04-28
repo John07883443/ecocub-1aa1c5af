@@ -95,13 +95,6 @@ function HomePage() {
       {/* HERO */}
       <section className="relative min-h-[100svh] w-full overflow-hidden bg-primary text-primary-foreground">
         <HeroSlider />
-        {/* Top label — не перекрывает дом */}
-        <Container className="pointer-events-none absolute inset-x-0 top-0 z-10 pt-32 md:pt-36">
-          <p className="pointer-events-auto inline-block text-[10px] sm:text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            EcoCub · Московская область
-          </p>
-        </Container>
-
         {/* Bottom panel — заголовок и CTA в нижней зоне, дом сверху не перекрыт */}
         <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-12 pt-24 md:pb-16 md:pt-32">
           <Container>
