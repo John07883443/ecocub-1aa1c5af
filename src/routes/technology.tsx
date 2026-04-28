@@ -75,35 +75,10 @@ function TechnologyPage() {
             </p>
           </div>
 
-          {/* Текущий (для сравнения) */}
-          <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Сейчас · текущий вариант</p>
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
-              <LayeredSection />
-            </div>
-          </div>
-
           {/* Variant A */}
           <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант A · Спецификация сбоку</p>
             <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
               <LayeredSectionA />
-            </div>
-          </div>
-
-          {/* Variant B */}
-          <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант B · Выноски по краям</p>
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
-              <LayeredSectionB />
-            </div>
-          </div>
-
-          {/* Variant C */}
-          <div className="mb-16">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">Вариант C · Вертикальный разрез</p>
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
-              <LayeredSectionC />
             </div>
           </div>
 
