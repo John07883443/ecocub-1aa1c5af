@@ -5,6 +5,9 @@ type Layer = {
   num: string;
   title: string;
   desc: string;
+  /** Marker position on the image, in % of container. Optional — omit to hide marker. */
+  x?: number;
+  y?: number;
 };
 
 const layers: Layer[] = [
@@ -13,6 +16,8 @@ const layers: Layer[] = [
     num: "01",
     title: "Бетон М400",
     desc: "Прочность на сжатие 400 кг/см². В 12 раз прочнее газоблока, без усадки.",
+    x: 70,
+    y: 62,
   },
   {
     id: "steel",
@@ -34,13 +39,45 @@ export function LayeredSectionA() {
 
   return (
     <div className="grid w-full gap-8 md:grid-cols-[1.1fr_1fr] md:gap-10">
-      {/* Image — clean, no markers */}
+      {/* Image with optional numbered markers */}
       <div className="relative mx-auto aspect-square w-full max-w-[520px]">
         <img
           src="/images/wall-section-v10.png"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, стальная арматура, ПСБ-С35"
           className="relative h-full w-full object-contain"
         />
+
+        {layers.map((l) => {
+          if (l.x === undefined || l.y === undefined) return null;
+          const isActive = active === l.id;
+          return (
+            <button
+              key={l.id}
+              type="button"
+              onMouseEnter={() => setActive(l.id)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(l.id)}
+              onBlur={() => setActive(null)}
+              style={{ left: `${l.x}%`, top: `${l.y}%` }}
+              className="absolute z-10 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none"
+              aria-label={l.title}
+            >
+              <span
+                aria-hidden
+                className="absolute inset-0 animate-ping rounded-full bg-accent/30 [animation-duration:2.4s]"
+              />
+              <span
+                className={`relative flex size-8 items-center justify-center rounded-full border text-[11px] font-bold transition-all duration-300 ${
+                  isActive
+                    ? "scale-110 border-accent bg-accent text-accent-foreground"
+                    : "border-accent/60 bg-primary/80 text-accent backdrop-blur-sm"
+                }`}
+              >
+                {l.num}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Spec list */}
