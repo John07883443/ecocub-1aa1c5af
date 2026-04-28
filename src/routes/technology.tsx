@@ -65,10 +65,10 @@ function TechnologyPage() {
       <Section className="bg-background">
         <Container>
           <div className="mb-12 max-w-3xl">
-            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Сравнение дизайна · временно</p>
-            <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">Три варианта блока «Технология»</h2>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Анатомия стены</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">Послойный разрез модуля</h2>
             <p className="mt-4 text-muted-foreground">
-              Внизу — три варианта подачи послойного разреза. Выберите тот, что нравится — оставлю один и удалю остальные.
+              Симметричный «сэндвич» 210 мм: бетон М400 на оцинкованном каркасе с обеих сторон, ядро — ПСБ-С35 100 мм.
             </p>
           </div>
 
