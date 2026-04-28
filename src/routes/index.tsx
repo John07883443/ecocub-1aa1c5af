@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowRight, ShieldCheck, Clock, Layers, Hammer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,16 +88,59 @@ const competitors = [
   { vs: "vs ЖБИ-панели", stat: "Дешевле и теплее", desc: "Утепление снаружи, теплопередача 4,1" },
 ];
 
+function useLockedMobileViewportHeight() {
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    let viewportWidth = window.innerWidth;
+    const readHeight = () => Math.round(window.visualViewport?.height ?? window.innerHeight);
+
+    setHeight(readHeight());
+
+    const handleResize = () => {
+      const nextWidth = window.innerWidth;
+      if (Math.abs(nextWidth - viewportWidth) < 24) return;
+      viewportWidth = nextWidth;
+      setHeight(readHeight());
+    };
+
+    const handleOrientationChange = () => {
+      window.setTimeout(() => {
+        viewportWidth = window.innerWidth;
+        setHeight(readHeight());
+      }, 250);
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleOrientationChange);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+    };
+  }, []);
+
+  return height;
+}
+
 function HomePage() {
   const { projects, posts } = Route.useLoaderData();
+  const mobileHeroHeight = useLockedMobileViewportHeight();
 
   return (
     <PageLayout headerVariant="dark">
       {/* HERO */}
-      <section className="relative h-[100dvh] w-full overflow-hidden bg-primary text-primary-foreground">
+      <section
+        className="relative h-[var(--mobile-hero-height,100svh)] w-full overflow-hidden bg-primary text-primary-foreground md:h-screen"
+        style={
+          mobileHeroHeight
+            ? ({ "--mobile-hero-height": `${mobileHeroHeight}px` } as React.CSSProperties)
+            : undefined
+        }
+      >
         <HeroSlider />
         {/* Bottom panel — заголовок и CTA в нижней зоне, дом сверху не перекрыт */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/55 to-transparent pb-16 pt-16 md:pb-16 md:pt-32">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/55 to-transparent pb-20 pt-12 md:pb-16 md:pt-32">
           <Container>
             <div className="grid items-end gap-8 lg:grid-cols-12">
               <h1 className="lg:col-span-7 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.75rem,5.5vw,3.75rem)]">
