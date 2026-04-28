@@ -16,24 +16,24 @@ const layers: Layer[] = [
     num: "01",
     title: "Бетон М400",
     desc: "Прочность на сжатие 400 кг/см². В 12 раз прочнее газоблока, без усадки.",
-    x: 24,
-    y: 50,
+    x: 78,
+    y: 55,
   },
   {
     id: "steel",
     num: "02",
     title: "Оцинкованная сталь",
     desc: "Несущий каркас, не подверженный коррозии. Срок службы более 120 лет.",
-    x: 60,
-    y: 38,
+    x: 52,
+    y: 55,
   },
   {
     id: "foam",
     num: "03",
     title: "Пенополистирол ПСБ-С35",
-    desc: "Сопротивление теплопередаче 4,1 (м²·°C)/Вт — выше нормы СНиП для Москвы.",
-    x: 45,
-    y: 50,
+    desc: "100 мм. Сопротивление теплопередаче 4,1 (м²·°C)/Вт — выше нормы СНиП для Москвы.",
+    x: 36,
+    y: 45,
   },
 ];
 
@@ -50,7 +50,7 @@ export function LayeredSectionA() {
           className="pointer-events-none absolute inset-[8%] rounded-full bg-accent/10 blur-3xl"
         />
         <img
-          src="/images/wall-section-v4.png"
+          src="/images/wall-section-v7.png"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, стальная арматура, ПСБ-С35"
           className="relative h-full w-full object-contain"
         />
