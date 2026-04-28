@@ -99,10 +99,9 @@ function HomePage() {
         <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-12 pt-24 md:pb-16 md:pt-32">
           <Container>
             <div className="grid items-end gap-8 lg:grid-cols-12">
-              <h1 className="lg:col-span-7 text-[1.75rem] sm:text-4xl md:text-5xl lg:text-6xl font-bold uppercase leading-[1.05] tracking-tight break-words hyphens-auto">
-                Капитальные.
-                <br />
-                <span className="text-accent">Технологичные.</span>
+              <h1 className="lg:col-span-7 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.75rem,5.5vw,3.75rem)]">
+                <span className="block max-w-full whitespace-nowrap">Капитальные.</span>
+                <span className="block max-w-full whitespace-nowrap text-accent">Технологичные.</span>
               </h1>
               <div className="lg:col-span-5">
                 <p className="max-w-md text-sm text-white/85 md:text-base">
