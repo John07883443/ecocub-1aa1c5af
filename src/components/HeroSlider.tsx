@@ -133,6 +133,17 @@ export function HeroSlider() {
           />
         ))}
       </div>
+
+      {/* Slide counter — минималистичный индикатор в правом нижнем углу */}
+      <div
+        className="pointer-events-none absolute bottom-2.5 right-4 z-10 flex items-baseline gap-1 font-mono text-[11px] tabular-nums tracking-widest md:bottom-7 md:right-8 md:text-xs"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <span className="text-white">{String(selected + 1).padStart(2, "0")}</span>
+        <span className="text-white/40">/</span>
+        <span className="text-white/40">{String(slides.length).padStart(2, "0")}</span>
+      </div>
     </>
   );
 }
