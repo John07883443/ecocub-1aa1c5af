@@ -4,9 +4,8 @@ import { Menu, Phone } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/Container";
+import { LogoMark } from "@/components/LogoMark";
 import { mainNav, site } from "@/lib/site";
-import logoBlack from "@/assets/logo-black.svg";
-import logoWhite from "@/assets/logo-white.svg";
 
 interface HeaderProps {
   variant?: "light" | "dark";
