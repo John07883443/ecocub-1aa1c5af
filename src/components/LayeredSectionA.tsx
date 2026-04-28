@@ -42,7 +42,7 @@ export function LayeredSectionA() {
   const [active, setActive] = useState<string | null>(null);
 
   return (
-    <div className="grid w-full gap-8 md:grid-cols-[1.1fr_1fr] md:gap-10">
+    <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
       {/* Image with optional numbered markers */}
       <div className="relative mx-auto aspect-square w-full max-w-[520px]">
         <img
