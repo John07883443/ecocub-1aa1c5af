@@ -93,7 +93,7 @@ function HomePage() {
   return (
     <PageLayout headerVariant="dark">
       {/* HERO */}
-      <section className="relative h-[100svh] w-full overflow-hidden bg-primary text-primary-foreground">
+      <section className="relative h-[100dvh] w-full overflow-hidden bg-primary text-primary-foreground">
         <HeroSlider />
         {/* Bottom panel — заголовок и CTA в нижней зоне, дом сверху не перекрыт */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/55 to-transparent pb-16 pt-16 md:pb-16 md:pt-32">
