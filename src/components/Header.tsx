@@ -4,9 +4,8 @@ import { Menu, Phone } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/Container";
+import { LogoMark } from "@/components/LogoMark";
 import { mainNav, site } from "@/lib/site";
-import logoBlack from "@/assets/logo-black.svg";
-import logoWhite from "@/assets/logo-white.svg";
 
 interface HeaderProps {
   variant?: "light" | "dark";
@@ -25,11 +24,10 @@ export function Header({ variant = "light" }: HeaderProps) {
       }
     >
       <Container className="flex h-20 items-center justify-between md:h-28">
-        <Link to="/" className="group flex items-center gap-2 [perspective:800px]">
-          <img
-            src={isDark ? logoWhite : logoBlack}
-            alt="EcoCub"
-            className="h-16 w-auto md:h-18 origin-center transition-all duration-700 ease-out [transform-style:preserve-3d] group-hover:[transform:rotateY(360deg)] group-hover:[filter:drop-shadow(0_0_14px_color-mix(in_oklab,var(--accent)_55%,transparent))] motion-reduce:transition-none motion-reduce:group-hover:[transform:none] motion-reduce:group-hover:[filter:none]"
+        <Link to="/" className="flex items-center gap-2">
+          <LogoMark
+            variant={isDark ? "dark" : "light"}
+            className="h-16 w-auto md:h-18"
           />
         </Link>
 
@@ -77,7 +75,7 @@ export function Header({ variant = "light" }: HeaderProps) {
           <SheetContent side="right" className="w-[85vw] max-w-sm bg-background">
             <SheetTitle className="sr-only">Навигация</SheetTitle>
             <div className="mb-8 mt-2">
-              <img src={logoBlack} alt="EcoCub" className="h-8 w-auto" />
+              <LogoMark variant="light" className="h-8 w-auto" />
             </div>
             <nav className="flex flex-col gap-1">
               {mainNav.map((item) => (

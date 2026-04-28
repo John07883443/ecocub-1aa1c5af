@@ -152,3 +152,20 @@
   padding-inline: 1rem;
   @media (min-width: 768px) { padding-inline: 2rem; }
 }
+
+/* Logo "breathing" levitation — only the cube part moves */
+@keyframes ecocub-cube-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
+}
+
+.ecocub-logo-cube {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: ecocub-cube-breathe 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecocub-logo-cube { animation: none; }
+}
