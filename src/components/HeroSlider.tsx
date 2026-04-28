@@ -104,17 +104,17 @@ export function HeroSlider() {
         type="button"
         aria-label="Предыдущий слайд"
         onClick={scrollPrev}
-        className="group absolute left-3 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-accent/60 hover:bg-black/40 md:left-6 md:size-14"
+        className="absolute left-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 md:left-6 md:size-12"
       >
-        <ChevronLeft className="size-5 transition-transform duration-300 group-hover:-translate-x-0.5 md:size-6" strokeWidth={1.5} />
+        <ChevronLeft className="size-5 md:size-6" strokeWidth={1.25} />
       </button>
       <button
         type="button"
         aria-label="Следующий слайд"
         onClick={scrollNext}
-        className="group absolute right-3 top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-accent/60 hover:bg-black/40 md:right-6 md:size-14"
+        className="absolute right-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 md:right-6 md:size-12"
       >
-        <ChevronRight className="size-5 transition-transform duration-300 group-hover:translate-x-0.5 md:size-6" strokeWidth={1.5} />
+        <ChevronRight className="size-5 md:size-6" strokeWidth={1.25} />
       </button>
 
       <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-nowrap items-center justify-center gap-1.5 md:bottom-8 md:gap-2">
