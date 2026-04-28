@@ -50,7 +50,7 @@ export function LayeredSectionA() {
           className="pointer-events-none absolute inset-[8%] rounded-full bg-accent/10 blur-3xl"
         />
         <img
-          src="/images/wall-section-v4.png"
+          src="/images/wall-section-v7.png"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, стальная арматура, ПСБ-С35"
           className="relative h-full w-full object-contain"
         />
