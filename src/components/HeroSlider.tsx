@@ -76,16 +76,19 @@ export function HeroSlider() {
         <div className="flex h-full">
           {slides.map((s, index) => (
             <div key={s.base} className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary">
-              <img
-                src={`${s.base}-1600.webp`}
-                srcSet={`${s.base}-768.webp 768w, ${s.base}-1600.webp 1600w`}
-                sizes="100vw"
-                alt={s.alt}
-                className="absolute inset-0 h-full w-full object-cover"
-                loading={index === 0 ? "eager" : "lazy"}
-                decoding={index === 0 ? "sync" : "async"}
-                {...(index === 0 ? { fetchPriority: "high" as const } : {})}
-              />
+              <picture>
+                <source media="(max-width: 767px)" srcSet={`${s.base}-mobile-src.png`} />
+                <img
+                  src={`${s.base}-1600.webp`}
+                  srcSet={`${s.base}-768.webp 768w, ${s.base}-1600.webp 1600w`}
+                  sizes="100vw"
+                  alt={s.alt}
+                  className="absolute inset-0 h-full w-full object-cover md:object-cover"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  decoding={index === 0 ? "sync" : "async"}
+                  {...(index === 0 ? { fetchPriority: "high" as const } : {})}
+                />
+              </picture>
             </div>
           ))}
         </div>
