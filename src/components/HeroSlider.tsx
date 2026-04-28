@@ -117,7 +117,7 @@ export function HeroSlider() {
         <ChevronRight className="size-5 transition-transform duration-300 group-hover:translate-x-0.5 md:size-6" strokeWidth={1.5} />
       </button>
 
-      <div className="absolute bottom-6 left-1/2 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap justify-center gap-2 md:bottom-8">
+      <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-nowrap items-center justify-center gap-1.5 md:bottom-8 md:gap-2">
         {slides.map((s, i) => (
           <button
             key={s.base}
@@ -127,8 +127,8 @@ export function HeroSlider() {
               autoplay.current.reset();
               emblaApi?.scrollTo(i);
             }}
-            className={`h-1 rounded-full transition-all ${
-              i === selected ? "w-8 bg-accent" : "w-5 bg-white/40 hover:bg-white/70"
+            className={`h-1 shrink-0 rounded-full transition-all ${
+              i === selected ? "w-6 bg-accent md:w-8" : "w-3 bg-white/40 hover:bg-white/70 md:w-5"
             }`}
           />
         ))}
