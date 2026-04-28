@@ -45,12 +45,8 @@ export function LayeredSectionA() {
     <div className="grid w-full gap-8 md:grid-cols-[1.1fr_1fr] md:gap-10">
       {/* Image with numbered markers */}
       <div className="relative mx-auto aspect-square w-full max-w-[520px]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-[8%] rounded-full bg-accent/10 blur-3xl"
-        />
         <img
-          src="/images/wall-section-v8.png"
+          src="/images/wall-section-v8-transparent.png"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, стальная арматура, ПСБ-С35"
           className="relative h-full w-full object-contain"
         />
