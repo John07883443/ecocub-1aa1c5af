@@ -77,7 +77,11 @@ export function HeroSlider() {
           {slides.map((s, index) => (
             <div key={s.base} className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary">
               <picture>
-                <source media="(max-width: 767px)" srcSet={`${s.base}-mobile-src.png`} />
+                <source
+                  media="(max-width: 767px)"
+                  srcSet={`${s.base}-mobile-768.webp 768w, ${s.base}-mobile-1080.webp 1080w`}
+                  sizes="100vw"
+                />
                 <img
                   src={`${s.base}-1600.webp`}
                   srcSet={`${s.base}-768.webp 768w, ${s.base}-1600.webp 1600w`}
