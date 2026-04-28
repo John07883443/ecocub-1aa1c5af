@@ -15,8 +15,9 @@ export function BrandSpecs() {
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
             Designed and engineered by EcoCub
           </p>
-          <h2 className="mt-6 text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">
-            Дом, спроектированный<br />как техника
+          <h2 className="mt-6 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.875rem,7vw,4.5rem)]">
+            <span className="block">Дом, спроектированный</span>
+            <span className="block">как техника</span>
           </h2>
           <p className="mx-auto mt-8 max-w-2xl text-base text-white/70 md:text-lg">
             Hi-tech архитектура. Заводская готовность. Сборка на участке за 5 дней.
@@ -26,12 +27,19 @@ export function BrandSpecs() {
 
         <div className="mt-20 grid grid-cols-2 gap-px overflow-hidden rounded-sm bg-white/10 md:grid-cols-4">
           {specs.map((s) => (
-            <div key={s.label} className="flex flex-col items-center bg-primary px-6 py-10 text-center md:py-14">
-              <p className="text-4xl font-bold tracking-tight text-white md:text-6xl">
-                {s.value}
-                {s.unit && <span className="ml-1 text-2xl text-white/60 md:text-3xl">{s.unit}</span>}
+            <div
+              key={s.label}
+              className="flex min-w-0 flex-col items-center bg-primary px-4 py-10 text-center md:px-6 md:py-14"
+            >
+              <p className="flex items-baseline justify-center whitespace-nowrap font-bold tracking-tight text-white [font-size:clamp(1.75rem,4.5vw,3.75rem)]">
+                <span>{s.value}</span>
+                {s.unit && (
+                  <span className="ml-1 text-white/60 [font-size:clamp(1rem,2.2vw,1.875rem)]">
+                    {s.unit}
+                  </span>
+                )}
               </p>
-              <p className="mt-4 text-xs uppercase tracking-wider text-white/60 md:text-sm">
+              <p className="mt-4 text-[11px] uppercase tracking-wider text-white/60 md:text-sm">
                 {s.label}
               </p>
             </div>
