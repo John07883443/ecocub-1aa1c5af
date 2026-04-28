@@ -46,7 +46,7 @@ export function LayeredSectionA() {
       {/* Image with numbered markers */}
       <div className="relative mx-auto aspect-square w-full max-w-[520px]">
         <img
-          src="/images/wall-section-v8-transparent.png"
+          src="/images/wall-section-v9-transparent.png"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, стальная арматура, ПСБ-С35"
           className="relative h-full w-full object-contain"
         />
