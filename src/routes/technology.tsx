@@ -74,7 +74,7 @@ function TechnologyPage() {
 
           {/* Variant A */}
           <div className="mb-16">
-            <div className="rounded-sm bg-primary p-6 text-primary-foreground md:p-10">
+            <div className="rounded-sm p-6 text-primary-foreground md:p-10" style={{ backgroundColor: "#222222" }}>
               <LayeredSectionA />
             </div>
           </div>
