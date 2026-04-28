@@ -96,7 +96,7 @@ function HomePage() {
       <section className="relative min-h-[100svh] w-full overflow-hidden bg-primary text-primary-foreground">
         <HeroSlider />
         {/* Bottom panel — заголовок и CTA в нижней зоне, дом сверху не перекрыт */}
-        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-12 pt-24 md:pb-16 md:pt-32">
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/60 to-transparent pb-20 pt-24 md:pb-16 md:pt-32">
           <Container>
             <div className="grid items-end gap-8 lg:grid-cols-12">
               <h1 className="lg:col-span-7 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.75rem,5.5vw,3.75rem)]">
