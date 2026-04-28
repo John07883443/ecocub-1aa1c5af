@@ -5,9 +5,6 @@ type Layer = {
   num: string;
   title: string;
   desc: string;
-  /** Marker position on the image, in % of container */
-  x: number;
-  y: number;
 };
 
 const layers: Layer[] = [
@@ -16,71 +13,34 @@ const layers: Layer[] = [
     num: "01",
     title: "Бетон М400",
     desc: "Прочность на сжатие 400 кг/см². В 12 раз прочнее газоблока, без усадки.",
-    x: 78,
-    y: 55,
   },
   {
     id: "steel",
     num: "02",
     title: "Оцинкованная сталь",
     desc: "Несущий каркас, не подверженный коррозии. Срок службы более 120 лет.",
-    x: 52,
-    y: 55,
   },
   {
     id: "foam",
     num: "03",
     title: "Пенополистирол ПСБ-С35",
     desc: "100 мм. Сопротивление теплопередаче 4,1 (м²·°C)/Вт — выше нормы СНиП для Москвы.",
-    x: 36,
-    y: 45,
   },
 ];
 
-/** Variant A — Specification list beside the image. Markers on the image, full text in a side list. */
+/** Variant A — Specification list beside the image. */
 export function LayeredSectionA() {
   const [active, setActive] = useState<string | null>(null);
 
   return (
     <div className="grid w-full gap-8 md:grid-cols-[1.1fr_1fr] md:gap-10">
-      {/* Image with numbered markers */}
+      {/* Image — clean, no markers */}
       <div className="relative mx-auto aspect-square w-full max-w-[520px]">
         <img
-          src="/images/wall-section-v9-transparent.png"
+          src="/images/wall-section-v10.png"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, стальная арматура, ПСБ-С35"
           className="relative h-full w-full object-contain"
         />
-
-        {layers.map((l) => {
-          const isActive = active === l.id;
-          return (
-            <button
-              key={l.id}
-              type="button"
-              onMouseEnter={() => setActive(l.id)}
-              onMouseLeave={() => setActive(null)}
-              onFocus={() => setActive(l.id)}
-              onBlur={() => setActive(null)}
-              style={{ left: `${l.x}%`, top: `${l.y}%` }}
-              className="absolute z-10 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none"
-              aria-label={l.title}
-            >
-              <span
-                aria-hidden
-                className="absolute inset-0 animate-ping rounded-full bg-accent/30 [animation-duration:2.4s]"
-              />
-              <span
-                className={`relative flex size-8 items-center justify-center rounded-full border text-[11px] font-bold transition-all duration-300 ${
-                  isActive
-                    ? "scale-110 border-accent bg-accent text-accent-foreground"
-                    : "border-accent/60 bg-primary/80 text-accent backdrop-blur-sm"
-                }`}
-              >
-                {l.num}
-              </span>
-            </button>
-          );
-        })}
       </div>
 
       {/* Spec list */}
