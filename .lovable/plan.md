@@ -1,31 +1,56 @@
-## Что меняем
+## Что делаем
 
-В `src/components/Header.tsx` (строки 28–34) добавить интерактивную 3D-анимацию логотипу EcoCub.
+Заменить альтернативный hover-эффект (3D-вращение + свечение) на плавную "дыхательную" левитацию **только куба** — надпись ECO CUB остаётся неподвижной. Эффект работает постоянно (не только на hover) — спокойный, бесконечный, ~3.5с цикл.
 
-### Поведение
+## Зачем
 
-- **При наведении** — куб плавно поворачивается на 360° вокруг вертикальной оси Y (полный оборот за 700 мс, easing `ease-out`), одновременно появляется мягкое свечение акцентным цветом (warm beige) под логотипом через `drop-shadow`.
-- **3D-эффект** — родительский `<Link>` получает `perspective: 800px`, изображение — `transform-style: preserve-3d` для объёмности вращения.
-- **Доступность** — для пользователей с включённой настройкой "уменьшить движение" (`prefers-reduced-motion`) анимация и transform отключаются (`motion-reduce`).
+Цельный `<img src=".svg">` нельзя анимировать по частям. Поэтому переводим логотип на inline-SVG React-компонент, где куб и текст — отдельные `<g>`-группы, и анимируем только группу куба через `transform: translateY` с keyframes.
 
-### Технические детали
+## Реализация
 
-Заменить разметку логотипа на:
+### 1) Новый компонент `src/components/LogoMark.tsx`
 
-```tsx
-<Link to="/" className="group flex items-center gap-2 [perspective:800px]">
-  <img
-    src={isDark ? logoWhite : logoBlack}
-    alt="EcoCub"
-    className="h-16 w-auto md:h-18 origin-center transition-all duration-700 ease-out [transform-style:preserve-3d] group-hover:[transform:rotateY(360deg)] group-hover:[filter:drop-shadow(0_0_14px_color-mix(in_oklab,var(--accent)_55%,transparent))] motion-reduce:transition-none motion-reduce:group-hover:[transform:none] motion-reduce:group-hover:[filter:none]"
-  />
-</Link>
+Inline-SVG логотипа с двумя группами:
+- `<g class="ecocub-logo-cube">` — три полигона куба (две тёмные/белые грани + бежевый фронтальный ромб).
+- `<g>` — буквы ECO CUB и фирменная бежевая точка-квадрат (без анимации).
+
+Цвет переключается через проп `variant: "light" | "dark"` (передаём `ink` и `accent` как `fill` напрямую — SVG-классы из исходника не нужны). Поддерживается `motion-reduce` (отключение анимации).
+
+### 2) Keyframes в `src/styles.css`
+
+Добавить:
+
+```css
+@keyframes ecocub-cube-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
+}
+
+.ecocub-logo-cube {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: ecocub-cube-breathe 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecocub-logo-cube { animation: none; }
+}
 ```
 
-Свечение реализовано через `color-mix(in oklab, var(--accent) 55%, transparent)`, потому что accent в проекте задан в `oklch` (а не HSL) — это корректный способ применить токен в `drop-shadow`.
+Амплитуда `-14px` указана в координатах `viewBox` (850×850), что при отображении на ~64–72px высоты даёт смещение ~1px — деликатное "дыхание", без скачков.
+
+### 3) `src/components/Header.tsx`
+
+- Удалить импорты `logoBlack` / `logoWhite`.
+- Заменить `<img>` в десктопной шапке на `<LogoMark variant={isDark ? "dark" : "light"} className="h-16 w-auto md:h-18" />`.
+- Убрать остатки прошлого hover-эффекта (`[perspective]`, `group-hover:[transform]`, `drop-shadow` на изображении).
+- В мобильном `Sheet`-меню тоже заменить `<img src={logoBlack}>` на `<LogoMark variant="light" className="h-8 w-auto" />` для консистентности.
 
 ## Затронутые файлы
 
-- `src/components/Header.tsx` — только разметка логотипа в десктопной шапке (мобильное меню `Sheet` не трогаем, чтобы не отвлекать при открытом меню).
+- `src/components/LogoMark.tsx` — новый.
+- `src/components/Header.tsx` — заменить разметку логотипа в двух местах, убрать импорты SVG.
+- `src/styles.css` — добавить keyframes и класс `.ecocub-logo-cube`.
 
-Никаких новых ассетов, зависимостей или изменений в `styles.css` не требуется — всё через arbitrary-классы Tailwind.
+Старые файлы `src/assets/logo-white.svg` и `src/assets/logo-black.svg` оставляем как есть — могут пригодиться для og:image / favicon.
