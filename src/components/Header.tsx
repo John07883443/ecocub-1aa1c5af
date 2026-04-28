@@ -75,7 +75,7 @@ export function Header({ variant = "light" }: HeaderProps) {
           <SheetContent side="right" className="w-[85vw] max-w-sm bg-background">
             <SheetTitle className="sr-only">Навигация</SheetTitle>
             <div className="mb-8 mt-2">
-              <img src={logoBlack} alt="EcoCub" className="h-8 w-auto" />
+              <LogoMark variant="light" className="h-8 w-auto" />
             </div>
             <nav className="flex flex-col gap-1">
               {mainNav.map((item) => (
