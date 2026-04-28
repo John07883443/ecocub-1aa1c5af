@@ -15,7 +15,7 @@ export function BrandSpecs() {
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
             Designed and engineered by EcoCub
           </p>
-          <h2 className="mt-6 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.875rem,7vw,4.5rem)]">
+          <h2 className="mt-6 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.5rem,5.2vw,4.5rem)]">
             <span className="block">Дом, спроектированный</span>
             <span className="block">как техника</span>
           </h2>
