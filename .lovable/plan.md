@@ -1,56 +1,30 @@
-## Что делаем
+## Что меняем
 
-Заменить альтернативный hover-эффект (3D-вращение + свечение) на плавную "дыхательную" левитацию **только куба** — надпись ECO CUB остаётся неподвижной. Эффект работает постоянно (не только на hover) — спокойный, бесконечный, ~3.5с цикл.
+В hero-блоке `src/routes/index.tsx` (строки 102–106) убрать перенос внутри слова "Технологичные" и одновременно гарантировать, что заголовок не налезает на CTA-кнопки и не вылезает за пределы контейнера ни на каком разрешении.
 
-## Зачем
+### Решение
 
-Цельный `<img src=".svg">` нельзя анимировать по частям. Поэтому переводим логотип на inline-SVG React-компонент, где куб и текст — отдельные `<g>`-группы, и анимируем только группу куба через `transform: translateY` с keyframes.
+1. **Запрет переноса внутри слова.** Каждой строке заголовка задаём `whitespace-nowrap` — слова "Капитальные." и "Технологичные." не разрываются.
+2. **Управляемый перенос между строками.** Вместо `<br/>` используем `<span className="block">` для каждой строки.
+3. **Чтобы не налезало на соседей** — два слоя защиты:
+   - На блочных span'ах добавляем `max-w-full` — длинная строка не выйдет за свою колонку.
+   - При переполнении масштабируем сам шрифт: класс `[font-size:clamp(1.75rem,5.5vw,3.75rem)]` плавно подгоняет размер под доступную ширину. Это автоматически решает риск налезания при любых промежуточных разрешениях между breakpoint'ами.
+4. **Структура grid'а** уже корректная: `lg:col-span-7` для `<h1>` и `lg:col-span-5` для текста+CTA — они в разных колонках, не пересекаются. До `lg` (1024px) раскладка одноколоночная, заголовок и CTA идут друг под другом — налезание невозможно.
+5. **Контейнер hero** имеет `overflow-hidden`, так что даже при крайних случаях не будет горизонтального скролла страницы.
+6. Удаляем теперь не нужные `break-words hyphens-auto`.
 
-## Реализация
+### Итоговый класс h1
 
-### 1) Новый компонент `src/components/LogoMark.tsx`
-
-Inline-SVG логотипа с двумя группами:
-- `<g class="ecocub-logo-cube">` — три полигона куба (две тёмные/белые грани + бежевый фронтальный ромб).
-- `<g>` — буквы ECO CUB и фирменная бежевая точка-квадрат (без анимации).
-
-Цвет переключается через проп `variant: "light" | "dark"` (передаём `ink` и `accent` как `fill` напрямую — SVG-классы из исходника не нужны). Поддерживается `motion-reduce` (отключение анимации).
-
-### 2) Keyframes в `src/styles.css`
-
-Добавить:
-
-```css
-@keyframes ecocub-cube-breathe {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-14px); }
-}
-
-.ecocub-logo-cube {
-  transform-origin: center;
-  transform-box: fill-box;
-  animation: ecocub-cube-breathe 3.6s ease-in-out infinite;
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ecocub-logo-cube { animation: none; }
-}
+```
+lg:col-span-7 font-bold uppercase leading-[1.05] tracking-tight
+[font-size:clamp(1.75rem,5.5vw,3.75rem)]
 ```
 
-Амплитуда `-14px` указана в координатах `viewBox` (850×850), что при отображении на ~64–72px высоты даёт смещение ~1px — деликатное "дыхание", без скачков.
+И каждая строка:
+```
+<span className="block max-w-full whitespace-nowrap">…</span>
+```
 
-### 3) `src/components/Header.tsx`
+### Затронутый файл
 
-- Удалить импорты `logoBlack` / `logoWhite`.
-- Заменить `<img>` в десктопной шапке на `<LogoMark variant={isDark ? "dark" : "light"} className="h-16 w-auto md:h-18" />`.
-- Убрать остатки прошлого hover-эффекта (`[perspective]`, `group-hover:[transform]`, `drop-shadow` на изображении).
-- В мобильном `Sheet`-меню тоже заменить `<img src={logoBlack}>` на `<LogoMark variant="light" className="h-8 w-auto" />` для консистентности.
-
-## Затронутые файлы
-
-- `src/components/LogoMark.tsx` — новый.
-- `src/components/Header.tsx` — заменить разметку логотипа в двух местах, убрать импорты SVG.
-- `src/styles.css` — добавить keyframes и класс `.ecocub-logo-cube`.
-
-Старые файлы `src/assets/logo-white.svg` и `src/assets/logo-black.svg` оставляем как есть — могут пригодиться для og:image / favicon.
+- `src/routes/index.tsx` — только разметка `<h1>` в hero (5 строк), без изменений в стилях/компонентах.
