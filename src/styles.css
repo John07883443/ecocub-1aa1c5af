@@ -162,7 +162,7 @@
 .ecocub-logo-cube {
   transform-origin: center;
   transform-box: fill-box;
-  animation: ecocub-cube-breathe 3.6s ease-in-out infinite;
+  animation: ecocub-cube-breathe 2s ease-in-out infinite;
   will-change: transform;
 }
 
