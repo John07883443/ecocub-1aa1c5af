@@ -39,7 +39,7 @@ export function BrandSpecs() {
                   </span>
                 )}
               </p>
-              <p className="mt-4 text-[11px] uppercase tracking-wider text-white/60 md:text-sm">
+              <p className="mt-4 hyphens-auto break-words text-[10px] uppercase tracking-wider text-white/60 md:text-xs lg:text-sm">
                 {s.label}
               </p>
             </div>
