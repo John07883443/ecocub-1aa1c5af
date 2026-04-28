@@ -24,11 +24,10 @@ export function Header({ variant = "light" }: HeaderProps) {
       }
     >
       <Container className="flex h-20 items-center justify-between md:h-28">
-        <Link to="/" className="group flex items-center gap-2 [perspective:800px]">
-          <img
-            src={isDark ? logoWhite : logoBlack}
-            alt="EcoCub"
-            className="h-16 w-auto md:h-18 origin-center transition-all duration-700 ease-out [transform-style:preserve-3d] group-hover:[transform:rotateY(360deg)] group-hover:[filter:drop-shadow(0_0_14px_color-mix(in_oklab,var(--accent)_55%,transparent))] motion-reduce:transition-none motion-reduce:group-hover:[transform:none] motion-reduce:group-hover:[filter:none]"
+        <Link to="/" className="flex items-center gap-2">
+          <LogoMark
+            variant={isDark ? "dark" : "light"}
+            className="h-16 w-auto md:h-18"
           />
         </Link>
 
