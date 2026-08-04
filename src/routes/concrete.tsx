@@ -9,9 +9,9 @@ import { CheckCircle2 } from "lucide-react";
 export const Route = createFileRoute("/concrete")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://eco-cub.ru/concrete" },
       {
-        title:
-          "Бетонные модульные дома от производителя в Подмосковье | EcoCub",
+        title: "Бетонные модульные дома от производителя в Подмосковье | EcoCub",
       },
       {
         name: "description",
@@ -29,13 +29,12 @@ export const Route = createFileRoute("/concrete")({
       },
       { property: "og:image", content: "/images/section-concrete.png" },
     ],
+    links: [{ rel: "canonical", href: "https://eco-cub.ru/concrete" }],
   }),
   loader: async () => {
     const { data, error } = await supabase
       .from("projects")
-      .select(
-        "slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image",
-      )
+      .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
       .eq("series", "concrete")
       .eq("published", true)
       .order("display_order", { ascending: true });
@@ -44,9 +43,7 @@ export const Route = createFileRoute("/concrete")({
   },
   errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
-      <Container className="py-32 text-center text-destructive">
-        {error.message}
-      </Container>
+      <Container className="py-32 text-center text-destructive">{error.message}</Container>
     </PageLayout>
   ),
   notFoundComponent: () => (
@@ -83,11 +80,13 @@ function ConcretePage() {
             Серия Concrete
           </p>
           <h1 className="mt-3 max-w-4xl text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-6xl">
-            Капитальный дом<br />из бетона за 90 дней
+            Капитальный дом
+            <br />
+            из бетона за 90 дней
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-white/85">
-            Hi-tech модули из бетона М400. Заводское качество, сборка на участке за 5 дней,
-            гарантия 50 лет. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
+            Hi-tech модули из бетона М400. Заводское качество, сборка на участке за 5 дней, гарантия
+            50 лет. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
           </p>
         </Container>
       </section>
@@ -96,14 +95,11 @@ function ConcretePage() {
         <Container>
           <div className="grid gap-x-12 gap-y-8 lg:grid-cols-2">
             <div>
-              <h2 className="text-2xl font-bold uppercase md:text-3xl">
-                Почему бетон
-              </h2>
+              <h2 className="text-2xl font-bold uppercase md:text-3xl">Почему бетон</h2>
               <p className="mt-4 text-muted-foreground">
-                Бетонная конструкция модулей даёт ключевое преимущество перед
-                каркасом — долговечность, звукоизоляция и устойчивость к
-                деформациям. Каждый модуль собирается на заводе, привозится на
-                участок готовым и монтируется за 1 день.
+                Бетонная конструкция модулей даёт ключевое преимущество перед каркасом —
+                долговечность, звукоизоляция и устойчивость к деформациям. Каждый модуль собирается
+                на заводе, привозится на участок готовым и монтируется за 1 день.
               </p>
             </div>
             <ul className="grid gap-3">
@@ -120,9 +116,7 @@ function ConcretePage() {
 
       <Section className="bg-secondary">
         <Container>
-          <h2 className="mb-10 text-2xl font-bold uppercase md:text-3xl">
-            Проекты бетонных домов
-          </h2>
+          <h2 className="mb-10 text-2xl font-bold uppercase md:text-3xl">Проекты бетонных домов</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((p: ProjectCardData) => (
               <ProjectCard key={p.slug} project={p} />
@@ -134,9 +128,7 @@ function ConcretePage() {
       <Section className="bg-primary text-primary-foreground">
         <Container>
           <div className="mx-auto max-w-2xl">
-            <h2 className="text-3xl font-bold uppercase md:text-4xl">
-              Подобрать бетонный дом
-            </h2>
+            <h2 className="text-3xl font-bold uppercase md:text-4xl">Подобрать бетонный дом</h2>
             <p className="mt-4 text-white/70">
               Расскажем подробнее, подберём проект под ваш участок и бюджет.
             </p>

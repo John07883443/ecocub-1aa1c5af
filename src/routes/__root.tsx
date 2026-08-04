@@ -30,28 +30,32 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "EcoCub — современные дома под ключ в Подмосковье" },
+      { title: "EcoCub — современные дома из бетона под ключ в Подмосковье" },
       {
         name: "description",
         content:
-          "Производство модульных бетонных и каркасных домов в Московской области. Виллы Hi-Tech под ключ за 90 дней. Цены, проекты, портфолио.",
+          "Производство монолитно-модульных домов из бетона в Московской области. Капитальный дом под ключ за 90 дней, гарантия 50 лет. Цены, проекты, портфолио.",
       },
       { name: "author", content: "EcoCub" },
-      { property: "og:title", content: "EcoCub — современные дома под ключ в Подмосковье" },
+      { property: "og:site_name", content: "EcoCub" },
+      {
+        property: "og:title",
+        content: "EcoCub — современные дома из бетона под ключ в Подмосковье",
+      },
       {
         property: "og:description",
         content:
-          "Модульные бетонные дома, каркасные Scandi и виллы Hi-Tech от производителя в Московской области.",
+          "Монолитно-модульные дома из бетона от производителя в Московской области. Капитальный дом за 90 дней, гарантия 50 лет.",
       },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "ru_RU" },
+      { property: "og:image", content: "https://eco-cub.ru/images/hero-villa-1600.webp" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "EcoCub — современные дома под ключ в Подмосковье" },
-      { name: "description", content: "Site Migrator clones websites from platforms like Tilda to a modern React + TanStack Start framework." },
-      { property: "og:description", content: "Site Migrator clones websites from platforms like Tilda to a modern React + TanStack Start framework." },
-      { name: "twitter:description", content: "Site Migrator clones websites from platforms like Tilda to a modern React + TanStack Start framework." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/514aca7c-fe6f-47ac-b412-62472ce3ed88/id-preview-1854803b--11a56c57-baa4-4049-9002-d7a0650d363e.lovable.app-1776869666158.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/514aca7c-fe6f-47ac-b412-62472ce3ed88/id-preview-1854803b--11a56c57-baa4-4049-9002-d7a0650d363e.lovable.app-1776869666158.png" },
+      {
+        name: "twitter:title",
+        content: "EcoCub — современные дома из бетона под ключ в Подмосковье",
+      },
+      { name: "twitter:image", content: "https://eco-cub.ru/images/hero-villa-1600.webp" },
     ],
     links: [
       {
@@ -78,16 +82,49 @@ export const Route = createRootRoute({
   notFoundComponent: NotFoundComponent,
 });
 
+const METRIKA_ID = 102678553;
+
+const metrikaSnippet = `
+(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
+ym(${METRIKA_ID},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
+`;
+
+const orgJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "HomeAndConstructionBusiness",
+  name: "EcoCub",
+  url: "https://eco-cub.ru",
+  logo: "https://eco-cub.ru/favicon.ico",
+  telephone: "+7 980 875-86-43",
+  email: "info@eco-cub.ru",
+  areaServed: "Москва и Московская область",
+  description:
+    "Производство монолитно-модульных домов из бетона под ключ. Капитальный дом за 90 дней, гарантия 50 лет.",
+});
+
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
       <head>
         <HeadContent />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: orgJsonLd }} />
       </head>
       <body>
         {children}
         <Toaster richColors position="top-right" />
         <Scripts />
+        <script dangerouslySetInnerHTML={{ __html: metrikaSnippet }} />
+        <noscript>
+          <div>
+            <img
+              src={`https://mc.yandex.ru/watch/${METRIKA_ID}`}
+              style={{ position: "absolute", left: "-9999px" }}
+              alt=""
+            />
+          </div>
+        </noscript>
       </body>
     </html>
   );

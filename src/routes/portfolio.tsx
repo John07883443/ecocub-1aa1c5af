@@ -7,6 +7,7 @@ import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
 export const Route = createFileRoute("/portfolio")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://eco-cub.ru/portfolio" },
       { title: "Портфолио проектов EcoCub — модульные бетонные дома под ключ" },
       {
         name: "description",
@@ -19,17 +20,15 @@ export const Route = createFileRoute("/portfolio")({
       },
       {
         property: "og:description",
-        content:
-          "Каталог проектов модульных и каркасных домов EcoCub. От 36 до 165 м².",
+        content: "Каталог проектов монолитно-модульных домов из бетона EcoCub. От 36 до 165 м².",
       },
     ],
+    links: [{ rel: "canonical", href: "https://eco-cub.ru/portfolio" }],
   }),
   loader: async () => {
     const { data, error } = await supabase
       .from("projects")
-      .select(
-        "slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image",
-      )
+      .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
       .eq("published", true)
       .order("display_order", { ascending: true });
     if (error) throw error;
@@ -37,9 +36,7 @@ export const Route = createFileRoute("/portfolio")({
   },
   errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
-      <Container className="py-32 text-center text-destructive">
-        Ошибка: {error.message}
-      </Container>
+      <Container className="py-32 text-center text-destructive">Ошибка: {error.message}</Container>
     </PageLayout>
   ),
   notFoundComponent: () => (
@@ -57,16 +54,11 @@ function PortfolioPage() {
     <PageLayout>
       <Section className="border-b border-border">
         <Container>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            Каталог
-          </p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">
-            Портфолио проектов
-          </h1>
+          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Каталог</p>
+          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Портфолио проектов</h1>
           <p className="mt-6 max-w-2xl text-base text-muted-foreground">
-            Готовые проекты EcoCub — от компактного Weekend One на 36 м² до
-            флагманского SkyRiver на 165 м². Все дома можно адаптировать
-            под ваш участок и пожелания.
+            Готовые проекты EcoCub — от компактного Weekend One на 36 м² до флагманского SkyRiver на
+            165 м². Все дома можно адаптировать под ваш участок и пожелания.
           </p>
         </Container>
       </Section>

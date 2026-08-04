@@ -24,9 +24,10 @@ type Project = {
 
 const seriesLabel: Record<string, string> = {
   concrete: "Бетонный модуль",
-  scandi: "Каркас Eco Wood",
   villa: "Вилла Hi-Tech",
 };
+
+const absUrl = (u: string) => (u.startsWith("http") ? u : `https://eco-cub.ru${u}`);
 
 export const Route = createFileRoute("/projects/$slug")({
   loader: async ({ params }) => {
@@ -42,9 +43,7 @@ export const Route = createFileRoute("/projects/$slug")({
       project: {
         ...data,
         gallery: Array.isArray(data.gallery) ? (data.gallery as string[]) : [],
-        features: Array.isArray(data.features)
-          ? (data.features as string[])
-          : [],
+        features: Array.isArray(data.features) ? (data.features as string[]) : [],
       } as Project,
     };
   },
@@ -53,6 +52,7 @@ export const Route = createFileRoute("/projects/$slug")({
     if (!p) return {};
     return {
       meta: [
+        { property: "og:url", content: `https://eco-cub.ru/projects/${p.slug}` },
         {
           title: `${p.name} — ${seriesLabel[p.series] ?? "Проект"} EcoCub`,
         },
@@ -70,16 +70,38 @@ export const Route = createFileRoute("/projects/$slug")({
           property: "og:description",
           content: p.tagline ?? p.description ?? "",
         },
-        { property: "og:image", content: p.cover_image },
-        { name: "twitter:image", content: p.cover_image },
+        { property: "og:image", content: absUrl(p.cover_image) },
+        { name: "twitter:image", content: absUrl(p.cover_image) },
+      ],
+      links: [{ rel: "canonical", href: `https://eco-cub.ru/projects/${p.slug}` }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: p.name,
+            description: p.tagline ?? p.description ?? undefined,
+            image: absUrl(p.cover_image),
+            brand: { "@type": "Brand", name: "EcoCub" },
+            ...(p.price_from
+              ? {
+                  offers: {
+                    "@type": "Offer",
+                    price: p.price_from,
+                    priceCurrency: "RUB",
+                    availability: "https://schema.org/InStock",
+                  },
+                }
+              : {}),
+          }),
+        },
       ],
     };
   },
   errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
-      <Container className="py-32 text-center text-destructive">
-        Ошибка: {error.message}
-      </Container>
+      <Container className="py-32 text-center text-destructive">Ошибка: {error.message}</Container>
     </PageLayout>
   ),
   notFoundComponent: () => (
@@ -141,13 +163,9 @@ function ProjectPage() {
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
             {seriesLabel[project.series] ?? project.series}
           </p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">
-            {project.name}
-          </h1>
+          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">{project.name}</h1>
           {project.tagline && (
-            <p className="mt-4 max-w-2xl text-lg text-white/85">
-              {project.tagline}
-            </p>
+            <p className="mt-4 max-w-2xl text-lg text-white/85">{project.tagline}</p>
           )}
           {project.price_from != null && (
             <p className="mt-8 text-sm text-white/60">
@@ -165,9 +183,7 @@ function ProjectPage() {
         <Container>
           <div className="grid gap-12 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <h2 className="text-2xl font-bold uppercase md:text-3xl">
-                О проекте
-              </h2>
+              <h2 className="text-2xl font-bold uppercase md:text-3xl">О проекте</h2>
               {project.description && (
                 <p className="mt-6 whitespace-pre-line text-base leading-relaxed text-muted-foreground">
                   {project.description}
@@ -176,15 +192,10 @@ function ProjectPage() {
 
               {project.features.length > 0 && (
                 <>
-                  <h3 className="mt-12 text-lg font-semibold uppercase">
-                    Особенности
-                  </h3>
+                  <h3 className="mt-12 text-lg font-semibold uppercase">Особенности</h3>
                   <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                     {project.features.map((f: string) => (
-                      <li
-                        key={f}
-                        className="flex items-start gap-2 text-sm text-foreground/80"
-                      >
+                      <li key={f} className="flex items-start gap-2 text-sm text-foreground/80">
                         <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
                         {f}
                       </li>
@@ -221,15 +232,10 @@ function ProjectPage() {
       {project.gallery.length > 1 && (
         <Section className="border-t border-border bg-secondary">
           <Container>
-            <h2 className="mb-8 text-2xl font-bold uppercase md:text-3xl">
-              Галерея
-            </h2>
+            <h2 className="mb-8 text-2xl font-bold uppercase md:text-3xl">Галерея</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {project.gallery.map((src: string) => (
-                <div
-                  key={src}
-                  className="aspect-[4/3] overflow-hidden rounded-sm bg-muted"
-                >
+                <div key={src} className="aspect-[4/3] overflow-hidden rounded-sm bg-muted">
                   <img
                     src={src}
                     alt={project.name}

@@ -8,11 +8,12 @@ import { site } from "@/lib/site";
 export const Route = createFileRoute("/contacts")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://eco-cub.ru/contacts" },
       { title: "Контакты EcoCub — связаться с производителем домов" },
       {
         name: "description",
         content:
-          "Телефон, email, мессенджеры EcoCub. Производство модульных и каркасных домов в Московской области.",
+          "Телефон, email, мессенджеры EcoCub. Производство монолитно-модульных домов из бетона в Московской области.",
       },
       { property: "og:title", content: "Контакты EcoCub" },
       {
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/contacts")({
         content: "Свяжитесь с EcoCub — производителем современных домов в Подмосковье.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://eco-cub.ru/contacts" }],
   }),
   component: ContactsPage,
 });
@@ -29,15 +31,11 @@ function ContactsPage() {
     <PageLayout>
       <Section className="border-b border-border">
         <Container>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            Контакты
-          </p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">
-            Связаться с EcoCub
-          </h1>
+          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Контакты</p>
+          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Связаться с EcoCub</h1>
           <p className="mt-6 max-w-2xl text-base text-muted-foreground">
-            Ответим на любой вопрос о проектах, технологиях и условиях. Расчёт
-            стоимости — в течение часа.
+            Ответим на любой вопрос о проектах, технологиях и условиях. Расчёт стоимости — в течение
+            часа.
           </p>
         </Container>
       </Section>
@@ -53,10 +51,7 @@ function ContactsPage() {
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">
                       Телефон
                     </p>
-                    <a
-                      href={site.phoneHref}
-                      className="text-xl font-semibold hover:text-accent"
-                    >
+                    <a href={site.phoneHref} className="text-xl font-semibold hover:text-accent">
                       {site.phone}
                     </a>
                   </div>
@@ -64,9 +59,7 @@ function ContactsPage() {
                 <li className="flex gap-4">
                   <Mail className="mt-1 size-5 shrink-0 text-accent" />
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Email
-                    </p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Email</p>
                     <a
                       href={`mailto:${site.email}`}
                       className="block text-base font-medium hover:text-accent"

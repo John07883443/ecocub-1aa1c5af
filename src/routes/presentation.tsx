@@ -7,6 +7,7 @@ import { ContactForm } from "@/components/ContactForm";
 export const Route = createFileRoute("/presentation")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://eco-cub.ru/presentation" },
       { title: "Скачать презентацию EcoCub — каталог проектов и цены" },
       {
         name: "description",
@@ -16,10 +17,10 @@ export const Route = createFileRoute("/presentation")({
       { property: "og:title", content: "Презентация EcoCub" },
       {
         property: "og:description",
-        content:
-          "Полный каталог проектов, технологий и цен EcoCub в одном PDF.",
+        content: "Полный каталог проектов, технологий и цен EcoCub в одном PDF.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://eco-cub.ru/presentation" }],
   }),
   component: PresentationPage,
 });
@@ -32,12 +33,10 @@ function PresentationPage() {
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
             PDF · Каталог
           </p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">
-            Презентация EcoCub
-          </h1>
+          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Презентация EcoCub</h1>
           <p className="mt-6 max-w-2xl text-base text-muted-foreground">
-            Подробный PDF с проектами, технологиями, материалами и
-            ценообразованием. Пришлём на ваш email сразу после заявки.
+            Подробный PDF с проектами, технологиями, материалами и ценообразованием. Пришлём на ваш
+            email сразу после заявки.
           </p>
         </Container>
       </Section>
@@ -46,12 +45,9 @@ function PresentationPage() {
         <Container>
           <div className="mx-auto max-w-2xl rounded-sm border border-border bg-secondary p-6 md:p-10">
             <Download className="size-10 text-accent" />
-            <h2 className="mt-4 text-2xl font-bold uppercase md:text-3xl">
-              Получить презентацию
-            </h2>
+            <h2 className="mt-4 text-2xl font-bold uppercase md:text-3xl">Получить презентацию</h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Заполните форму — отправим презентацию на email и WhatsApp в
-              течение нескольких минут.
+              Заполните форму — отправим презентацию на email и WhatsApp в течение нескольких минут.
             </p>
             <div className="mt-6">
               <ContactForm
