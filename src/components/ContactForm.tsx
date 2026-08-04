@@ -24,9 +24,7 @@ const schema = z.object({
     .min(5, "Введите телефон")
     .max(30)
     .regex(/^[+0-9\s\-()]+$/, "Неверный формат"),
-  email: z
-    .union([z.email("Неверный email").max(200), z.literal("")])
-    .optional(),
+  email: z.union([z.email("Неверный email").max(200), z.literal("")]).optional(),
   message: z.string().trim().max(2000).optional(),
   consent: z.literal(true, { error: "Нужно согласие" }),
 });
@@ -80,11 +78,27 @@ export function ContactForm({
         message: values.message?.trim() || null,
         project_slug: projectSlug ?? null,
         source_page:
-          sourcePage ??
-          (typeof window !== "undefined" ? window.location.pathname : null),
+          sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : null),
         status: "new",
       });
       if (error) throw error;
+
+      // Мгновенное уведомление в Telegram (сбой уведомления не блокирует форму)
+      void fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          formType,
+          name: values.name.trim(),
+          phone: values.phone.trim(),
+          email: values.email?.trim() || undefined,
+          message: values.message?.trim() || undefined,
+          projectSlug,
+          sourcePage:
+            sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : undefined),
+        }),
+      }).catch(() => {});
+
       toast.success("Заявка отправлена!", {
         description: "Мы свяжемся с вами в ближайшее время.",
       });
@@ -103,26 +117,16 @@ export function ContactForm({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className={className}
-        noValidate
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className={className} noValidate>
         <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={isDark ? "text-white" : ""}>
-                  Имя
-                </FormLabel>
+                <FormLabel className={isDark ? "text-white" : ""}>Имя</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="Как к вам обращаться"
-                    className={inputCls}
-                    {...field}
-                  />
+                  <Input placeholder="Как к вам обращаться" className={inputCls} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,9 +137,7 @@ export function ContactForm({
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={isDark ? "text-white" : ""}>
-                  Телефон
-                </FormLabel>
+                <FormLabel className={isDark ? "text-white" : ""}>Телефон</FormLabel>
                 <FormControl>
                   <Input
                     type="tel"
@@ -157,9 +159,7 @@ export function ContactForm({
             name="email"
             render={({ field }) => (
               <FormItem className="mt-4">
-                <FormLabel className={isDark ? "text-white" : ""}>
-                  Email (необязательно)
-                </FormLabel>
+                <FormLabel className={isDark ? "text-white" : ""}>Email (необязательно)</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -180,9 +180,7 @@ export function ContactForm({
             name="message"
             render={({ field }) => (
               <FormItem className="mt-4">
-                <FormLabel className={isDark ? "text-white" : ""}>
-                  Комментарий
-                </FormLabel>
+                <FormLabel className={isDark ? "text-white" : ""}>Комментарий</FormLabel>
                 <FormControl>
                   <Textarea
                     rows={4}
@@ -210,11 +208,7 @@ export function ContactForm({
                   onChange={(e) => field.onChange(e.target.checked)}
                 />
                 <span
-                  className={
-                    isDark
-                      ? "text-xs text-white/70"
-                      : "text-xs text-muted-foreground"
-                  }
+                  className={isDark ? "text-xs text-white/70" : "text-xs text-muted-foreground"}
                 >
                   Согласен на обработку персональных данных
                 </span>

@@ -14,7 +14,6 @@ export type ProjectCardData = {
 
 const seriesLabel: Record<string, string> = {
   concrete: "Бетонный модуль",
-  scandi: "Каркас Eco Wood",
   villa: "Вилла Hi-Tech",
 };
 
@@ -39,9 +38,7 @@ export function ProjectCard({ project }: { project: ProjectCardData }) {
         </p>
         <h3 className="mt-2 text-xl font-semibold">{project.name}</h3>
         {project.tagline && (
-          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-            {project.tagline}
-          </p>
+          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{project.tagline}</p>
         )}
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
           {project.area_m2 != null && (

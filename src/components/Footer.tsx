@@ -12,8 +12,8 @@ export function Footer() {
           <div>
             <img src={logoWhite} alt="EcoCub" className="mb-5 h-9 w-auto" />
             <p className="text-sm leading-relaxed text-primary-foreground/70">
-              Производство и строительство современных модульных домов из бетона
-              и каркасных домов в Московской области.
+              Производство и строительство современных монолитно-модульных домов из бетона в
+              Московской области.
             </p>
           </div>
 

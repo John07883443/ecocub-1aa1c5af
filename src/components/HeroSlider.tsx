@@ -11,7 +11,7 @@ type Slide = {
 const slides: Slide[] = [
   {
     base: "/images/hero-villa",
-    alt: "Современная вилла EcoCub с деревянной отделкой и террасой на закате",
+    alt: "Современная вилла EcoCub из бетонных модулей с террасой на закате",
   },
   {
     base: "/images/hero-villa-2",
@@ -43,9 +43,7 @@ export function HeroSlider() {
   const autoplay = useRef(
     Autoplay({ delay: 5500, stopOnInteraction: false, stopOnMouseEnter: false }),
   );
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" }, [
-    autoplay.current,
-  ]);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" }, [autoplay.current]);
   const [selected, setSelected] = useState(0);
 
   useEffect(() => {
@@ -75,7 +73,10 @@ export function HeroSlider() {
       <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
         <div className="flex h-full">
           {slides.map((s, index) => (
-            <div key={s.base} className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary">
+            <div
+              key={s.base}
+              className="relative h-full min-w-0 flex-[0_0_100%] overflow-hidden bg-primary"
+            >
               <picture>
                 <source
                   media="(max-width: 767px)"
