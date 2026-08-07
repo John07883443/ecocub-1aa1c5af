@@ -7,6 +7,9 @@ import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
 import { Button } from "@/components/ui/button";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
+import { analytics } from "@/lib/analytics";
+import { useEffect } from "react";
 
 const categoryLabels = {
   tech: "Технология",
@@ -82,6 +85,10 @@ export const Route = createFileRoute("/blog/$slug")({
 
 function BlogPostPage() {
   const { post } = Route.useLoaderData();
+  usePageEngagement(`article:${post.slug}`);
+  useEffect(() => {
+    analytics.articleRead(post.slug);
+  }, [post.slug]);
   const category = (post.category ?? "tech") as keyof typeof categoryLabels;
   return (
     <PageLayout>

@@ -5,6 +5,9 @@ import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
 import { Button } from "@/components/ui/button";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
+import { analytics } from "@/lib/analytics";
+import { useEffect } from "react";
 
 type Project = {
   slug: string;
@@ -119,6 +122,10 @@ export const Route = createFileRoute("/projects/$slug")({
 
 function ProjectPage() {
   const { project } = Route.useLoaderData();
+  usePageEngagement(`project:${project.slug}`);
+  useEffect(() => {
+    analytics.projectView(project.slug);
+  }, [project.slug]);
   const specs = [
     project.area_m2 != null && {
       icon: Maximize2,

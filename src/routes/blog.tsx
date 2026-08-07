@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { BlogCard, type BlogCardData } from "@/components/BlogCard";
 import { Button } from "@/components/ui/button";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/blog")({
   head: () => ({
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/blog")({
 });
 
 function BlogPage() {
+  usePageEngagement("blog");
   const { posts } = Route.useLoaderData();
   return (
     <PageLayout>

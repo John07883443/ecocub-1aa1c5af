@@ -12,6 +12,7 @@ type NotifyPayload = {
   phone?: string;
   email?: string;
   message?: string;
+  attributionSummary?: string;
   sourcePage?: string;
   projectSlug?: string;
 };
@@ -59,6 +60,8 @@ export const Route = createFileRoute("/api/notify")({
         if (p.projectSlug) lines.push(`Проект: ${esc(p.projectSlug.toString().slice(0, 100))}`);
         if (p.sourcePage) lines.push(`Страница: ${esc(p.sourcePage.toString().slice(0, 200))}`);
         if (p.message) lines.push(`Сообщение: ${esc(p.message.toString().slice(0, 500))}`);
+        if (p.attributionSummary)
+          lines.push(`Источник: ${esc(p.attributionSummary.toString().slice(0, 300))}`);
 
         try {
           const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

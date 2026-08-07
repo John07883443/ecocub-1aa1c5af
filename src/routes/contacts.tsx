@@ -4,6 +4,8 @@ import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
 import { site } from "@/lib/site";
+import { analytics } from "@/lib/analytics";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/contacts")({
   head: () => ({
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/contacts")({
 });
 
 function ContactsPage() {
+  usePageEngagement("contacts");
   return (
     <PageLayout>
       <Section className="border-b border-border">
@@ -51,7 +54,11 @@ function ContactsPage() {
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">
                       Телефон
                     </p>
-                    <a href={site.phoneHref} className="text-xl font-semibold hover:text-accent">
+                    <a
+                      href={site.phoneHref}
+                      onClick={() => analytics.contactClick("phone", "contacts")}
+                      className="text-xl font-semibold hover:text-accent"
+                    >
                       {site.phone}
                     </a>
                   </div>
@@ -83,6 +90,7 @@ function ContactsPage() {
                     <div className="mt-1 flex flex-wrap gap-3">
                       <a
                         href={site.whatsappHref}
+                        onClick={() => analytics.contactClick("whatsapp", "contacts")}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-sm border border-border px-4 py-2 text-sm hover:border-accent hover:text-accent"
@@ -91,6 +99,7 @@ function ContactsPage() {
                       </a>
                       <a
                         href={site.telegramHref}
+                        onClick={() => analytics.contactClick("telegram", "contacts")}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-sm border border-border px-4 py-2 text-sm hover:border-accent hover:text-accent"

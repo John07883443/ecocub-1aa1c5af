@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/presentation")({
   head: () => ({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/presentation")({
 });
 
 function PresentationPage() {
+  usePageEngagement("presentation");
   return (
     <PageLayout>
       <Section className="border-b border-border">

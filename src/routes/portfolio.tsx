@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/portfolio")({
   head: () => ({
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/portfolio")({
 });
 
 function PortfolioPage() {
+  usePageEngagement("portfolio");
   const { projects } = Route.useLoaderData();
 
   return (

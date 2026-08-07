@@ -5,6 +5,7 @@ import { Container, Section } from "@/components/Container";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
 import { ContactForm } from "@/components/ContactForm";
 import { CheckCircle2 } from "lucide-react";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/concrete")({
   head: () => ({
@@ -64,6 +65,7 @@ const benefits = [
 ];
 
 function ConcretePage() {
+  usePageEngagement("concrete");
   const { projects } = Route.useLoaderData();
 
   return (

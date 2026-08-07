@@ -19,6 +19,8 @@ import { HeroSlider } from "@/components/HeroSlider";
 import { LayeredSection } from "@/components/LayeredSection";
 
 import { site } from "@/lib/site";
+import { analytics } from "@/lib/analytics";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -139,6 +141,7 @@ function useLockedMobileViewportHeight() {
 }
 
 function HomePage() {
+  usePageEngagement("home");
   const { projects, posts } = Route.useLoaderData();
   const mobileHeroHeight = useLockedMobileViewportHeight();
 
@@ -463,7 +466,11 @@ function HomePage() {
                 пришлёт расчёт.
               </p>
               <div className="mt-8 space-y-2 text-sm text-white/80">
-                <a href={site.phoneHref} className="block text-2xl font-semibold text-white">
+                <a
+                  href={site.phoneHref}
+                  onClick={() => analytics.contactClick("phone", "home-cta")}
+                  className="block text-2xl font-semibold text-white"
+                >
                   {site.phone}
                 </a>
                 <a href={`mailto:${site.email}`} className="block">

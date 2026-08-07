@@ -2,6 +2,8 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { initAttribution } from "@/lib/attribution";
+import { useEffect } from "react";
 
 function NotFoundComponent() {
   return (
@@ -105,6 +107,11 @@ const orgJsonLd = JSON.stringify({
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
+  // Ловим источник визита один раз при загрузке — до любых внутренних переходов.
+  useEffect(() => {
+    initAttribution();
+  }, []);
+
   return (
     <html lang="ru">
       <head>

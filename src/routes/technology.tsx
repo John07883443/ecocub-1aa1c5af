@@ -7,6 +7,7 @@ import { EngineeringFeatures } from "@/components/EngineeringFeatures";
 import { ContactForm } from "@/components/ContactForm";
 import { LayeredSectionA } from "@/components/LayeredSectionA";
 import { Button } from "@/components/ui/button";
+import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/technology")({
   head: () => ({
@@ -56,6 +57,7 @@ export const Route = createFileRoute("/technology")({
 });
 
 function TechnologyPage() {
+  usePageEngagement("technology");
   return (
     <PageLayout headerVariant="dark">
       {/* HERO */}
