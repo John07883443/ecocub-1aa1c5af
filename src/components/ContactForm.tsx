@@ -15,6 +15,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
+import { analytics } from "@/lib/analytics";
+import { buildAttribution, attributionSummary } from "@/lib/attribution";
+import { useEffect, useRef } from "react";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Минимум 2 символа").max(100),
@@ -55,6 +58,34 @@ export function ContactForm({
   const [pending, setPending] = useState(false);
   const isDark = variant === "dark";
 
+  // Отслеживание брошенных форм: начал заполнять, но не отправил.
+  const started = useRef(false);
+  const submitted = useRef(false);
+  const lastField = useRef<string>("");
+  const pageRef =
+    sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : "unknown");
+
+  const markStart = (field: string) => {
+    lastField.current = field;
+    if (!started.current) {
+      started.current = true;
+      analytics.formStart(formType, pageRef);
+    }
+  };
+
+  useEffect(() => {
+    const report = () => {
+      if (started.current && !submitted.current) {
+        analytics.formAbandon(formType, pageRef, lastField.current || "unknown");
+      }
+    };
+    window.addEventListener("pagehide", report);
+    return () => {
+      window.removeEventListener("pagehide", report);
+      report();
+    };
+  }, [formType, pageRef]);
+
   const form = useForm<FormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema as any),
@@ -70,6 +101,9 @@ export function ContactForm({
   const onSubmit = async (values: FormValues) => {
     setPending(true);
     try {
+      // Паспорт происхождения заявки: откуда пришёл человек и насколько был вовлечён.
+      const attribution = await buildAttribution();
+
       const { error } = await supabase.from("submissions").insert({
         form_type: formType,
         name: values.name.trim(),
@@ -80,6 +114,7 @@ export function ContactForm({
         source_page:
           sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : null),
         status: "new",
+        payload: attribution as unknown as never,
       });
       if (error) throw error;
 
@@ -96,8 +131,13 @@ export function ContactForm({
           projectSlug,
           sourcePage:
             sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : undefined),
+          attribution,
+          attributionSummary: attributionSummary(attribution),
         }),
       }).catch(() => {});
+
+      submitted.current = true;
+      analytics.formSubmit(formType, pageRef, projectSlug);
 
       toast.success("Заявка отправлена!", {
         description: "Мы свяжемся с вами в ближайшее время.",
@@ -126,7 +166,12 @@ export function ContactForm({
               <FormItem>
                 <FormLabel className={isDark ? "text-white" : ""}>Имя</FormLabel>
                 <FormControl>
-                  <Input placeholder="Как к вам обращаться" className={inputCls} {...field} />
+                  <Input
+                    placeholder="Как к вам обращаться"
+                    className={inputCls}
+                    {...field}
+                    onFocus={() => markStart("name")}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -145,6 +190,7 @@ export function ContactForm({
                     placeholder="+7 (___) ___-__-__"
                     className={inputCls}
                     {...field}
+                    onFocus={() => markStart("phone")}
                   />
                 </FormControl>
                 <FormMessage />
@@ -166,6 +212,7 @@ export function ContactForm({
                     placeholder="you@example.com"
                     className={inputCls}
                     {...field}
+                    onFocus={() => markStart("email")}
                   />
                 </FormControl>
                 <FormMessage />
@@ -187,6 +234,7 @@ export function ContactForm({
                     placeholder="Площадь, участок, пожелания…"
                     className={inputCls}
                     {...field}
+                    onFocus={() => markStart("message")}
                   />
                 </FormControl>
                 <FormMessage />

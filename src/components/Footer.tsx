@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin } from "lucide-react";
 import { Container } from "@/components/Container";
 import { mainNav, site } from "@/lib/site";
 import logoWhite from "@/assets/logo-white.svg";
+import { analytics } from "@/lib/analytics";
 
 export function Footer() {
   return (
@@ -43,6 +44,7 @@ export function Footer() {
               <li>
                 <a
                   href={site.phoneHref}
+                  onClick={() => analytics.contactClick("phone", "footer")}
                   className="flex items-center gap-2 text-primary-foreground/90 hover:text-accent"
                 >
                   <Phone className="size-4 shrink-0" />
@@ -81,6 +83,7 @@ export function Footer() {
             <div className="flex flex-col gap-3">
               <a
                 href={site.whatsappHref}
+                onClick={() => analytics.contactClick("whatsapp", "footer")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-sm border border-primary-foreground/20 px-4 py-2 text-center text-sm transition-colors hover:border-accent hover:text-accent"
@@ -89,6 +92,7 @@ export function Footer() {
               </a>
               <a
                 href={site.telegramHref}
+                onClick={() => analytics.contactClick("telegram", "footer")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-sm border border-primary-foreground/20 px-4 py-2 text-center text-sm transition-colors hover:border-accent hover:text-accent"

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/Container";
 import { LogoMark } from "@/components/LogoMark";
 import { mainNav, site } from "@/lib/site";
+import { analytics } from "@/lib/analytics";
 
 interface HeaderProps {
   variant?: "light" | "dark";
@@ -25,10 +26,7 @@ export function Header({ variant = "light" }: HeaderProps) {
     >
       <Container className="flex h-20 items-center justify-between md:h-28">
         <Link to="/" className="flex items-center gap-2">
-          <LogoMark
-            variant={isDark ? "dark" : "light"}
-            className="h-16 w-auto md:h-18"
-          />
+          <LogoMark variant={isDark ? "dark" : "light"} className="h-16 w-auto md:h-18" />
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex">
@@ -51,10 +49,9 @@ export function Header({ variant = "light" }: HeaderProps) {
         <div className="hidden items-center gap-3 lg:flex">
           <a
             href={site.phoneHref}
+            onClick={() => analytics.contactClick("phone", "header")}
             className={
-              isDark
-                ? "text-sm font-medium text-white"
-                : "text-sm font-medium text-foreground"
+              isDark ? "text-sm font-medium text-white" : "text-sm font-medium text-foreground"
             }
           >
             {site.phone}
@@ -93,15 +90,13 @@ export function Header({ variant = "light" }: HeaderProps) {
             <div className="mt-8 space-y-3 border-t border-border pt-6">
               <a
                 href={site.phoneHref}
+                onClick={() => analytics.contactClick("phone", "header")}
                 className="flex items-center gap-2 text-base font-semibold"
               >
                 <Phone className="size-4 text-accent" />
                 {site.phone}
               </a>
-              <a
-                href={`mailto:${site.email}`}
-                className="block text-sm text-muted-foreground"
-              >
+              <a href={`mailto:${site.email}`} className="block text-sm text-muted-foreground">
                 {site.email}
               </a>
             </div>
