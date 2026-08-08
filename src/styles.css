@@ -169,3 +169,20 @@
 @media (prefers-reduced-motion: reduce) {
   .ecocub-logo-cube { animation: none; }
 }
+
+/* LEGO-кран: подвешенный модуль мягко качается на тросах (маятник).
+   Качаем вокруг блока/оголовка стрелы — верх троса остаётся на месте. */
+@keyframes ecocub-crane-sway {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50%      { transform: rotate(1.6deg); }
+}
+
+.ecocub-crane-load {
+  transform-origin: 46.31% 10.38%;
+  animation: ecocub-crane-sway 5.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecocub-crane-load { animation: none; }
+}
