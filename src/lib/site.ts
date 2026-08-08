@@ -16,7 +16,7 @@ export const site = {
   warrantyYears: 50,
   lifespanYears: 120,
   productionDays: 90,
-  assemblyDays: 5,
+  assemblyDays: 10,
 };
 
 export type NavItem = { label: string; to: string };

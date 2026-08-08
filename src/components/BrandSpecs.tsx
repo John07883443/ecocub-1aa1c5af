@@ -20,7 +20,7 @@ export function BrandSpecs() {
             <span className="block">как техника</span>
           </h2>
           <p className="mx-auto mt-8 max-w-2xl text-base text-white/70 md:text-lg">
-            Hi-tech архитектура. Заводская готовность. Сборка на участке за 5 дней.
+            Hi-tech архитектура. Заводская готовность. Сборка на участке за 10 дней.
             Конструктор от 36 до 300 м².
           </p>
         </div>

@@ -1,28 +1,66 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { getAllPosts, getCategories, getTags } from "@/lib/blog";
 
 const SITE_URL = "https://eco-cub.ru";
 
-const staticRoutes = ["", "/concrete", "/technology", "/portfolio", "/blog", "/presentation", "/contacts"];
+const staticRoutes = [
+  "",
+  "/concrete",
+  "/technology",
+  "/portfolio",
+  "/blog",
+  "/presentation",
+  "/contacts",
+];
+
+function url(loc: string, lastmod?: string, changefreq = "weekly", priority?: string): string {
+  return [
+    "  <url>",
+    `    <loc>${SITE_URL}${loc}</loc>`,
+    lastmod ? `    <lastmod>${lastmod}</lastmod>` : "",
+    `    <changefreq>${changefreq}</changefreq>`,
+    priority ? `    <priority>${priority}</priority>` : "",
+    "  </url>",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const [projects, posts] = await Promise.all([
-          supabase.from("projects").select("slug,updated_at").eq("published", true),
-          supabase.from("blog_posts").select("slug,published_at").eq("published", true),
-        ]);
-
         const urls: string[] = [];
-        for (const r of staticRoutes) {
-          urls.push(`<url><loc>${SITE_URL}${r}</loc><changefreq>weekly</changefreq></url>`);
+
+        for (const route of staticRoutes) {
+          urls.push(url(route, undefined, "weekly", route === "" ? "1.0" : "0.8"));
         }
-        for (const p of projects.data ?? []) {
-          urls.push(`<url><loc>${SITE_URL}/projects/${p.slug}</loc><lastmod>${p.updated_at}</lastmod></url>`);
+
+        // Блог — из локальных файлов. Не зависит ни от сети, ни от базы:
+        // если внешний сервис лежит, карта сайта всё равно полная по статьям.
+        for (const post of getAllPosts()) {
+          urls.push(url(`/blog/${post.slug}`, post.date, "monthly", "0.7"));
         }
-        for (const p of posts.data ?? []) {
-          urls.push(`<url><loc>${SITE_URL}/blog/${p.slug}</loc><lastmod>${p.published_at ?? ""}</lastmod></url>`);
+        for (const category of getCategories()) {
+          urls.push(url(`/blog/category/${category.key}`, undefined, "weekly", "0.5"));
+        }
+        for (const tag of getTags()) {
+          urls.push(url(`/blog/tag/${tag.slug}`, undefined, "weekly", "0.4"));
+        }
+
+        // Проекты пока живут во внешней базе — это унаследованная зависимость,
+        // снимается отдельным шагом. Ошибка здесь не должна обнулять карту сайта.
+        try {
+          const projects = await supabase
+            .from("projects")
+            .select("slug,updated_at")
+            .eq("published", true);
+          for (const project of projects.data ?? []) {
+            urls.push(url(`/projects/${project.slug}`, project.updated_at ?? undefined, "monthly", "0.7"));
+          }
+        } catch {
+          // Молча пропускаем: карта сайта без проектов лучше, чем 500 в ответ роботу.
         }
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -30,7 +68,12 @@ export const Route = createFileRoute("/sitemap.xml")({
 ${urls.join("\n")}
 </urlset>`;
 
-        return new Response(xml, { headers: { "Content-Type": "application/xml" } });
+        return new Response(xml, {
+          headers: {
+            "Content-Type": "application/xml; charset=utf-8",
+            "Cache-Control": "public, max-age=3600",
+          },
+        });
       },
     },
   },

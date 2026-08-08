@@ -12,13 +12,14 @@ import { CompanyTimeline } from "@/components/CompanyTimeline";
 import { WhatsIncluded } from "@/components/WhatsIncluded";
 import { StagesCooperation } from "@/components/StagesCooperation";
 import { InteriorsGallery } from "@/components/InteriorsGallery";
-import { BlogCard, type BlogCardData } from "@/components/BlogCard";
+import { BlogCard } from "@/components/BlogCard";
 import { BrandSpecs } from "@/components/BrandSpecs";
 import { Configurator } from "@/components/Configurator";
 import { HeroSlider } from "@/components/HeroSlider";
 import { LayeredSection } from "@/components/LayeredSection";
 
 import { site } from "@/lib/site";
+import { getAllPosts } from "@/lib/blog";
 import { analytics } from "@/lib/analytics";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 
@@ -52,26 +53,19 @@ export const Route = createFileRoute("/")({
     links: [{ rel: "canonical", href: "https://eco-cub.ru" }],
   }),
   loader: async () => {
-    const [projectsRes, postsRes] = await Promise.all([
-      supabase
-        .from("projects")
-        .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
-        .eq("published", true)
-        .order("display_order", { ascending: true })
-        .limit(6),
-      supabase
-        .from("blog_posts")
-        .select("slug,title,excerpt,cover_image,category,reading_time,published_at")
-        .eq("published", true)
-        .order("published_at", { ascending: false })
-        .limit(3),
-    ]);
+    // Статьи — из локальных файлов, без сети и без базы.
+    const posts = getAllPosts().slice(0, 3);
+
+    // Проекты пока во внешней базе: унаследованная зависимость, снимается отдельно.
+    const projectsRes = await supabase
+      .from("projects")
+      .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
+      .eq("published", true)
+      .order("display_order", { ascending: true })
+      .limit(6);
     if (projectsRes.error) throw projectsRes.error;
-    if (postsRes.error) throw postsRes.error;
-    return {
-      projects: (projectsRes.data ?? []) as ProjectCardData[],
-      posts: (postsRes.data ?? []) as BlogCardData[],
-    };
+
+    return { projects: (projectsRes.data ?? []) as ProjectCardData[], posts };
   },
   errorComponent: ({ error, reset }: { error: Error; reset: () => void }) => (
     <PageLayout>
@@ -169,7 +163,7 @@ function HomePage() {
               </h1>
               <div className="lg:col-span-5">
                 <p className="max-w-md text-sm text-white/85 md:text-base">
-                  Дома из бетона с заводским качеством. Сборка на участке от 5 дней.
+                  Дома из бетона с заводским качеством. Сборка на участке за 10 дней.
                 </p>
                 <div className="pointer-events-auto mt-6 flex flex-wrap gap-3">
                   <Button
@@ -262,7 +256,7 @@ function HomePage() {
               </h2>
               <p className="mt-6 text-base text-muted-foreground">
                 Каждый модуль ECO·CUB — это готовая комната с потолками 3,15 м, инженерией и
-                отделкой, произведённая на заводе. На участке модули собираются в дом краном за 5
+                отделкой, произведённая на заводе. На участке модули собираются в дом краном за 10
                 дней. Хотите больше места — добавьте модуль. Гибкая планировка под ваши задачи.
               </p>
               <Button
@@ -327,7 +321,7 @@ function HomePage() {
                 </div>
                 <div>
                   <Hammer className="size-6 text-accent" />
-                  <p className="mt-3 text-2xl font-bold">5 дней</p>
+                  <p className="mt-3 text-2xl font-bold">10 дней</p>
                   <p className="text-sm text-white/70">монтаж на участке</p>
                 </div>
               </div>
@@ -442,7 +436,7 @@ function HomePage() {
               </Link>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
-              {posts.map((p: BlogCardData) => (
+              {posts.map((p) => (
                 <BlogCard key={p.slug} post={p} />
               ))}
             </div>
