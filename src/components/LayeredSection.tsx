@@ -55,10 +55,11 @@ export function LayeredSection() {
   return (
     <div className="w-full">
       <div className="relative mx-auto aspect-square w-full max-w-[640px]">
-        {/* Рендер сразу на тёмном фоне #121212 (= bg-primary секции), поэтому
-            сливается бесшовно и ничего не вырезается по краям. */}
+        {/* Прозрачный вырез разреза без подложки: пирог «висит» прямо на секции.
+            Сделан из рендера, где задний край утеплителя сам уходит в темноту,
+            поэтому переход в прозрачность плавный, без рваных краёв. */}
         <img
-          src="/images/tech-section-dark.webp"
+          src="/images/tech-section-wall.webp"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, оцинкованная сталь, ПСБ-С35"
           className="h-full w-full object-contain"
         />
