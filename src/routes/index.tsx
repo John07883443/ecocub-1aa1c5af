@@ -269,11 +269,17 @@ function HomePage() {
                 </Link>
               </Button>
             </div>
-            <div className="relative aspect-[4/3]">
+            <div className="relative aspect-[2315/1465]">
               <img
-                src="/images/lego-truck.png"
+                src="/images/lego-truck-base.png"
                 alt="Принцип LEGO: модули EcoCub доставляются на участок"
-                className="h-full w-full object-contain"
+                className="absolute inset-0 h-full w-full object-contain"
+              />
+              <img
+                src="/images/lego-truck-load.png"
+                alt=""
+                aria-hidden="true"
+                className="ecocub-crane-load absolute inset-0 h-full w-full object-contain"
               />
             </div>
           </div>
