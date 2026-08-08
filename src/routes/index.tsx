@@ -281,6 +281,7 @@ function HomePage() {
                 aria-hidden="true"
                 className="ecocub-crane-load absolute inset-0 h-full w-full object-contain"
               />
+              <span aria-hidden="true" className="ecocub-crane-beacon" />
             </div>
           </div>
         </Container>
