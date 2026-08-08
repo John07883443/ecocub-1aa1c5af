@@ -55,21 +55,12 @@ export function LayeredSection() {
   return (
     <div className="w-full">
       <div className="relative mx-auto aspect-square w-full max-w-[640px]">
-        {/* Мягкое золотистое свечение позади разреза — даёт объём на тёмном фоне */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-[10%] rounded-full bg-accent/10 blur-3xl"
-        />
-        {/* Тень-«опора» под объектом, чтобы разрез не висел в пустоте */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-[14%] bottom-[8%] h-8 rounded-[50%] bg-black/60 blur-2xl"
-        />
-
+        {/* Рендер сразу на тёмном фоне #121212 (= bg-primary секции), поэтому
+            сливается бесшовно и ничего не вырезается по краям. */}
         <img
-          src="/images/tech-section-clean-transparent.webp"
+          src="/images/tech-section-dark.webp"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, оцинкованная сталь, ПСБ-С35"
-          className="relative h-full w-full object-contain drop-shadow-[0_22px_45px_rgba(0,0,0,0.55)]"
+          className="h-full w-full object-contain"
         />
 
         {/* Hotspots */}
