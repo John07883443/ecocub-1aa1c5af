@@ -173,16 +173,42 @@
 /* LEGO-кран: подвешенный модуль мягко качается на тросах (маятник).
    Качаем вокруг блока/оголовка стрелы — верх троса остаётся на месте. */
 @keyframes ecocub-crane-sway {
-  0%, 100% { transform: rotate(-1.6deg); }
-  50%      { transform: rotate(1.6deg); }
+  0%, 100% { transform: rotate(-0.9deg); }
+  50%      { transform: rotate(0.9deg); }
 }
 
 .ecocub-crane-load {
   transform-origin: 46.31% 10.38%;
-  animation: ecocub-crane-sway 5.5s ease-in-out infinite;
+  animation: ecocub-crane-sway 6s ease-in-out infinite;
   will-change: transform;
+}
+
+/* Проблесковый маячок на кабине — мягко мигает оранжевым */
+@keyframes ecocub-crane-beacon {
+  0%, 100% { opacity: 0.12; }
+  50%      { opacity: 1; }
+}
+
+.ecocub-crane-beacon {
+  position: absolute;
+  left: 6.7%;
+  top: 68.3%;
+  width: 3.8%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 179, 71, 0.95) 0%,
+    rgba(255, 138, 28, 0.55) 38%,
+    rgba(255, 120, 0, 0) 72%
+  );
+  filter: blur(1px);
+  pointer-events: none;
+  animation: ecocub-crane-beacon 1.3s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ecocub-crane-load { animation: none; }
+  .ecocub-crane-beacon { animation: none; opacity: 0.55; }
 }
