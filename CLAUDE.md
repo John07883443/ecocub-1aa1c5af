@@ -38,7 +38,8 @@
 
 Якоря секций главной (`src/routes/index.tsx`, id на `<Section>`):
 `#comparison` (сравнение технологий), `#about` (о компании/таймлайн),
-`#modules` (принцип LEGO), `#technology` (05 · Технология),
+`#modules` (принцип LEGO), `#quiz` (квиз подбора проекта),
+`#technology` (05 · Технология),
 `#calculator` (калькулятор цены), `#included` (что входит),
 `#projects` (проекты), `#interiors` (интерьеры), `#stages` (этапы),
 `#blog` (блок блога), `#contact` (форма связи).
