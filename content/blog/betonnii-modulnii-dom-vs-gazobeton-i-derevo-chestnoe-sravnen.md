@@ -5,7 +5,7 @@ date: 2025-10-20
 category: comparison
 tags: ["железобетон", "монолит"]
 excerpt: "Сравнение технологий строительства: бетонный модульный дом, газобетон и дерево. Что лучше по цене, теплу, срокам, архитектуре и долговечности. Плюсы и минусы."
-cover: /images/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen-cover.png
+cover: /images/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen-cover.webp
 readingTime: 7
 seoTitle: "Бетонный модульный дом, газобетон или дерево — честное сравнение технологий в 2025 году"
 seoDescription: "Сравнение технологий строительства: бетонный модульный дом, газобетон и дерево. Что лучше по цене, теплу, срокам, архитектуре и долговечности. Плюсы и минусы."
@@ -50,7 +50,7 @@ legacyUid: 3mc11xdbe1
 
 ## Энергоэффективность и экономия на отоплении
 
-![Бетонный модульный дом vs газобетон и дерево: честное сравнение. Энергоэффективность и экономия на отоплении](/images/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen-2.jpg)
+![Бетонный модульный дом vs газобетон и дерево: честное сравнение. Энергоэффективность и экономия на отоплении](/images/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen-2.webp)
 
 Тепло — это деньги. Каждый сезон мы буквально отапливаем улицу, если дом собран с ошибками.
 

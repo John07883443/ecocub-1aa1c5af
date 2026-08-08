@@ -5,7 +5,7 @@ date: 2026-02-13
 category: cases
 tags: ["участок", "коммуникации"]
 excerpt: "'Как проходит монтаж"
-cover: /images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-cover.jpg
+cover: /images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-cover.webp
 readingTime: 4
 seoTitle: "Монтаж модульного дома: как перевозят бетонные модули?"
 seoDescription: "Как проходит монтаж модульного дома и каким образом организуется перевозка бетонных модулей? Подробно разбираем логистику, подготовку участка, работу кранов и этап установки."
@@ -24,7 +24,7 @@ legacyUid: sbp66522t1
 
 ## Точный расчёт при перевозке
 
-![Монтаж модульного дома: как перевозят бетонные модули?. Точный расчёт при перевозке](/images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-1.jpg)
+![Монтаж модульного дома: как перевозят бетонные модули?. Точный расчёт при перевозке](/images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-1.webp)
 
 Транспортировка бетонных модулей — один из самых ответственных и сложных этапов всего процесса. Вес одного блока может достигать от 14 тонн и более, а габариты нередко превышают стандартные транспортные нормы. Именно поэтому используются специализированные низкорамные тралы с усиленной рамой и системой распределения нагрузки.
 
@@ -48,7 +48,7 @@ legacyUid: sbp66522t1
 
 ## Подготовка участка
 
-![Монтаж модульного дома: как перевозят бетонные модули?. Подготовка участка](/images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-2.jpg)
+![Монтаж модульного дома: как перевозят бетонные модули?. Подготовка участка](/images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-2.webp)
 
 Пока модули находятся в пути, <a href="https://eco-cub.ru/tpost/p382vfb931-kak-vibrat-uchastok-pod-modulnii-dom-7-p">на участке</a> завершается подготовка основания. Чаще всего это свайный или плитный фундамент, рассчитанный под конкретные нагрузки.
 
@@ -58,7 +58,7 @@ legacyUid: sbp66522t1
 
 ## День Х. Установка
 
-![Монтаж модульного дома: как перевозят бетонные модули?. День Х. Установка](/images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-3.jpg)
+![Монтаж модульного дома: как перевозят бетонные модули?. День Х. Установка](/images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli-3.webp)
 
 Самый впечатляющий этап! На участок заезжают краны, которые аккуратно поднимают каждый модуль и перемещают его на подготовленное основание.
 

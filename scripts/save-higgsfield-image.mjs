@@ -20,8 +20,9 @@
  *   → /images/blog/dom-s-terrasoi-1.png
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { toWebp } from "./lib/optimize-image.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const OUT_DIR = join(ROOT, "public/images/blog");
@@ -35,11 +36,6 @@ if (!url || !/^https?:\/\//i.test(url)) {
 
 mkdirSync(OUT_DIR, { recursive: true });
 
-function extFromUrl(u) {
-  const ext = extname(u.split(/[?#]/)[0]).toLowerCase();
-  return /^\.(jpe?g|png|webp|gif|avif|svg)$/.test(ext) ? ext.replace(".jpeg", ".jpg") : ".png";
-}
-
 function slugify(s) {
   return (
     s
@@ -49,20 +45,24 @@ function slugify(s) {
   );
 }
 
-const ext = extFromUrl(url);
+// Изображения блога хранятся в едином формате — оптимизированный WebP.
 const base = rawName ? slugify(rawName.replace(/\.[a-z0-9]+$/i, "")) : `higgsfield-${slugify(url).slice(-12)}`;
 
-let name = `${base}${ext}`;
+let name = `${base}.webp`;
 let i = 2;
-while (existsSync(join(OUT_DIR, name))) name = `${base}-${i++}${ext}`;
+while (existsSync(join(OUT_DIR, name))) name = `${base}-${i++}.webp`;
 
-const dest = join(OUT_DIR, name);
-execFileSync("curl", ["-sSL", "--fail", "--retry", "3", "--retry-delay", "2", "-o", dest, url], {
+const tmp = join(OUT_DIR, `.${base}.download`);
+execFileSync("curl", ["-sSL", "--fail", "--retry", "3", "--retry-delay", "2", "-o", tmp, url], {
   stdio: ["ignore", "ignore", "inherit"],
 });
-if (readFileSync(dest).length === 0) {
+if (readFileSync(tmp).length === 0) {
+  rmSync(tmp, { force: true });
   console.error("Скачан пустой файл — проверьте URL.");
   process.exit(1);
 }
+
+writeFileSync(join(OUT_DIR, name), await toWebp(readFileSync(tmp)));
+rmSync(tmp, { force: true });
 
 console.log(`${PUBLIC_PREFIX}/${name}`);

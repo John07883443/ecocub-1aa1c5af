@@ -5,7 +5,7 @@ date: 2026-04-18
 category: comparison
 tags: ["железобетон", "монолит"]
 excerpt: "Сравниваем монолитно-модульную технологию и железобетонные панели БЕНПАН: что прочнее, надёжнее и выгоднее для жизни за городом."
-cover: /images/blog/monolitno-modulnii-dom-vs-benpan-pochemu-zhelezobetonnii-mod-cover.jpg
+cover: /images/blog/monolitno-modulnii-dom-vs-benpan-pochemu-zhelezobetonnii-mod-cover.webp
 readingTime: 3
 seoTitle: "Монолитно-модульный дом vs БЕНПАН: в чём преимущество железобетонного модуля | ECO CUB"
 seoDescription: "Что такое технология БЕНПАН (ЖБИ-панели) и почему монолитно-модульный дом ECO CUB превосходит её по надёжности, цельности конструкции, теплоизоляции и скорости монтажа. Сравнение двух железобетонных технологий для загородного строительства."
