@@ -8,13 +8,20 @@ import {
   Check,
   Clock3,
   Compass,
+  CreditCard,
   Eye,
+  HelpCircle,
   Home,
   KeyRound,
+  Landmark,
   MapPin,
+  MessageCircle,
+  Phone,
   Search,
+  Send,
   TreePine,
   Users,
+  Wallet,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -29,13 +36,18 @@ import { site } from "@/lib/site";
 /**
  * HouseQuiz — нативный квиз подбора проекта.
  *
- * Логика построена по исследованию квиз-маркетинга: 5 коротких вопросов
- * (порог, за которым падает доходимость) + шаг результата с контактами.
- * Каждый ответ — микро-обязательство, поэтому вопросы идут от лёгкого
- * («для чего дом») к решающему (контакты), а в конце — награда:
- * ориентировочная площадь и цена под ключ. Одиночный выбор автопереключает
- * шаг, чтобы убрать лишний клик. Заявка уходит в тот же пайплайн, что и
- * форма контактов: submissions + Telegram, с полной атрибуцией.
+ * Логика по исследованию квиз-маркетинга: короткие вопросы с готовыми
+ * вариантами — лестница микро-обязательств. Порядок от лёгкого («для чего
+ * дом») к денежному (способ оплаты) и к «горячему» (сроки) прямо перед
+ * контактами, а в конце — награда: ориентировочная площадь и цена под ключ.
+ * Одиночный выбор автопереключает шаг. Из ответов вытаскиваем максимум
+ * полезного для менеджера: цель, размер, этажность, участок, бюджетный
+ * сценарий, сроки и предпочтительный канал связи. «Откуда узнали» не
+ * спрашиваем — источник и так пишется в атрибуции автоматически.
+ *
+ * Карточки размера показывают рендеры домов (public/images/quiz-house-*.webp),
+ * с деградацией до иконки, если файл ещё не залит. Заявка уходит в тот же
+ * пайплайн, что и форма контактов: submissions + Telegram, с атрибуцией.
  */
 
 type Choice = {
@@ -45,6 +57,8 @@ type Choice = {
   icon: LucideIcon;
   /** Представительная площадь м² — только у вопроса о размере. */
   area?: number;
+  /** Путь к рендеру для карточки-картинки (иначе рисуется иконка). */
+  image?: string;
 };
 
 type Question = {
@@ -62,7 +76,7 @@ const QUESTIONS: Question[] = [
     title: "Для чего вы строите дом?",
     choices: [
       { value: "Круглогодичное проживание (ПМЖ)", hint: "тёплый дом на каждый день", icon: Home },
-      { value: "Загородная дача", hint: "отдых в тёплый сезон и на выходных", icon: TreePine },
+      { value: "Загородная дача", hint: "отдых в сезон и на выходных", icon: TreePine },
       { value: "Гостевой дом / баня", hint: "дополнительный блок на участке", icon: Users },
       { value: "Аренда / инвестиция", hint: "дом, который зарабатывает", icon: KeyRound },
     ],
@@ -70,11 +84,29 @@ const QUESTIONS: Question[] = [
   {
     id: "size",
     eyebrow: "Размер",
-    title: "Сколько человек будет жить в доме?",
+    title: "Какой дом вам ближе?",
     choices: [
-      { value: "1–2 человека · компактный", hint: "≈ 54–72 м²", icon: Box, area: 63 },
-      { value: "3–4 человека · семейный", hint: "≈ 108–144 м²", icon: Boxes, area: 126 },
-      { value: "5+ или два поколения · просторный", hint: "≈ 180–288 м²", icon: Blocks, area: 216 },
+      {
+        value: "1–2 человека · компактный",
+        hint: "≈ 54–72 м²",
+        icon: Box,
+        area: 63,
+        image: "/images/quiz-house-compact.webp",
+      },
+      {
+        value: "3–4 человека · семейный",
+        hint: "≈ 108–144 м²",
+        icon: Boxes,
+        area: 126,
+        image: "/images/quiz-house-family.webp",
+      },
+      {
+        value: "5+ или два поколения · просторный",
+        hint: "≈ 180–288 м²",
+        icon: Blocks,
+        area: 216,
+        image: "/images/quiz-house-estate.webp",
+      },
     ],
   },
   {
@@ -98,6 +130,17 @@ const QUESTIONS: Question[] = [
     ],
   },
   {
+    id: "budget",
+    eyebrow: "Оплата",
+    title: "Как планируете оплачивать?",
+    choices: [
+      { value: "Собственные средства", hint: "оплата напрямую", icon: Wallet },
+      { value: "Ипотека", hint: "поможем с одобрением", icon: Landmark },
+      { value: "Рассрочка от компании", hint: "платежами по этапам", icon: CreditCard },
+      { value: "Ещё не решил", hint: "подберём вариант", icon: HelpCircle },
+    ],
+  },
+  {
     id: "timing",
     eyebrow: "Сроки",
     title: "Когда планируете начать?",
@@ -107,6 +150,12 @@ const QUESTIONS: Question[] = [
       { value: "Пока изучаю варианты", hint: "собираю информацию", icon: Eye },
     ],
   },
+];
+
+const CHANNELS: { value: string; icon: LucideIcon }[] = [
+  { value: "Телефонный звонок", icon: Phone },
+  { value: "WhatsApp", icon: MessageCircle },
+  { value: "Telegram", icon: Send },
 ];
 
 const TOTAL_STEPS = QUESTIONS.length + 1; // +1 — шаг результата с контактами
@@ -120,6 +169,7 @@ export function HouseQuiz() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [channel, setChannel] = useState(CHANNELS[0].value);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; phone?: string; consent?: string }>({});
   const [pending, setPending] = useState(false);
@@ -178,6 +228,7 @@ export function HouseQuiz() {
         const label = q.title.replace(/[?？]$/, "");
         return `${label}: ${answers[q.id] ?? "—"}`;
       });
+      summaryLines.push(`Удобная связь: ${channel}`);
       summaryLines.push(
         `Ориентир: ≈ ${estArea} м², от ${formatRub(estPrice)} ₽ под предчистовую отделку`,
       );
@@ -197,6 +248,7 @@ export function HouseQuiz() {
         payload: {
           ...attribution,
           quiz: answers,
+          preferredChannel: channel,
           estimate: { area: estArea, price: estPrice },
         } as never,
       });
@@ -246,7 +298,7 @@ export function HouseQuiz() {
 
       <div className="p-6 md:p-8">
         {done ? (
-          <SuccessState estArea={estArea} estPrice={estPrice} />
+          <SuccessState estArea={estArea} estPrice={estPrice} channel={channel} />
         ) : isResult ? (
           <ResultStep
             estArea={estArea}
@@ -255,11 +307,13 @@ export function HouseQuiz() {
             answers={answers}
             name={name}
             phone={phone}
+            channel={channel}
             consent={consent}
             errors={errors}
             pending={pending}
             onName={setName}
             onPhone={setPhone}
+            onChannel={setChannel}
             onConsent={setConsent}
             onBack={back}
             onSubmit={submit}
@@ -291,6 +345,7 @@ function QuestionStep({
   onPick: (q: Question, c: Choice) => void;
   onBack?: () => void;
 }) {
+  const hasImages = question.choices.some((c) => c.image);
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
@@ -300,47 +355,60 @@ function QuestionStep({
         {question.title}
       </h3>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {question.choices.map((c) => {
-          const Icon = c.icon;
-          const active = selected === c.value;
-          return (
-            <button
+      {hasImages ? (
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {question.choices.map((c) => (
+            <ImageChoiceCard
               key={c.value}
-              type="button"
+              choice={c}
+              active={selected === c.value}
               onClick={() => onPick(question, c)}
-              aria-pressed={active}
-              className={[
-                "group flex items-center gap-4 rounded-sm border p-4 text-left transition-all",
-                active
-                  ? "border-accent bg-accent/10 ring-1 ring-accent"
-                  : "border-border bg-card hover:border-accent hover:bg-accent/5",
-              ].join(" ")}
-            >
-              <span
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {question.choices.map((c) => {
+            const Icon = c.icon;
+            const active = selected === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => onPick(question, c)}
+                aria-pressed={active}
                 className={[
-                  "flex size-11 shrink-0 items-center justify-center rounded-sm transition-colors",
+                  "group flex items-center gap-4 rounded-sm border p-4 text-left transition-all",
                   active
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-secondary text-accent group-hover:bg-accent/15",
+                    ? "border-accent bg-accent/10 ring-1 ring-accent"
+                    : "border-border bg-card hover:border-accent hover:bg-accent/5",
                 ].join(" ")}
               >
-                {active ? (
-                  <Check className="size-5" />
-                ) : (
-                  <Icon className="size-5" strokeWidth={1.75} />
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold leading-snug">{c.value}</span>
-                {c.hint && (
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{c.hint}</span>
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span
+                  className={[
+                    "flex size-11 shrink-0 items-center justify-center rounded-sm transition-colors",
+                    active
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-secondary text-accent group-hover:bg-accent/15",
+                  ].join(" ")}
+                >
+                  {active ? (
+                    <Check className="size-5" />
+                  ) : (
+                    <Icon className="size-5" strokeWidth={1.75} />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold leading-snug">{c.value}</span>
+                  {c.hint && (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{c.hint}</span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {onBack && (
         <button
@@ -355,6 +423,61 @@ function QuestionStep({
   );
 }
 
+function ImageChoiceCard({
+  choice,
+  active,
+  onClick,
+}: {
+  choice: Choice;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const [imgOk, setImgOk] = useState(true);
+  const Icon = choice.icon;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={[
+        "group flex flex-col overflow-hidden rounded-sm border text-left transition-all",
+        active
+          ? "border-accent ring-1 ring-accent"
+          : "border-border hover:border-accent hover:shadow-sm",
+      ].join(" ")}
+    >
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-secondary">
+        {choice.image && imgOk ? (
+          <img
+            src={choice.image}
+            alt={choice.value}
+            loading="lazy"
+            onError={() => setImgOk(false)}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-accent">
+            <Icon className="size-10" strokeWidth={1.25} />
+          </span>
+        )}
+        {active && (
+          <span className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-accent text-accent-foreground shadow">
+            <Check className="size-4" />
+          </span>
+        )}
+      </div>
+      <div
+        className={["flex-1 p-4 transition-colors", active ? "bg-accent/10" : "bg-card"].join(" ")}
+      >
+        <span className="block text-sm font-semibold leading-snug">{choice.value}</span>
+        {choice.hint && (
+          <span className="mt-0.5 block text-xs text-muted-foreground">{choice.hint}</span>
+        )}
+      </div>
+    </button>
+  );
+}
+
 function ResultStep({
   estArea,
   estPrice,
@@ -362,11 +485,13 @@ function ResultStep({
   answers,
   name,
   phone,
+  channel,
   consent,
   errors,
   pending,
   onName,
   onPhone,
+  onChannel,
   onConsent,
   onBack,
   onSubmit,
@@ -377,11 +502,13 @@ function ResultStep({
   answers: Record<string, string>;
   name: string;
   phone: string;
+  channel: string;
   consent: boolean;
   errors: { name?: string; phone?: string; consent?: string };
   pending: boolean;
   onName: (v: string) => void;
   onPhone: (v: string) => void;
+  onChannel: (v: string) => void;
   onConsent: (v: boolean) => void;
   onBack: () => void;
   onSubmit: () => void;
@@ -433,7 +560,7 @@ function ResultStep({
 
       <p className="mt-6 text-sm text-muted-foreground">
         Оставьте контакты — инженер подберёт готовый проект под ваш запрос, пришлёт планировки и
-        точный расчёт. Перезвоним в течение часа, без навязчивых звонков.
+        точный расчёт. Свяжемся в течение часа, без навязчивых звонков.
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -458,6 +585,33 @@ function ResultStep({
             aria-invalid={!!errors.phone}
           />
           {errors.phone && <p className="mt-1 text-xs text-destructive">{errors.phone}</p>}
+        </div>
+      </div>
+
+      {/* Предпочтительный канал связи */}
+      <div className="mt-4">
+        <label className="mb-1.5 block text-sm font-medium">Как удобнее связаться?</label>
+        <div className="flex flex-wrap gap-2">
+          {CHANNELS.map((ch) => {
+            const Icon = ch.icon;
+            const active = channel === ch.value;
+            return (
+              <button
+                key={ch.value}
+                type="button"
+                onClick={() => onChannel(ch.value)}
+                aria-pressed={active}
+                className={[
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "border-accent bg-accent/10 text-foreground"
+                    : "border-border text-muted-foreground hover:border-accent hover:text-foreground",
+                ].join(" ")}
+              >
+                <Icon className={active ? "size-4 text-accent" : "size-4"} /> {ch.value}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -497,7 +651,15 @@ function ResultStep({
   );
 }
 
-function SuccessState({ estArea, estPrice }: { estArea: number; estPrice: number }) {
+function SuccessState({
+  estArea,
+  estPrice,
+  channel,
+}: {
+  estArea: number;
+  estPrice: number;
+  channel: string;
+}) {
   return (
     <div className="py-6 text-center">
       <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-accent/15 text-accent">
@@ -508,7 +670,8 @@ function SuccessState({ estArea, estPrice }: { estArea: number; estPrice: number
       </h3>
       <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
         Мы подбираем проект под ваш запрос: ориентир ≈ {estArea} м², от {formatRub(estPrice)} ₽ под
-        ключ. Инженер свяжется с вами в течение часа и пришлёт планировки с точным расчётом.
+        ключ. Инженер свяжется с вами в течение часа ({channel}) и пришлёт планировки с точным
+        расчётом.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Button asChild size="lg" variant="outline" className="border-border hover:border-accent">
