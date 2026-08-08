@@ -1,4 +1,5 @@
 import { Container } from "@/components/Container";
+import { Reveal } from "@/components/motion/Reveal";
 
 const specs = [
   { value: "5", unit: "дней", label: "монтаж на участке" },
@@ -9,9 +10,13 @@ const specs = [
 
 export function BrandSpecs() {
   return (
-    <section className="bg-primary py-24 text-primary-foreground md:py-36">
-      <Container>
-        <div className="mx-auto max-w-4xl text-center">
+    <section className="relative overflow-hidden bg-primary py-24 text-primary-foreground md:py-36">
+      <span
+        aria-hidden="true"
+        className="ecocub-glow left-1/2 top-[-20%] h-[45vw] max-h-[520px] w-[45vw] max-w-[520px] -translate-x-1/2"
+      />
+      <Container className="relative">
+        <Reveal className="mx-auto max-w-4xl text-center">
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
             Designed and engineered by EcoCub
           </p>
@@ -20,16 +25,18 @@ export function BrandSpecs() {
             <span className="block">как техника</span>
           </h2>
           <p className="mx-auto mt-8 max-w-2xl text-base text-white/70 md:text-lg">
-            Hi-tech архитектура. Заводская готовность. Сборка на участке за 10 дней.
-            Конструктор от 36 до 300 м².
+            Hi-tech архитектура. Заводская готовность. Сборка на участке за 10 дней. Конструктор от
+            36 до 300 м².
           </p>
-        </div>
+        </Reveal>
 
         <div className="mt-20 grid grid-cols-2 gap-px overflow-hidden rounded-sm bg-white/10 md:grid-cols-4">
-          {specs.map((s) => (
-            <div
+          {specs.map((s, i) => (
+            <Reveal
               key={s.label}
-              className="flex min-w-0 flex-col items-center bg-primary px-4 py-10 text-center md:px-6 md:py-14"
+              variant="up"
+              delay={i * 110}
+              className="group flex min-w-0 flex-col items-center bg-primary px-4 py-10 text-center transition-colors duration-500 hover:bg-white/[0.04] md:px-6 md:py-14"
             >
               <p className="flex items-baseline justify-center whitespace-nowrap font-bold tracking-tight text-white [font-size:clamp(1.75rem,4.5vw,3.75rem)]">
                 <span>{s.value}</span>
@@ -42,7 +49,7 @@ export function BrandSpecs() {
               <p className="mt-4 hyphens-auto break-words text-[10px] uppercase tracking-wider text-white/60 md:text-xs lg:text-sm">
                 {s.label}
               </p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </Container>

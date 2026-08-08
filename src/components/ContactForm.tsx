@@ -272,8 +272,8 @@ export function ContactForm({
           disabled={pending}
           className={
             isDark
-              ? "mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
-              : "mt-6 w-full sm:w-auto"
+              ? "btn-shine mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
+              : "btn-shine mt-6 w-full sm:w-auto"
           }
         >
           {pending ? "Отправка…" : submitLabel}

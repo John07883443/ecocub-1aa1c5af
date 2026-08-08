@@ -8,16 +8,11 @@ import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
 import { BlogCard } from "@/components/BlogCard";
 import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { analytics } from "@/lib/analytics";
 import { useEffect } from "react";
-import {
-  BLOG_CATEGORIES,
-  formatDate,
-  getPostBySlug,
-  getRelatedPosts,
-  tagToSlug,
-} from "@/lib/blog";
+import { BLOG_CATEGORIES, formatDate, getPostBySlug, getRelatedPosts, tagToSlug } from "@/lib/blog";
 
 const SITE_URL = "https://eco-cub.ru";
 
@@ -157,7 +152,10 @@ function BlogPostPage() {
           {post.excerpt && <p className="mt-6 text-lg text-muted-foreground">{post.excerpt}</p>}
 
           {post.cover && (
-            <div className="mt-10 aspect-[16/9] overflow-hidden rounded-sm bg-secondary">
+            <Reveal
+              variant="scale"
+              className="mt-10 aspect-[16/9] overflow-hidden rounded-sm bg-secondary"
+            >
               <img
                 src={post.cover}
                 alt={post.title}
@@ -166,11 +164,13 @@ function BlogPostPage() {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
                 }}
               />
-            </div>
+            </Reveal>
           )}
 
           <article className="prose prose-neutral mt-10 max-w-none prose-headings:font-bold prose-headings:uppercase prose-h2:text-2xl prose-a:text-accent prose-strong:text-foreground prose-table:text-sm">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{post.content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {post.content}
+            </ReactMarkdown>
           </article>
 
           {post.tags.length > 0 && (
@@ -193,28 +193,38 @@ function BlogPostPage() {
       {related.length > 0 && (
         <Section className="bg-secondary/30">
           <Container>
-            <h2 className="text-2xl font-bold uppercase">Читать дальше</h2>
+            <Reveal>
+              <h2 className="text-2xl font-bold uppercase">Читать дальше</h2>
+            </Reveal>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map((p) => (
-                <BlogCard key={p.slug} post={p} />
+              {related.map((p, i) => (
+                <Reveal key={p.slug} variant="up" delay={(i % 3) * 90} className="h-full">
+                  <BlogCard post={p} />
+                </Reveal>
               ))}
             </div>
           </Container>
         </Section>
       )}
 
-      <Section className="bg-primary text-primary-foreground">
-        <Container className="max-w-3xl">
-          <h2 className="text-3xl font-bold uppercase">Получить расчёт по вашему проекту</h2>
-          <p className="mt-4 text-white/70">Менеджер свяжется в течение часа.</p>
-          <div className="mt-8 rounded-sm bg-white/5 p-6 md:p-8">
-            <ContactForm
-              variant="dark"
-              formType="contact"
-              sourcePage={`/blog/${post.slug}`}
-              submitLabel="Получить расчёт"
-            />
-          </div>
+      <Section className="relative overflow-hidden bg-primary text-primary-foreground">
+        <span
+          aria-hidden="true"
+          className="ecocub-glow bottom-[-20%] right-[-8%] h-[45vw] max-h-[500px] w-[45vw] max-w-[500px]"
+        />
+        <Container className="relative max-w-3xl">
+          <Reveal variant="scale">
+            <h2 className="text-3xl font-bold uppercase">Получить расчёт по вашему проекту</h2>
+            <p className="mt-4 text-white/70">Менеджер свяжется в течение часа.</p>
+            <div className="mt-8 rounded-sm bg-white/5 p-6 md:p-8">
+              <ContactForm
+                variant="dark"
+                formType="contact"
+                sourcePage={`/blog/${post.slug}`}
+                submitLabel="Получить расчёт"
+              />
+            </div>
+          </Reveal>
         </Container>
       </Section>
     </PageLayout>

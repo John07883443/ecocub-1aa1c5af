@@ -3,6 +3,7 @@ import { Phone, Mail, MapPin, MessageCircle } from "lucide-react";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
+import { Reveal } from "@/components/motion/Reveal";
 import { site } from "@/lib/site";
 import { analytics } from "@/lib/analytics";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
@@ -34,19 +35,21 @@ function ContactsPage() {
     <PageLayout>
       <Section className="border-b border-border">
         <Container>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Контакты</p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Связаться с EcoCub</h1>
-          <p className="mt-6 max-w-2xl text-base text-muted-foreground">
-            Ответим на любой вопрос о проектах, технологиях и условиях. Расчёт стоимости — в течение
-            часа.
-          </p>
+          <Reveal>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Контакты</p>
+            <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Связаться с EcoCub</h1>
+            <p className="mt-6 max-w-2xl text-base text-muted-foreground">
+              Ответим на любой вопрос о проектах, технологиях и условиях. Расчёт стоимости — в
+              течение часа.
+            </p>
+          </Reveal>
         </Container>
       </Section>
 
       <Section>
         <Container>
           <div className="grid gap-12 lg:grid-cols-2">
-            <div>
+            <Reveal variant="left">
               <ul className="space-y-6">
                 <li className="flex gap-4">
                   <Phone className="mt-1 size-5 shrink-0 text-accent" />
@@ -119,9 +122,13 @@ function ContactsPage() {
                   </div>
                 </li>
               </ul>
-            </div>
+            </Reveal>
 
-            <div className="rounded-sm border border-border bg-secondary p-6 md:p-8">
+            <Reveal
+              variant="right"
+              delay={120}
+              className="rounded-sm border border-border bg-secondary p-6 md:p-8"
+            >
               <h2 className="text-xl font-bold uppercase">Оставить заявку</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Менеджер свяжется с вами в течение часа.
@@ -129,7 +136,7 @@ function ContactsPage() {
               <div className="mt-6">
                 <ContactForm formType="contact" sourcePage="/contacts" />
               </div>
-            </div>
+            </Reveal>
           </div>
         </Container>
       </Section>

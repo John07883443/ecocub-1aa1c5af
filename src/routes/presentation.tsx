@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
+import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/presentation")({
@@ -32,20 +33,25 @@ function PresentationPage() {
     <PageLayout>
       <Section className="border-b border-border">
         <Container>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            PDF · Каталог
-          </p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Презентация EcoCub</h1>
-          <p className="mt-6 max-w-2xl text-base text-muted-foreground">
-            Подробный PDF с проектами, технологиями, материалами и ценообразованием. Пришлём на ваш
-            email сразу после заявки.
-          </p>
+          <Reveal>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
+              PDF · Каталог
+            </p>
+            <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Презентация EcoCub</h1>
+            <p className="mt-6 max-w-2xl text-base text-muted-foreground">
+              Подробный PDF с проектами, технологиями, материалами и ценообразованием. Пришлём на
+              ваш email сразу после заявки.
+            </p>
+          </Reveal>
         </Container>
       </Section>
 
       <Section>
         <Container>
-          <div className="mx-auto max-w-2xl rounded-sm border border-border bg-secondary p-6 md:p-10">
+          <Reveal
+            variant="scale"
+            className="mx-auto max-w-2xl rounded-sm border border-border bg-secondary p-6 md:p-10"
+          >
             <Download className="size-10 text-accent" />
             <h2 className="mt-4 text-2xl font-bold uppercase md:text-3xl">Получить презентацию</h2>
             <p className="mt-3 text-sm text-muted-foreground">
@@ -59,7 +65,7 @@ function PresentationPage() {
                 showMessage={false}
               />
             </div>
-          </div>
+          </Reveal>
         </Container>
       </Section>
     </PageLayout>

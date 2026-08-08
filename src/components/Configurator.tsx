@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Box, Boxes, Blocks } from "lucide-react";
 import { Container } from "@/components/Container";
+import { Reveal } from "@/components/motion/Reveal";
 
 const configs = [
   {
@@ -33,25 +34,31 @@ export function Configurator() {
   return (
     <section className="bg-background py-24 md:py-32">
       <Container>
-        <div className="mb-14 max-w-3xl">
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            Конструктор
-          </p>
+        <Reveal className="mb-14 max-w-3xl">
+          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Конструктор</p>
           <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
             Соберите свой EcoCub
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Кратно 18 м². До 3 этажей. Любая планировка. Расширяете по мере роста семьи —
-            добавляете модуль и подключаете к существующему.
+            Кратно 18 м². До 3 этажей. Любая планировка. Расширяете по мере роста семьи — добавляете
+            модуль и подключаете к существующему.
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {configs.map((c) => {
+          {configs.map((c, i) => {
             const Icon = c.icon;
             return (
-              <div key={c.name} className="group flex flex-col rounded-sm border border-border bg-card p-8 transition-colors hover:border-accent">
-                <Icon className="size-10 text-accent" strokeWidth={1.5} />
+              <Reveal
+                key={c.name}
+                variant="up"
+                delay={i * 110}
+                className="group hover-lift flex h-full flex-col rounded-sm border border-border bg-card p-8 hover:border-accent hover:shadow-lg"
+              >
+                <Icon
+                  className="size-10 text-accent transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1 group-hover:scale-110"
+                  strokeWidth={1.5}
+                />
                 <h3 className="mt-6 text-2xl font-bold uppercase tracking-tight">{c.name}</h3>
                 <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                   <p>{c.modules}</p>
@@ -59,16 +66,20 @@ export function Configurator() {
                   <p>{c.floors}</p>
                 </div>
                 <p className="mt-6 flex-1 text-sm text-muted-foreground">{c.desc}</p>
-              </div>
+              </Reveal>
             );
           })}
         </div>
 
-        <div className="mt-10">
-          <Link to="/portfolio" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline">
-            Смотреть готовые конфигурации <ArrowRight className="size-4" />
+        <Reveal delay={120} className="mt-10">
+          <Link
+            to="/portfolio"
+            className="group inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
+          >
+            Смотреть готовые конфигурации{" "}
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
           </Link>
-        </div>
+        </Reveal>
       </Container>
     </section>
   );
