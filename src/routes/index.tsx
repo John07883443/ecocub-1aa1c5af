@@ -194,7 +194,7 @@ function HomePage() {
       <BrandSpecs />
 
       {/* COMPETITORS */}
-      <Section className="bg-background">
+      <Section id="comparison" className="bg-background">
         <Container>
           <div className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
@@ -231,7 +231,7 @@ function HomePage() {
       </Section>
 
       {/* COMPANY TIMELINE */}
-      <Section className="bg-secondary">
+      <Section id="about" className="bg-secondary">
         <Container>
           <div className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">О компании</p>
@@ -244,7 +244,7 @@ function HomePage() {
       </Section>
 
       {/* LEGO */}
-      <Section className="bg-background">
+      <Section id="modules" className="bg-background">
         <Container>
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
@@ -284,7 +284,7 @@ function HomePage() {
       <Configurator />
 
       {/* TECHNOLOGY */}
-      <Section className="bg-primary text-primary-foreground">
+      <Section id="technology" className="bg-primary text-primary-foreground">
         <Container>
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div className="relative">
@@ -331,7 +331,7 @@ function HomePage() {
       </Section>
 
       {/* CALCULATOR */}
-      <Section className="bg-background">
+      <Section id="calculator" className="bg-background">
         <Container>
           <div className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
@@ -350,7 +350,7 @@ function HomePage() {
       </Section>
 
       {/* WHATS INCLUDED */}
-      <Section className="bg-secondary">
+      <Section id="included" className="bg-secondary">
         <Container>
           <div className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
@@ -365,7 +365,7 @@ function HomePage() {
       </Section>
 
       {/* PROJECTS */}
-      <Section className="bg-background">
+      <Section id="projects" className="bg-background">
         <Container>
           <div className="mb-12 flex items-end justify-between gap-4">
             <div>
@@ -388,7 +388,7 @@ function HomePage() {
       </Section>
 
       {/* INTERIORS */}
-      <Section className="bg-secondary">
+      <Section id="interiors" className="bg-secondary">
         <Container>
           <div className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
@@ -404,7 +404,7 @@ function HomePage() {
       </Section>
 
       {/* STAGES */}
-      <Section className="bg-background">
+      <Section id="stages" className="bg-background">
         <Container>
           <div className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
@@ -421,7 +421,7 @@ function HomePage() {
 
       {/* BLOG */}
       {posts.length > 0 && (
-        <Section className="bg-secondary">
+        <Section id="blog" className="bg-secondary">
           <Container>
             <div className="mb-12 flex items-end justify-between gap-4">
               <div>
@@ -445,7 +445,7 @@ function HomePage() {
       )}
 
       {/* CTA FORM */}
-      <Section className="bg-primary text-primary-foreground">
+      <Section id="contact" className="bg-primary text-primary-foreground">
         <Container>
           <div className="grid gap-12 lg:grid-cols-2">
             <div>
