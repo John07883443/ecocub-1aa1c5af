@@ -5,7 +5,7 @@ date: 2025-09-16
 category: cases
 tags: ["кирпич", "участок"]
 excerpt: "<strong>SkyRiver — стильный модульный дом от EcoCub, который объединил идеи архитекторов с трёх континентов и обрёл собственный характер в премиальных пейзажах Подмосковья.</strong>"
-cover: https://static.tildacdn.com/tild6163-6466-4735-b639-333362326661/R_Photo_-_1.jpg
+cover: /images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-cover.jpg
 readingTime: 8
 seoTitle: "SkyRiver: уникальный дом в Подмосковье — архитектура, выросшая из ландшафта"
 seoDescription: "SkyRiver — загородный дом в Подмосковье, созданный из идей мировой архитектуры и вдохновлённый природным ландшафтом. История проекта, философия и дизайн."
@@ -26,9 +26,9 @@ SkyRiver — это не случайный образ, а результат в
 
 <strong>Дом как продолжение скалы</strong>
 
-![](https://static.tildacdn.com/tild3861-3535-4833-a261-376530666564/CROWHILL-1.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. La Binocle (Канада, студия Naturehumaine)](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-1.jpg)
 
-![](https://static.tildacdn.com/tild3637-3461-4134-b238-646266613063/CROWHILL_Plan.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. La Binocle (Канада, студия Naturehumaine)](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-2.jpg)
 
 <ul><li data-list="bullet">Восточные кантоны, Квебек</li><li data-list="bullet">Архитектурное бюро: Naturehumaine, автор — Стефан Расслет (Stéphane Rasselet)</li><li data-list="bullet">2018 год, финалист OAQ Awards of Excellence 2019</li></ul>
 
@@ -44,9 +44,9 @@ SkyRiver — это не случайный образ, а результат в
 
 <strong>Архитектура, рождённая горным склоном</strong>
 
-![](https://static.tildacdn.com/tild3265-6362-4438-a539-363366373733/cover.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. Detached Family House (GCA Architects, Испания)](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-3.jpg)
 
-![](https://static.tildacdn.com/tild6563-3130-4130-a433-313666383733/10.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. Detached Family House (GCA Architects, Испания)](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-4.jpg)
 
 <ul><li data-list="bullet">Андорра</li><li data-list="bullet">Архитектурное бюро: GCA Architects (Барселона)</li><li data-list="bullet">2010 год</li></ul>
 
@@ -62,9 +62,9 @@ SkyRiver — это не случайный образ, а результат в
 
 <strong>Биоклиматический куб</strong>
 
-![](https://static.tildacdn.com/tild6533-3962-4361-a164-363363393035/guaiume-house-by-24-.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. Guaiume House (Бразилия, 24 7 Arquitetura)](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-5.jpg)
 
-![](https://static.tildacdn.com/tild3134-6436-4262-a638-613864376238/guaiume-house-by-24-.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. Guaiume House (Бразилия, 24 7 Arquitetura)](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-6.jpg)
 
 <ul><li data-list="bullet">Sousas, Campinas, штат Сан-Паулу</li><li data-list="bullet">Архитектурное бюро: 24 7 Arquitetura</li><li data-list="bullet">2012 год, площадь ~304 м²</li></ul>
 
@@ -88,7 +88,7 @@ SkyRiver следует этому принципу, продолжая лучш
 
 ## SkyRiver в деталях: когда дом рождается из ландшафта
 
-![](https://static.tildacdn.com/tild3237-6433-4436-a433-383964396335/R.jpg)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. SkyRiver в деталях: когда дом рождается из ландшафта](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-7.jpg)
 
 Перед проектированием была проведена полная топографическая съёмка участка:
 
@@ -96,7 +96,7 @@ SkyRiver следует этому принципу, продолжая лучш
 
 Это позволило вписать дом в ландшафт сразу с учётом всех будущих сценариев жизни.
 
-![](https://static.tildacdn.com/tild6165-3637-4934-b163-646261313136/skyriver_scheme.png)
+![От Канады до Бразилии: мировые идеи в подмосковном доме SkyRiver. SkyRiver в деталях: когда дом рождается из ландшафта](/images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri-8.png)
 
 <strong>Фундамент и перспектива</strong>
 

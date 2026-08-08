@@ -5,7 +5,7 @@ date: 2025-07-01
 category: news
 tags: ["монолит", "каркасные дома"]
 excerpt: "Почему всё больше семей переходят от дерева к бетону?"
-cover: https://static.tildacdn.com/tild6163-3730-4465-a638-323136626535/dvuhetazhnyj-kottedz.jpg
+cover: /images/blog/modulnie-betonnie-doma-dlya-kruglogodichnogo-prozhivaniya-ra-cover.jpg
 readingTime: 3
 seoTitle: "Модульные бетонные дома для круглогодичного проживания | EcoCub"
 seoDescription: "Бетонный модульный дом от EcoCub — безопасный, тёплый и долговечный вариант для ПМЖ. Сборка от 5 дней. Цена от 4,9 млн ₽. Хай-тек стиль и заводское качество."

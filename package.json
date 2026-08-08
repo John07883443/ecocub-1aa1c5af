@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "blog:localize-images": "node scripts/localize-blog-images.mjs",
+    "blog:save-image": "node scripts/save-higgsfield-image.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
