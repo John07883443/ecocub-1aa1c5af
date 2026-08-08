@@ -60,6 +60,12 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "https://eco-cub.ru/images/hero-villa-1600.webp" },
     ],
     links: [
+      // Иконки сайта — логотип EcoCub, перенесённый со старой версии на Тильде.
+      // SVG идёт первым: браузеры, которые его понимают, берут именно его и
+      // получают чёткую картинку в любом размере. Остальным достаётся .ico.
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/x-icon", sizes: "16x16 32x32 48x48", href: "/favicon.ico" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       {
         rel: "preconnect",
         href: "https://fonts.googleapis.com",
