@@ -71,15 +71,9 @@ export function LayeredSection() {
             <button
               key={l.id}
               type="button"
-              onMouseEnter={() => setActive(l.id)}
-              onMouseLeave={() =>
-                setActive((prev) => (prev === l.id ? null : prev))
+              onClick={() =>
+                setActive((prev) => (prev === l.id ? null : l.id))
               }
-              onFocus={() => setActive(l.id)}
-              onBlur={() =>
-                setActive((prev) => (prev === l.id ? null : prev))
-              }
-              onClick={() => setActive(isActive ? null : l.id)}
               style={{ left: `${l.x}%`, top: `${l.y}%` }}
               className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 outline-none"
               aria-label={l.title}
@@ -89,17 +83,23 @@ export function LayeredSection() {
                 aria-hidden
                 className="absolute inset-0 -m-2 animate-ping rounded-full bg-accent/40 [animation-duration:2.4s]"
               />
-              {/* Dot */}
+              {/* Точка: на десктопе реагирует на ховер (sm:group-hover),
+                  на мобильных подсветка только по тапу (active) — без эмуляции
+                  ховера, поэтому один тап сразу срабатывает. */}
               <span
-                className={`relative block size-3 rounded-full border-2 border-accent bg-background transition-all duration-300 group-hover:scale-125 group-focus-visible:scale-125 ${
-                  isActive ? "scale-125 bg-accent" : ""
+                className={`relative block size-3 rounded-full border-2 border-accent transition-all duration-300 group-focus-visible:scale-125 sm:group-hover:scale-125 sm:group-hover:bg-accent ${
+                  isActive ? "scale-125 bg-accent" : "bg-background"
                 }`}
               />
 
               {/* Label card (desktop only) */}
               <span
-                className={`pointer-events-none absolute top-1/2 hidden w-64 -translate-y-1/2 sm:block ${
+                className={`pointer-events-none absolute top-1/2 hidden w-64 -translate-y-1/2 transition-opacity duration-300 sm:block ${
                   l.side === "right" ? "left-6" : "right-6"
+                } ${
+                  isActive
+                    ? "opacity-100"
+                    : "opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                 }`}
               >
                 {/* Connector line */}
@@ -144,7 +144,9 @@ export function LayeredSection() {
               ref={(el) => {
                 legendRefs.current[l.id] = el;
               }}
-              onClick={() => setActive(isActive ? null : l.id)}
+              onClick={() =>
+                setActive((prev) => (prev === l.id ? null : l.id))
+              }
               aria-pressed={isActive}
               className={`rounded-sm border px-4 py-3 text-left transition-colors duration-300 ${
                 isActive
