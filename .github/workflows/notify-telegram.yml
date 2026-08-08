@@ -1,0 +1,43 @@
+# Анонс новых статей блога в Telegram.
+# Срабатывает после успешного деплоя (workflow "Deploy to VPS") и шлёт в
+# Telegram статьи, добавленные последним коммитом. Также можно запустить
+# вручную (workflow_dispatch) и указать slug конкретной статьи.
+#
+# Требует секретов Actions: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# (Settings -> Secrets and variables -> Actions). Это тот же бот и чат,
+# что и для уведомлений о заявках.
+name: Announce new blog posts to Telegram
+
+on:
+  workflow_run:
+    workflows: ["Deploy to VPS"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Slug статьи для ручного анонса (без .md). Пусто — по последнему коммиту."
+        required: false
+        default: ""
+
+jobs:
+  announce:
+    # Автозапуск — только после успешного деплоя из push в main.
+    # Ручной запуск (workflow_dispatch) — всегда.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          fetch-depth: 2
+      - name: Announce to Telegram
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLUG: ${{ github.event.inputs.slug }}
+        run: bash scripts/announce-telegram.sh
