@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Layer = {
   id: string;
@@ -40,6 +40,17 @@ const layers: Layer[] = [
 
 export function LayeredSection() {
   const [active, setActive] = useState<string | null>(null);
+  const legendRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // На мобильных карточка-подпись у точки скрыта, поэтому по тапу подсвечиваем
+  // и подкручиваем к соответствующему пункту легенды под картинкой.
+  useEffect(() => {
+    if (!active) return;
+    legendRefs.current[active]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [active]);
 
   return (
     <div className="w-full">
@@ -56,7 +67,7 @@ export function LayeredSection() {
         />
 
         <img
-          src="/images/tech-section-clean-transparent.png"
+          src="/images/tech-section-clean-transparent.webp"
           alt="Послойный разрез монолитного модуля EcoCub: бетон М400, оцинкованная сталь, ПСБ-С35"
           className="relative h-full w-full object-contain drop-shadow-[0_22px_45px_rgba(0,0,0,0.55)]"
         />
@@ -130,22 +141,43 @@ export function LayeredSection() {
         })}
       </div>
 
-      {/* Mobile legend (below image) */}
+      {/* Mobile legend (below image) — синхронизирована с точками по тапу */}
       <div className="mt-8 grid gap-3 sm:hidden">
-        {layers.map((l) => (
-          <div
-            key={l.id}
-            className="rounded-sm border border-white/15 bg-white/5 px-4 py-3"
-          >
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
-              <span className="inline-block size-2 rounded-full bg-accent" />
-              {l.title}
-            </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-white/70">
-              {l.desc}
-            </p>
-          </div>
-        ))}
+        {layers.map((l) => {
+          const isActive = active === l.id;
+          return (
+            <button
+              key={l.id}
+              type="button"
+              ref={(el) => {
+                legendRefs.current[l.id] = el;
+              }}
+              onClick={() => setActive(isActive ? null : l.id)}
+              aria-pressed={isActive}
+              className={`rounded-sm border px-4 py-3 text-left transition-colors duration-300 ${
+                isActive
+                  ? "border-accent/60 bg-accent/10"
+                  : "border-white/15 bg-white/5"
+              }`}
+            >
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+                <span
+                  className={`inline-block size-2 rounded-full bg-accent transition-transform duration-300 ${
+                    isActive ? "scale-150" : ""
+                  }`}
+                />
+                {l.title}
+              </p>
+              <p
+                className={`mt-1.5 text-xs leading-relaxed transition-colors duration-300 ${
+                  isActive ? "text-white/90" : "text-white/70"
+                }`}
+              >
+                {l.desc}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
