@@ -101,6 +101,49 @@ export function orphansAfterRemoval(modules: ModuleItem[], removedId: string): M
   return remaining.filter((m) => m.floor > 0 && supportArea(m, remaining) < MIN_SUPPORT_AREA);
 }
 
+/** Каскадно убирает модули верхних этажей, оставшиеся без достаточной опоры. */
+export function dropUnsupported(modules: ModuleItem[]): ModuleItem[] {
+  let kept = modules;
+  for (;;) {
+    const orphans = kept.filter((m) => m.floor > 0 && supportArea(m, kept) < MIN_SUPPORT_AREA);
+    if (!orphans.length) return kept;
+    const ids = new Set(orphans.map((o) => o.id));
+    kept = kept.filter((m) => !ids.has(m.id));
+  }
+}
+
+/**
+ * Можно ли передвинуть модуль id в позицию (x, z): без пересечений, с опорой
+ * для него самого и не лишая опоры ни один из уже стоящих модулей.
+ */
+export function isValidMove(
+  modules: ModuleItem[],
+  id: string,
+  x: number,
+  z: number,
+  n: number,
+): boolean {
+  const target = modules.find((m) => m.id === id);
+  if (!target) return false;
+  const rest = modules.filter((m) => m.id !== id);
+  const moved = { ...target, x, z };
+  if (!canPlace(rest, moved, n)) return false;
+  const next = [...rest, moved];
+  return dropUnsupported(next).length === next.length;
+}
+
+/** Все допустимые позиции (шаг 1 м) для перемещения модуля id по участку. */
+export function validMoveAnchors(modules: ModuleItem[], id: string, n: number): Set<string> {
+  const valid = new Set<string>();
+  const max = maxAnchor(n);
+  for (let x = 0; x <= max; x += STEP_M) {
+    for (let z = 0; z <= max; z += STEP_M) {
+      if (isValidMove(modules, id, x, z, n)) valid.add(`${x},${z}`);
+    }
+  }
+  return valid;
+}
+
 export function computeStats(
   modules: ModuleItem[],
   sotki: number,
