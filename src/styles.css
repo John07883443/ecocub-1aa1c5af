@@ -472,3 +472,18 @@ html {
     transform: none;
   }
 }
+
+/* Медленное вращение иконки автоповорота в конструкторе */
+@keyframes ecocub-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: ecocub-spin 2.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow {
+    animation: none;
+  }
+}
