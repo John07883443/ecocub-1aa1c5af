@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Box, Boxes, Blocks } from "lucide-react";
 import { Container } from "@/components/Container";
+import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/Reveal";
 
 const configs = [
@@ -32,7 +33,7 @@ const configs = [
 
 export function Configurator() {
   return (
-    <section className="bg-background py-24 md:py-32">
+    <section id="builder" className="scroll-mt-28 bg-background py-24 md:scroll-mt-32 md:py-32">
       <Container>
         <Reveal className="mb-14 max-w-3xl">
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Конструктор</p>
@@ -40,9 +41,18 @@ export function Configurator() {
             Соберите свой EcoCub
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Кратно 18 м². До 3 этажей. Любая планировка. Расширяете по мере роста семьи — добавляете
-            модуль и подключаете к существующему.
+            Кратно 9 м². До 3 этажей. Любая планировка. Соберите дом из модулей в интерактивном
+            3D-конструкторе, покрутите его на участке и сразу узнайте площадь и стоимость.
           </p>
+          <Button
+            asChild
+            size="lg"
+            className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90"
+          >
+            <Link to="/constructor">
+              Открыть 3D-конструктор <ArrowRight />
+            </Link>
+          </Button>
         </Reveal>
 
         <div className="grid gap-6 md:grid-cols-3">

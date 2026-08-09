@@ -28,7 +28,6 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
 import { seedFromQuiz } from "@/lib/dreamProfile";
@@ -48,7 +47,8 @@ import { site } from "@/lib/site";
  *
  * Карточки размера показывают рендеры домов (public/images/quiz-house-*.webp),
  * с деградацией до иконки, если файл ещё не залит. Заявка уходит в тот же
- * пайплайн, что и форма контактов: submissions + Telegram, с атрибуцией.
+ * пайплайн, что и форма контактов: POST /api/lead — база и Telegram,
+ * с атрибуцией.
  */
 
 type Choice = {
@@ -237,10 +237,9 @@ export function HouseQuiz() {
 
       const attribution = await buildAttribution();
 
-      // Доставка лида в Telegram — критичный путь и не зависит от записи в БД.
-      // RLS-политика submissions может отклонить незнакомый form_type, но заявка
-      // всё равно обязана дойти до менеджера, поэтому уведомление идёт первым.
-      const notified = await fetch("/api/notify", {
+      // Одна точка приёма: сервер кладёт заявку в базу и шлёт уведомление
+      // в Telegram. Ошибку вернёт, только если не сработало ни то, ни другое.
+      const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -249,36 +248,16 @@ export function HouseQuiz() {
           phone: phone.trim(),
           message,
           sourcePage: typeof window !== "undefined" ? window.location.pathname : undefined,
+          payload: {
+            ...attribution,
+            quiz: answers,
+            preferredChannel: channel,
+            estimate: { area: estArea, price: estPrice },
+          },
           attributionSummary: attributionSummary(attribution),
         }),
-      })
-        .then((r) => r.ok)
-        .catch(() => false);
-
-      // Сохранение в админ-базу — лучшее усилие. Если политика БД отклонит вставку
-      // (пока form_type='quiz' не добавлен в RLS), не роняем заявку: она уже в Telegram.
-      const { error } = await supabase.from("submissions").insert({
-        form_type: "quiz",
-        name: name.trim(),
-        phone: phone.trim(),
-        email: null,
-        message,
-        project_slug: null,
-        source_page: typeof window !== "undefined" ? window.location.pathname : null,
-        status: "new",
-        payload: {
-          ...attribution,
-          quiz: answers,
-          preferredChannel: channel,
-          estimate: { area: estArea, price: estPrice },
-        } as never,
       });
-      if (error) {
-        console.warn("Квиз: заявка не записана в БД:", error.message);
-      }
-
-      // Ошибку показываем, только если лид не ушёл ни одним путём.
-      if (!notified && error) throw error;
+      if (!res.ok) throw new Error("Сервер не принял заявку");
 
       // Запоминаем базовые ответы — конфигуратор «Дом мечты» стартует не с нуля.
       seedFromQuiz(answers);

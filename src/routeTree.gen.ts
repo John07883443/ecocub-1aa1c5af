@@ -15,12 +15,13 @@ import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as ContactsRouteImport } from './routes/contacts'
+import { Route as ConstructorRouteImport } from './routes/constructor'
 import { Route as ConcreteRouteImport } from './routes/concrete'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
-import { Route as ApiNotifyRouteImport } from './routes/api.notify'
+import { Route as ApiLeadRouteImport } from './routes/api.lead'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
 
@@ -54,6 +55,11 @@ const ContactsRoute = ContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConstructorRoute = ConstructorRouteImport.update({
+  id: '/constructor',
+  path: '/constructor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConcreteRoute = ConcreteRouteImport.update({
   id: '/concrete',
   path: '/concrete',
@@ -79,9 +85,9 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiNotifyRoute = ApiNotifyRouteImport.update({
-  id: '/api/notify',
-  path: '/api/notify',
+const ApiLeadRoute = ApiLeadRouteImport.update({
+  id: '/api/lead',
+  path: '/api/lead',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogTagTagRoute = BlogTagTagRouteImport.update({
@@ -98,13 +104,14 @@ const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/concrete': typeof ConcreteRoute
+  '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/api/notify': typeof ApiNotifyRoute
+  '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -114,13 +121,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/concrete': typeof ConcreteRoute
+  '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/api/notify': typeof ApiNotifyRoute
+  '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
@@ -131,13 +139,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/concrete': typeof ConcreteRoute
+  '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/api/notify': typeof ApiNotifyRoute
+  '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -149,13 +158,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/concrete'
+    | '/constructor'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
-    | '/api/notify'
+    | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -165,13 +175,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/concrete'
+    | '/constructor'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
-    | '/api/notify'
+    | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog'
@@ -181,13 +192,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/concrete'
+    | '/constructor'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
-    | '/api/notify'
+    | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -198,13 +210,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConcreteRoute: typeof ConcreteRoute
+  ConstructorRoute: typeof ConstructorRoute
   ContactsRoute: typeof ContactsRoute
   PortfolioRoute: typeof PortfolioRoute
   PresentationRoute: typeof PresentationRoute
   RssDotxmlRoute: typeof RssDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TechnologyRoute: typeof TechnologyRoute
-  ApiNotifyRoute: typeof ApiNotifyRoute
+  ApiLeadRoute: typeof ApiLeadRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/constructor': {
+      id: '/constructor'
+      path: '/constructor'
+      fullPath: '/constructor'
+      preLoaderRoute: typeof ConstructorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/concrete': {
       id: '/concrete'
       path: '/concrete'
@@ -291,11 +311,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/notify': {
-      id: '/api/notify'
-      path: '/api/notify'
-      fullPath: '/api/notify'
-      preLoaderRoute: typeof ApiNotifyRouteImport
+    '/api/lead': {
+      id: '/api/lead'
+      path: '/api/lead'
+      fullPath: '/api/lead'
+      preLoaderRoute: typeof ApiLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/tag/$tag': {
@@ -318,13 +338,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConcreteRoute: ConcreteRoute,
+  ConstructorRoute: ConstructorRoute,
   ContactsRoute: ContactsRoute,
   PortfolioRoute: PortfolioRoute,
   PresentationRoute: PresentationRoute,
   RssDotxmlRoute: RssDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TechnologyRoute: TechnologyRoute,
-  ApiNotifyRoute: ApiNotifyRoute,
+  ApiLeadRoute: ApiLeadRoute,
   BlogSlugRoute: BlogSlugRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
   BlogIndexRoute: BlogIndexRoute,

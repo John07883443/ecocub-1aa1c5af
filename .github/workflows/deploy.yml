@@ -1,6 +1,13 @@
-# Автодеплой EcoCub на VPS
-# Требует секретов: VPS_HOST, VPS_SSH_KEY, VPS_KNOWN_HOSTS
-# (Settings -> Secrets and variables -> Actions)
+# Автодеплой EcoCub на VPS.
+#
+# Сборка идёт здесь, а не на сервере. Причина: у VPS 2 ГБ памяти, из которых
+# сборка забирала 1.5 ГБ и уходила в подкачку — запас был на исходе, и однажды
+# она упала бы прямо на боевой машине. Теперь на сервер приезжает готовый
+# .output, ему нужно только распаковаться и перезапустить процесс.
+#
+# Секретов сборке не требуется: адрес и ключ базы читаются на сервере в момент
+# запроса, в бандл ничего не попадает. Ключи VPS — в Settings → Secrets and
+# variables → Actions: VPS_HOST, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
 name: Deploy to VPS
 
 on:
@@ -16,13 +23,69 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Prepare SSH
+      - uses: actions/checkout@v4
+
+      # Версия должна совпадать с той, под которой сайт работает на сервере
+      # (Node 22): собранный бандл рассчитан на конкретный рантайм.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Сборка
+        run: npm run build
+
+      # Проверка цели сборки. Сервер запускает `node .output/server/index.mjs`,
+      # а конфиг Lovable по умолчанию подставляет воркер для Cloudflare —
+      # такой артефакт под Node молча завершается, не открывая порт. Если
+      # цель когда-нибудь съедет, деплой должен упасть здесь, а не на бою.
+      - name: Проверка цели сборки
+        run: |
+          test -f .output/server/index.mjs || { echo "нет .output/server/index.mjs"; exit 1; }
+          grep -q '"preset": "node-server"' .output/nitro.json || {
+            echo "ОШИБКА: цель сборки не node-server"; cat .output/nitro.json; exit 1; }
+
+      # Собранный сервер поднимается прямо здесь и отвечает на запросы.
+      # Переменных базы в CI нет намеренно: заодно проверяется, что при
+      # недоступной базе сайт отдаёт карточки из файлов, а не падает.
+      - name: Проверка запуска
+        run: |
+          LEADS_DB_PATH="$RUNNER_TEMP/leads.db" PORT=3000 HOST=127.0.0.1 \
+            node .output/server/index.mjs & echo $! > /tmp/srv.pid
+          for i in $(seq 1 30); do sleep 1; curl -sf -o /dev/null http://127.0.0.1:3000/ && break; done
+          fail=0
+          for path in / /portfolio /concrete /blog /sitemap.xml; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "http://127.0.0.1:3000$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          kill "$(cat /tmp/srv.pid)" 2>/dev/null || true
+          [ "$fail" = "0" ] || { echo "ОШИБКА: собранный сайт отвечает не 200"; exit 1; }
+
+      - name: Ключи SSH
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-      - name: Run deploy script on server
+
+      # rsync, а не scp: картинки занимают большую часть из 67 МБ и меняются
+      # редко, поэтому обычная выкладка передаёт сотни килобайт вместо десятков
+      # мегабайт. Каталог промежуточный — сервер сам переносит его в рабочий,
+      # сохранив предыдущую сборку для отката.
+      # --rsync-path создаёт каталог назначения на сервере: иначе первая же
+      # выкладка на свежей машине падала бы на «нет такого каталога».
+      - name: Отправка сборки на сервер
+        run: |
+          rsync -az --delete --stats \
+            --rsync-path="mkdir -p /home/deploy/incoming/output && rsync" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts" \
+            .output/ deploy@${{ secrets.VPS_HOST }}:/home/deploy/incoming/output/
+
+      - name: Активация на сервере
         run: |
           ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts \
             deploy@${{ secrets.VPS_HOST }} 'bash /home/deploy/deploy.sh'

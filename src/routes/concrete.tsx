@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchProjects, filterBySeries } from "@/lib/projects";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
@@ -34,16 +34,9 @@ export const Route = createFileRoute("/concrete")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru/concrete" }],
   }),
-  loader: async () => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
-      .eq("series", "concrete")
-      .eq("published", true)
-      .order("display_order", { ascending: true });
-    if (error) throw error;
-    return { projects: (data ?? []) as ProjectCardData[] };
-  },
+  loader: async () => ({
+    projects: filterBySeries(await fetchProjects(), "concrete") as ProjectCardData[],
+  }),
   errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
       <Container className="py-32 text-center text-destructive">{error.message}</Container>

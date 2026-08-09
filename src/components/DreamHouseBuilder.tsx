@@ -43,7 +43,6 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
 import {
@@ -810,7 +809,8 @@ export function DreamHouseBuilder() {
       const message = buildSummary();
       const attribution = await buildAttribution();
 
-      const notified = await fetch("/api/notify", {
+      // Одна точка приёма: сервер кладёт заявку в базу и шлёт уведомление в Telegram.
+      const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -819,32 +819,18 @@ export function DreamHouseBuilder() {
           phone: phone.trim(),
           message,
           sourcePage: typeof window !== "undefined" ? window.location.pathname : undefined,
+          payload: {
+            ...attribution,
+            dream: answers,
+            prompt: buildPrompt(),
+            plot: { sotki, orient },
+            estimate: { area: est.area, price: est.price },
+            preferredChannel: channel,
+          },
           attributionSummary: attributionSummary(attribution),
         }),
-      })
-        .then((r) => r.ok)
-        .catch(() => false);
-
-      const { error } = await supabase.from("submissions").insert({
-        form_type: "dream",
-        name: name.trim(),
-        phone: phone.trim(),
-        email: null,
-        message,
-        project_slug: null,
-        source_page: typeof window !== "undefined" ? window.location.pathname : null,
-        status: "new",
-        payload: {
-          ...attribution,
-          dream: answers,
-          prompt: buildPrompt(),
-          plot: { sotki, orient },
-          estimate: { area: est.area, price: est.price },
-          preferredChannel: channel,
-        } as never,
       });
-      if (error) console.warn("Дом мечты: заявка не записана в БД:", error.message);
-      if (!notified && error) throw error;
+      if (!res.ok) throw new Error("Сервер не принял заявку");
 
       analytics.quizComplete();
       analytics.formSubmit("dream", "home-dream");
