@@ -41,6 +41,8 @@ const WEIGHTS: Record<string, number> = {
   CTA_CLICK: 10,
   CONTACT_CLICK: 25,
   FORM_START: 20,
+  QUIZ_START: 8,
+  QUIZ_COMPLETE: 25,
 };
 
 /** Базовая отправка цели. Безопасна на сервере и при заблокированном счётчике. */
@@ -108,4 +110,13 @@ export const analytics = {
 
   /** Просмотр блока цен — маркер горячего интереса. */
   pricingView: (page: string) => track("PRICING_VIEW", { page }),
+
+  /** Пользователь начал проходить квиз подбора проекта (первый ответ). */
+  quizStart: () => track("QUIZ_START"),
+
+  /** Ответ на шаг квиза — по нему видно, где люди отваливаются. */
+  quizStep: (step: string, value: string) => track("QUIZ_STEP", { step, value }),
+
+  /** Квиз пройден и заявка отправлена. */
+  quizComplete: () => track("QUIZ_COMPLETE"),
 };

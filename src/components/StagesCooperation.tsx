@@ -31,13 +31,17 @@ const stages = [
   },
 ];
 
+import { Reveal } from "@/components/motion/Reveal";
+
 export function StagesCooperation() {
   return (
     <div className="grid gap-6 md:grid-cols-5">
-      {stages.map((s) => (
-        <div
+      {stages.map((s, i) => (
+        <Reveal
           key={s.n}
-          className="flex flex-col rounded-sm border border-border bg-card p-6"
+          variant="up"
+          delay={i * 90}
+          className="hover-lift flex h-full flex-col rounded-sm border border-border bg-card p-6 hover:border-accent hover:shadow-lg"
         >
           <div className="text-3xl font-bold text-accent">{s.n}</div>
           <h3 className="mt-3 text-base font-semibold uppercase">{s.title}</h3>
@@ -47,7 +51,7 @@ export function StagesCooperation() {
               Оплата {s.payment}
             </div>
           )}
-        </div>
+        </Reveal>
       ))}
     </div>
   );

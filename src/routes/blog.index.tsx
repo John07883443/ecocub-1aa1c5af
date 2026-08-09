@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { BlogCard } from "@/components/BlogCard";
+import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { getAllPosts, getCategories, getTags } from "@/lib/blog";
 
@@ -70,7 +71,7 @@ function BlogPage() {
     <PageLayout>
       <Section className="bg-background">
         <Container>
-          <div className="mb-10 max-w-3xl">
+          <Reveal className="mb-10 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Блог</p>
             <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">
               Статьи о бетонных домах
@@ -79,7 +80,7 @@ function BlogPage() {
               Технологии, сравнения, цены, кейсы. Помогаем разобраться в нюансах капитального
               строительства из бетона.
             </p>
-          </div>
+          </Reveal>
 
           {categories.length > 0 && (
             <nav aria-label="Категории" className="mb-6 flex flex-wrap gap-2">
@@ -118,8 +119,10 @@ function BlogPage() {
             <p className="text-muted-foreground">Статьи скоро появятся.</p>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {posts.map((p) => (
-                <BlogCard key={p.slug} post={p} />
+              {posts.map((p, i) => (
+                <Reveal key={p.slug} variant="up" delay={(i % 3) * 90} className="h-full">
+                  <BlogCard post={p} />
+                </Reveal>
               ))}
             </div>
           )}

@@ -38,10 +38,11 @@
 
 Якоря секций главной (`src/routes/index.tsx`, id на `<Section>`):
 `#comparison` (сравнение технологий), `#about` (о компании/таймлайн),
-`#modules` (принцип LEGO), `#builder` (тизер 3D-конструктора),
-`#technology` (05 · Технология), `#calculator` (калькулятор цены),
-`#included` (что входит), `#projects` (проекты), `#interiors` (интерьеры),
-`#stages` (этапы), `#blog` (блок блога), `#contact` (форма связи).
+`#modules` (принцип LEGO), `#quiz` (квиз подбора проекта),
+`#builder` (тизер 3D-конструктора), `#technology` (05 · Технология),
+`#calculator` (калькулятор цены), `#included` (что входит),
+`#projects` (проекты), `#interiors` (интерьеры), `#stages` (этапы),
+`#blog` (блок блога), `#contact` (форма связи).
 
 Базовый компонент `Section` (`src/components/Container.tsx`) несёт
 `scroll-mt-28 md:scroll-mt-32`, чтобы прыжок по якорю не залезал под липкую

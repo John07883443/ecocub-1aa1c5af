@@ -5,6 +5,8 @@ import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
 import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/motion/Reveal";
+import { Parallax } from "@/components/motion/Parallax";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { analytics } from "@/lib/analytics";
 import { useEffect } from "react";
@@ -153,35 +155,41 @@ function ProjectPage() {
     <PageLayout headerVariant="dark">
       {/* HERO */}
       <section className="relative min-h-[80svh] w-full overflow-hidden bg-primary text-primary-foreground">
-        <img
-          src={project.cover_image}
-          alt={project.name}
-          className="absolute inset-0 h-full w-full object-cover opacity-70"
-        />
+        <div className="absolute inset-0 opacity-70">
+          <Parallax speed={0.1} max={50} className="h-[120%] w-full">
+            <img
+              src={project.cover_image}
+              alt={project.name}
+              className="hero-kenburns h-full w-full object-cover"
+            />
+          </Parallax>
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40" />
         <Container className="relative flex min-h-[80svh] flex-col justify-end pb-16 pt-32">
-          <Link
-            to="/portfolio"
-            className="mb-6 inline-flex w-fit items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80 hover:text-accent"
-          >
-            <ArrowLeft className="size-4" />
-            Все проекты
-          </Link>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            {seriesLabel[project.series] ?? project.series}
-          </p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">{project.name}</h1>
-          {project.tagline && (
-            <p className="mt-4 max-w-2xl text-lg text-white/85">{project.tagline}</p>
-          )}
-          {project.price_from != null && (
-            <p className="mt-8 text-sm text-white/60">
-              Стоимость от{" "}
-              <span className="text-2xl font-semibold text-white">
-                {new Intl.NumberFormat("ru-RU").format(project.price_from)} ₽
-              </span>
+          <Reveal variant="up">
+            <Link
+              to="/portfolio"
+              className="mb-6 inline-flex w-fit items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-white/80 transition-colors hover:text-accent"
+            >
+              <ArrowLeft className="size-4" />
+              Все проекты
+            </Link>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
+              {seriesLabel[project.series] ?? project.series}
             </p>
-          )}
+            <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">{project.name}</h1>
+            {project.tagline && (
+              <p className="mt-4 max-w-2xl text-lg text-white/85">{project.tagline}</p>
+            )}
+            {project.price_from != null && (
+              <p className="mt-8 text-sm text-white/60">
+                Стоимость от{" "}
+                <span className="text-2xl font-semibold text-white">
+                  {new Intl.NumberFormat("ru-RU").format(project.price_from)} ₽
+                </span>
+              </p>
+            )}
+          </Reveal>
         </Container>
       </section>
 
@@ -189,7 +197,7 @@ function ProjectPage() {
       <Section>
         <Container>
           <div className="grid gap-12 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            <Reveal variant="left" className="lg:col-span-2">
               <h2 className="text-2xl font-bold uppercase md:text-3xl">О проекте</h2>
               {project.description && (
                 <p className="mt-6 whitespace-pre-line text-base leading-relaxed text-muted-foreground">
@@ -210,9 +218,13 @@ function ProjectPage() {
                   </ul>
                 </>
               )}
-            </div>
+            </Reveal>
 
-            <aside className="rounded-sm border border-border bg-secondary p-6">
+            <Reveal
+              variant="right"
+              delay={120}
+              className="rounded-sm border border-border bg-secondary p-6"
+            >
               <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">
                 Характеристики
               </h3>
@@ -230,7 +242,7 @@ function ProjectPage() {
                   </div>
                 ))}
               </dl>
-            </aside>
+            </Reveal>
           </div>
         </Container>
       </Section>
@@ -239,17 +251,24 @@ function ProjectPage() {
       {project.gallery.length > 1 && (
         <Section className="border-t border-border bg-secondary">
           <Container>
-            <h2 className="mb-8 text-2xl font-bold uppercase md:text-3xl">Галерея</h2>
+            <Reveal>
+              <h2 className="mb-8 text-2xl font-bold uppercase md:text-3xl">Галерея</h2>
+            </Reveal>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {project.gallery.map((src: string) => (
-                <div key={src} className="aspect-[4/3] overflow-hidden rounded-sm bg-muted">
+              {project.gallery.map((src: string, i: number) => (
+                <Reveal
+                  key={src}
+                  variant="scale"
+                  delay={(i % 3) * 90}
+                  className="group aspect-[4/3] overflow-hidden rounded-sm bg-muted"
+                >
                   <img
                     src={src}
                     alt={project.name}
                     loading="lazy"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
                   />
-                </div>
+                </Reveal>
               ))}
             </div>
           </Container>
@@ -257,9 +276,13 @@ function ProjectPage() {
       )}
 
       {/* CONTACT */}
-      <Section className="bg-primary text-primary-foreground">
-        <Container>
-          <div className="mx-auto max-w-2xl">
+      <Section className="relative overflow-hidden bg-primary text-primary-foreground">
+        <span
+          aria-hidden="true"
+          className="ecocub-glow bottom-[-20%] left-[-8%] h-[45vw] max-h-[500px] w-[45vw] max-w-[500px]"
+        />
+        <Container className="relative">
+          <Reveal variant="scale" className="mx-auto max-w-2xl">
             <h2 className="text-3xl font-bold uppercase md:text-4xl">
               Заказать проект {project.name}
             </h2>
@@ -274,7 +297,7 @@ function ProjectPage() {
                 submitLabel="Заказать проект"
               />
             </div>
-          </div>
+          </Reveal>
         </Container>
       </Section>
     </PageLayout>
