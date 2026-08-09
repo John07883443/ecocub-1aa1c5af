@@ -1,18 +1,48 @@
 import { Link } from "@tanstack/react-router";
 import { Mail, Phone, MapPin } from "lucide-react";
+import { useRef } from "react";
 import { Container } from "@/components/Container";
 import { Reveal } from "@/components/motion/Reveal";
 import { mainNav, site } from "@/lib/site";
 import logoWhite from "@/assets/logo-white.svg";
 import { analytics } from "@/lib/analytics";
 
+/** Сколько кликов по логотипу открывают панель состояния и за какое время. */
+const PANEL_CLICKS = 3;
+const PANEL_WINDOW_MS = 1500;
+
 export function Footer() {
+  // Пасхалка: панель состояния стека открывается тройным кликом по логотипу.
+  //
+  // Тройным, а не одиночным, по двум причинам. Логотип в футере ничем не
+  // отмечен как ссылка, и случайное попадание по нему у посетителя не должно
+  // никуда уводить. Плюс панель закрыта паролем: одиночный клик показывал бы
+  // случайному человеку окно авторизации браузера — недоумение на ровном месте.
+  const panelTaps = useRef({ count: 0, last: 0 });
+
+  function handleLogoTap() {
+    const now = Date.now();
+    const taps = panelTaps.current;
+    taps.count = now - taps.last < PANEL_WINDOW_MS ? taps.count + 1 : 1;
+    taps.last = now;
+    if (taps.count >= PANEL_CLICKS) {
+      taps.count = 0;
+      window.open("/panel/", "_blank", "noopener");
+    }
+  }
+
   return (
     <footer className="bg-primary text-primary-foreground">
       <Container className="py-14 md:py-20">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <Reveal variant="up">
-            <img src={logoWhite} alt="EcoCub" className="mb-5 h-9 w-auto" />
+            {/* Курсор намеренно обычный: пасхалка не должна выглядеть ссылкой. */}
+            <img
+              src={logoWhite}
+              alt="EcoCub"
+              className="mb-5 h-9 w-auto select-none"
+              onClick={handleLogoTap}
+            />
             <p className="text-sm leading-relaxed text-primary-foreground/70">
               Производство и строительство современных монолитно-модульных домов из бетона в
               Московской области.
