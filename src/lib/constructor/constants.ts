@@ -2,12 +2,11 @@ import type { DesignPreset, RoleMeta, Role, Template } from "./types";
 
 /** Метры на одну ячейку сетки (сторона). */
 export const CELL_M = 3;
-/** Габариты модуля в метрах. */
-export const MODULE_LONG_M = 6;
-export const MODULE_SHORT_M = 3;
+/** Габариты базового модуля-кубика в метрах: 3 × 3, высота 3,15. */
+export const MODULE_SIDE_M = 3;
 export const MODULE_HEIGHT_M = 3.15;
 /** Площадь одного модуля, м². */
-export const MODULE_AREA = MODULE_LONG_M * MODULE_SHORT_M; // 18
+export const MODULE_AREA = MODULE_SIDE_M * MODULE_SIDE_M; // 9
 
 /** Терраса считается по сниженной ставке относительно жилой площади. */
 export const TERRACE_PRICE_FACTOR = 0.4;
@@ -87,52 +86,72 @@ export const TEMPLATES: Template[] = [
   {
     id: "studio",
     name: "Студия",
-    shape: "1 модуль · 18 м²",
-    seeds: [{ x: 0, z: 0, floor: 0, orient: "h", role: "living" }],
+    shape: "2 модуля · 18 м²",
+    seeds: [
+      { x: 0, z: 0, floor: 0, role: "living" },
+      { x: 1, z: 0, floor: 0, role: "bathroom" },
+    ],
   },
   {
     id: "cube",
     name: "Куб",
-    shape: "2 модуля · 36 м²",
+    shape: "4 модуля · 36 м²",
     seeds: [
-      { x: 0, z: 0, floor: 0, orient: "h", role: "living" },
-      { x: 0, z: 1, floor: 0, orient: "h", role: "bedroom" },
+      { x: 0, z: 0, floor: 0, role: "living" },
+      { x: 1, z: 0, floor: 0, role: "kitchen" },
+      { x: 0, z: 1, floor: 0, role: "bedroom" },
+      { x: 1, z: 1, floor: 0, role: "bathroom" },
     ],
   },
   {
     id: "l-family",
     name: "Семья L",
-    shape: "4 модуля · 72 м², Г-образный",
+    shape: "8 модулей · 72 м², Г-образный",
     seeds: [
-      { x: 0, z: 0, floor: 0, orient: "h", role: "living" },
-      { x: 0, z: 1, floor: 0, orient: "h", role: "kitchen" },
-      { x: 2, z: 1, floor: 0, orient: "h", role: "bedroom" },
-      { x: 4, z: 1, floor: 0, orient: "h", role: "bathroom" },
+      { x: 0, z: 0, floor: 0, role: "living" },
+      { x: 1, z: 0, floor: 0, role: "living" },
+      { x: 2, z: 0, floor: 0, role: "kitchen" },
+      { x: 0, z: 1, floor: 0, role: "bedroom" },
+      { x: 1, z: 1, floor: 0, role: "bathroom" },
+      { x: 0, z: 2, floor: 0, role: "bedroom" },
+      { x: 0, z: 3, floor: 0, role: "bedroom" },
+      { x: 1, z: 3, floor: 0, role: "terrace" },
     ],
   },
   {
     id: "u-court",
     name: "П-образный",
-    shape: "5 модулей · 90 м², двор",
+    shape: "10 модулей · 90 м², двор",
     seeds: [
-      { x: 0, z: 0, floor: 0, orient: "h", role: "living" },
-      { x: 2, z: 0, floor: 0, orient: "h", role: "kitchen" },
-      { x: 4, z: 0, floor: 0, orient: "h", role: "bedroom" },
-      { x: 0, z: 1, floor: 0, orient: "v", role: "bathroom" },
-      { x: 5, z: 1, floor: 0, orient: "v", role: "bedroom" },
+      { x: 0, z: 0, floor: 0, role: "living" },
+      { x: 1, z: 0, floor: 0, role: "living" },
+      { x: 2, z: 0, floor: 0, role: "kitchen" },
+      { x: 3, z: 0, floor: 0, role: "bedroom" },
+      { x: 0, z: 1, floor: 0, role: "bedroom" },
+      { x: 3, z: 1, floor: 0, role: "bathroom" },
+      { x: 0, z: 2, floor: 0, role: "bedroom" },
+      { x: 3, z: 2, floor: 0, role: "bathroom" },
+      { x: 0, z: 3, floor: 0, role: "terrace" },
+      { x: 3, z: 3, floor: 0, role: "terrace" },
     ],
   },
   {
     id: "two-story",
     name: "Двухэтажный",
-    shape: "6 модулей · 108 м², 2 этажа",
+    shape: "12 модулей · 108 м², 2 этажа",
     seeds: [
-      { x: 0, z: 0, floor: 0, orient: "h", role: "living" },
-      { x: 2, z: 0, floor: 0, orient: "h", role: "kitchen" },
-      { x: 0, z: 1, floor: 0, orient: "h", role: "bathroom" },
-      { x: 2, z: 1, floor: 0, orient: "h", role: "stairs" },
-      { x: 0, z: 0, floor: 1, orient: "h", role: "bedroom" },
-      { x: 2, z: 0, floor: 1, orient: "h", role: "bedroom" },
+      { x: 0, z: 0, floor: 0, role: "living" },
+      { x: 1, z: 0, floor: 0, role: "living" },
+      { x: 2, z: 0, floor: 0, role: "kitchen" },
+      { x: 0, z: 1, floor: 0, role: "stairs" },
+      { x: 1, z: 1, floor: 0, role: "bathroom" },
+      { x: 2, z: 1, floor: 0, role: "terrace" },
+      { x: 0, z: 0, floor: 1, role: "bedroom" },
+      { x: 1, z: 0, floor: 1, role: "bedroom" },
+      { x: 2, z: 0, floor: 1, role: "bedroom" },
+      { x: 0, z: 1, floor: 1, role: "stairs" },
+      { x: 1, z: 1, floor: 1, role: "bathroom" },
+      { x: 2, z: 1, floor: 1, role: "terrace" },
     ],
   },
 ];

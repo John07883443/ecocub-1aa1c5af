@@ -1,17 +1,7 @@
 import { useMemo } from "react";
 import type { HouseBuilderApi } from "@/lib/constructor/useHouseBuilder";
-import { cellsOf, gridKey } from "@/lib/constructor/geometry";
+import { gridKey } from "@/lib/constructor/geometry";
 import { ROLES } from "@/lib/constructor/constants";
-import type { ModuleItem } from "@/lib/constructor/types";
-
-function moduleRect(m: ModuleItem) {
-  const cells = cellsOf(m);
-  const x = Math.min(...cells.map((c) => c.x));
-  const z = Math.min(...cells.map((c) => c.z));
-  const w = m.orient === "h" ? 2 : 1;
-  const h = m.orient === "h" ? 1 : 2;
-  return { x, z, w, h };
-}
 
 export function PlanEditor({ api }: { api: HouseBuilderApi }) {
   const { modules, floor, gridN, selectedId, placeAtCell, selectModule, occ } = api;
@@ -21,7 +11,7 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
 
   const occupiedHere = useMemo(() => {
     const s = new Set<string>();
-    for (const m of current) for (const c of cellsOf(m)) s.add(`${c.x}:${c.z}`);
+    for (const m of current) s.add(`${m.x}:${m.z}`);
     return s;
   }, [current]);
 
@@ -67,27 +57,23 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
           )}
 
           {/* Модули других этажей — призрачный контур */}
-          {others.map((m) => {
-            const r = moduleRect(m);
-            return (
-              <rect
-                key={`o-${m.id}`}
-                x={r.x + 0.06}
-                y={r.z + 0.06}
-                width={r.w - 0.12}
-                height={r.h - 0.12}
-                fill="none"
-                stroke="rgba(0,0,0,0.28)"
-                strokeWidth={0.03}
-                strokeDasharray="0.18 0.12"
-                rx={0.06}
-              />
-            );
-          })}
+          {others.map((m) => (
+            <rect
+              key={`o-${m.id}`}
+              x={m.x + 0.06}
+              y={m.z + 0.06}
+              width={0.88}
+              height={0.88}
+              fill="none"
+              stroke="rgba(0,0,0,0.28)"
+              strokeWidth={0.03}
+              strokeDasharray="0.18 0.12"
+              rx={0.06}
+            />
+          ))}
 
           {/* Модули текущего этажа */}
           {current.map((m) => {
-            const r = moduleRect(m);
             const meta = ROLES[m.role];
             const selected = m.id === selectedId;
             return (
@@ -101,26 +87,26 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
                 style={{ cursor: "pointer" }}
               >
                 <rect
-                  x={r.x + 0.05}
-                  y={r.z + 0.05}
-                  width={r.w - 0.1}
-                  height={r.h - 0.1}
+                  x={m.x + 0.05}
+                  y={m.z + 0.05}
+                  width={0.9}
+                  height={0.9}
                   fill={meta.plan}
                   stroke={selected ? "#1a1a1a" : "rgba(0,0,0,0.25)"}
                   strokeWidth={selected ? 0.08 : 0.03}
                   rx={0.08}
                 />
                 <text
-                  x={r.x + r.w / 2}
-                  y={r.z + r.h / 2}
+                  x={m.x + 0.5}
+                  y={m.z + 0.5}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize={0.26}
-                  fontWeight={600}
+                  fontSize={0.3}
+                  fontWeight={700}
                   fill="#ffffff"
                   style={{ pointerEvents: "none" }}
                 >
-                  {meta.label}
+                  {meta.label.slice(0, 1)}
                 </text>
               </g>
             );

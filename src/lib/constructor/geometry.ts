@@ -1,18 +1,5 @@
-import type { Cell, HouseStats, ModuleItem, Orientation } from "./types";
+import type { Cell, HouseStats, ModuleItem } from "./types";
 import { CELL_M, MODULE_AREA, ROLES, TERRACE_PRICE_FACTOR } from "./constants";
-
-/** Ячейки сетки, которые занимает модуль. */
-export function cellsOf(m: Pick<ModuleItem, "x" | "z" | "orient">): Cell[] {
-  return m.orient === "h"
-    ? [
-        { x: m.x, z: m.z },
-        { x: m.x + 1, z: m.z },
-      ]
-    : [
-        { x: m.x, z: m.z },
-        { x: m.x, z: m.z + 1 },
-      ];
-}
 
 /** Сторона участка в ячейках для заданного числа соток (квадратный участок). */
 export function gridSizeForSotki(sotki: number): number {
@@ -23,12 +10,10 @@ export function gridSizeForSotki(sotki: number): number {
 
 const key = (floor: number, x: number, z: number) => `${floor}:${x}:${z}`;
 
-/** Карта занятости ячеек → id модуля. */
+/** Карта занятости ячеек → id модуля. Модуль занимает ровно одну ячейку. */
 export function occupancy(modules: ModuleItem[]): Map<string, string> {
   const map = new Map<string, string>();
-  for (const m of modules) {
-    for (const c of cellsOf(m)) map.set(key(m.floor, c.x, c.z), m.id);
-  }
+  for (const m of modules) map.set(key(m.floor, m.x, m.z), m.id);
   return map;
 }
 
@@ -37,63 +22,27 @@ function inBounds(c: Cell, n: number): boolean {
 }
 
 /**
- * Можно ли поставить модуль: в границах участка, без пересечений и — для
- * верхних этажей — с опорой на модуль этажом ниже под каждой ячейкой.
+ * Можно ли поставить модуль: в границах участка, ячейка свободна и — для
+ * верхних этажей — есть опора этажом ниже.
  */
 export function canPlace(
   modules: ModuleItem[],
-  candidate: Pick<ModuleItem, "x" | "z" | "floor" | "orient">,
+  candidate: Pick<ModuleItem, "x" | "z" | "floor">,
   n: number,
-  ignoreId?: string,
 ): boolean {
-  const cells = cellsOf(candidate);
-  if (!cells.every((c) => inBounds(c, n))) return false;
-
-  const occ = occupancy(ignoreId ? modules.filter((m) => m.id !== ignoreId) : modules);
-
-  for (const c of cells) {
-    if (occ.has(key(candidate.floor, c.x, c.z))) return false;
-    if (candidate.floor > 0 && !occ.has(key(candidate.floor - 1, c.x, c.z))) return false;
-  }
+  if (!inBounds(candidate, n)) return false;
+  const occ = occupancy(modules);
+  if (occ.has(key(candidate.floor, candidate.x, candidate.z))) return false;
+  if (candidate.floor > 0 && !occ.has(key(candidate.floor - 1, candidate.x, candidate.z)))
+    return false;
   return true;
 }
 
-/**
- * Подобрать якорь так, чтобы модуль накрыл нажатую ячейку и поместился.
- * Возвращает валидный якорь либо null.
- */
-export function anchorForClick(
-  modules: ModuleItem[],
-  clicked: Cell,
-  floor: number,
-  orient: Orientation,
-  n: number,
-): { x: number; z: number } | null {
-  const candidates =
-    orient === "h"
-      ? [
-          { x: clicked.x, z: clicked.z },
-          { x: clicked.x - 1, z: clicked.z },
-        ]
-      : [
-          { x: clicked.x, z: clicked.z },
-          { x: clicked.x, z: clicked.z - 1 },
-        ];
-
-  for (const a of candidates) {
-    if (canPlace(modules, { ...a, floor, orient }, n)) return a;
-  }
-  return null;
-}
-
-/** Есть ли под модулем на floor>0 пустая (неопираемая) ячейка после удаления. */
+/** Модули на floor>0, оставшиеся без опоры после удаления removedId. */
 export function orphansAfterRemoval(modules: ModuleItem[], removedId: string): ModuleItem[] {
   const remaining = modules.filter((m) => m.id !== removedId);
   const occ = occupancy(remaining);
-  return remaining.filter((m) => {
-    if (m.floor === 0) return false;
-    return cellsOf(m).some((c) => !occ.has(key(m.floor - 1, c.x, c.z)));
-  });
+  return remaining.filter((m) => m.floor > 0 && !occ.has(key(m.floor - 1, m.x, m.z)));
 }
 
 export function computeStats(

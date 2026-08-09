@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Sky, Edges } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
-import { cellsOf } from "@/lib/constructor/geometry";
-import { CELL_M, MODULE_HEIGHT_M, ROLES } from "@/lib/constructor/constants";
+import { CELL_M, MODULE_HEIGHT_M } from "@/lib/constructor/constants";
+import { ROLES } from "@/lib/constructor/constants";
 import type { DesignPreset, ModuleItem } from "@/lib/constructor/types";
 
 const FOUNDATION_H = 0.35;
@@ -23,7 +23,7 @@ function useOccByFloor(modules: ModuleItem[]) {
     const map = new Map<number, Set<string>>();
     for (const m of modules) {
       const set = map.get(m.floor) ?? new Set<string>();
-      for (const c of cellsOf(m)) set.add(`${c.x}:${c.z}`);
+      set.add(`${m.x}:${m.z}`);
       map.set(m.floor, set);
     }
     return map;
@@ -43,23 +43,16 @@ function ModuleMesh({
   sameFloor: Set<string>;
   aboveFloor: Set<string> | undefined;
 }) {
-  const cells = cellsOf(m);
-  const minCx = Math.min(...cells.map((c) => c.x));
-  const minCz = Math.min(...cells.map((c) => c.z));
-  const spanX = m.orient === "h" ? 2 : 1;
-  const spanZ = m.orient === "h" ? 1 : 2;
-
   const toWorld = (cellCol: number) => (cellCol - gridN / 2) * CELL_M;
-  const sizeX = spanX * CELL_M;
-  const sizeZ = spanZ * CELL_M;
-  const centerX = toWorld(minCx + spanX / 2);
-  const centerZ = toWorld(minCz + spanZ / 2);
+  const size = CELL_M;
+  const centerX = toWorld(m.x + 0.5);
+  const centerZ = toWorld(m.z + 0.5);
   const baseY = FOUNDATION_H + m.floor * H;
   const centerY = baseY + H / 2;
 
   const isTerrace = m.role === "terrace";
 
-  // Окна на внешних гранях ячеек (там, где нет соседнего модуля этого этажа).
+  // Окна на внешних гранях (там, где нет соседнего модуля этого этажа).
   const windows = useMemo<WindowSpec[]>(() => {
     if (isTerrace) return [];
     const specs: WindowSpec[] = [];
@@ -70,43 +63,35 @@ function ModuleMesh({
       { dx: 0, dz: -1, rotY: Math.PI },
     ];
     const winY = baseY + H * 0.46;
-    for (const c of cells) {
-      const cx = toWorld(c.x + 0.5);
-      const cz = toWorld(c.z + 0.5);
-      for (const d of dirs) {
-        if (sameFloor.has(`${c.x + d.dx}:${c.z + d.dz}`)) continue;
-        const off = 0.03;
-        specs.push({
-          pos: [cx + d.dx * (CELL_M / 2 + off), winY, cz + d.dz * (CELL_M / 2 + off)],
-          rotY: d.rotY,
-          w: CELL_M * 0.72,
-          h: H * 0.5,
-        });
-      }
+    for (const d of dirs) {
+      if (sameFloor.has(`${m.x + d.dx}:${m.z + d.dz}`)) continue;
+      const off = 0.03;
+      specs.push({
+        pos: [centerX + d.dx * (size / 2 + off), winY, centerZ + d.dz * (size / 2 + off)],
+        rotY: d.rotY,
+        w: size * 0.66,
+        h: H * 0.5,
+      });
     }
     return specs;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m.id, m.orient, m.floor, m.role, gridN, sameFloor]);
+  }, [m.id, m.x, m.z, m.floor, m.role, gridN, sameFloor]);
 
-  const roofed = useMemo(() => {
-    if (!aboveFloor) return true;
-    return !cells.some((c) => aboveFloor.has(`${c.x}:${c.z}`));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m.id, aboveFloor]);
+  const roofed = !aboveFloor || !aboveFloor.has(`${m.x}:${m.z}`);
 
   if (isTerrace) {
-    // Терраса: пол-настил, 4 стойки и лёгкая плоская кровля, без стен.
+    // Терраса: настил, 4 стойки и лёгкая плоская кровля, без стен.
     const postH = H * 0.92;
     const corners: Array<[number, number]> = [
-      [centerX - sizeX / 2 + 0.2, centerZ - sizeZ / 2 + 0.2],
-      [centerX + sizeX / 2 - 0.2, centerZ - sizeZ / 2 + 0.2],
-      [centerX - sizeX / 2 + 0.2, centerZ + sizeZ / 2 - 0.2],
-      [centerX + sizeX / 2 - 0.2, centerZ + sizeZ / 2 - 0.2],
+      [centerX - size / 2 + 0.2, centerZ - size / 2 + 0.2],
+      [centerX + size / 2 - 0.2, centerZ - size / 2 + 0.2],
+      [centerX - size / 2 + 0.2, centerZ + size / 2 - 0.2],
+      [centerX + size / 2 - 0.2, centerZ + size / 2 - 0.2],
     ];
     return (
       <group>
         <mesh position={[centerX, baseY + 0.08, centerZ]} receiveShadow castShadow>
-          <boxGeometry args={[sizeX, 0.16, sizeZ]} />
+          <boxGeometry args={[size, 0.16, size]} />
           <meshStandardMaterial color={ROLES.terrace.floor3d} roughness={0.9} />
         </mesh>
         {corners.map(([px, pz], i) => (
@@ -117,7 +102,7 @@ function ModuleMesh({
         ))}
         {roofed && (
           <mesh position={[centerX, baseY + postH, centerZ]} castShadow receiveShadow>
-            <boxGeometry args={[sizeX + 0.2, 0.16, sizeZ + 0.2]} />
+            <boxGeometry args={[size + 0.2, 0.16, size + 0.2]} />
             <meshStandardMaterial color={design.roof} roughness={0.7} />
           </mesh>
         )}
@@ -129,7 +114,7 @@ function ModuleMesh({
     <group>
       {/* Стены */}
       <mesh position={[centerX, centerY, centerZ]} castShadow receiveShadow>
-        <boxGeometry args={[sizeX, H, sizeZ]} />
+        <boxGeometry args={[size, H, size]} />
         <meshStandardMaterial
           color={design.wall}
           roughness={design.wallRoughness}
@@ -155,7 +140,7 @@ function ModuleMesh({
       {/* Плоская кровля с небольшим свесом */}
       {roofed && (
         <mesh position={[centerX, baseY + H + 0.12, centerZ]} castShadow receiveShadow>
-          <boxGeometry args={[sizeX + 0.24, 0.24, sizeZ + 0.24]} />
+          <boxGeometry args={[size + 0.24, 0.24, size + 0.24]} />
           <meshStandardMaterial color={design.roof} roughness={0.7} />
         </mesh>
       )}
@@ -163,7 +148,7 @@ function ModuleMesh({
       {/* Фундамент под модулями первого этажа */}
       {m.floor === 0 && (
         <mesh position={[centerX, FOUNDATION_H / 2, centerZ]} receiveShadow castShadow>
-          <boxGeometry args={[sizeX + 0.1, FOUNDATION_H, sizeZ + 0.1]} />
+          <boxGeometry args={[size + 0.1, FOUNDATION_H, size + 0.1]} />
           <meshStandardMaterial color="#3a3a3c" roughness={0.9} />
         </mesh>
       )}
