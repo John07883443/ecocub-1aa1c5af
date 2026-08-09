@@ -1,16 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import {
-  Box,
-  Layers3,
-  RotateCw,
-  Trash2,
-  Sparkles,
-  MoveHorizontal,
-  MoveVertical,
-  Eraser,
-  RefreshCw,
-  ArrowRight,
-} from "lucide-react";
+import { Box, Layers3, Trash2, Sparkles, Eraser, RefreshCw, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -114,23 +103,13 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
           )}
 
           {view === "plan" && (
-            <>
-              <div className="inline-flex rounded-sm border border-border p-1">
-                <TabBtn active={api.orient === "h"} onClick={() => api.setOrient("h")}>
-                  <MoveHorizontal className="size-4" /> 6×3
+            <div className="inline-flex rounded-sm border border-border p-1">
+              {floorButtons.map((f) => (
+                <TabBtn key={f} active={api.floor === f} onClick={() => api.setFloor(f)}>
+                  {f + 1} эт.
                 </TabBtn>
-                <TabBtn active={api.orient === "v"} onClick={() => api.setOrient("v")}>
-                  <MoveVertical className="size-4" /> 3×6
-                </TabBtn>
-              </div>
-              <div className="inline-flex rounded-sm border border-border p-1">
-                {floorButtons.map((f) => (
-                  <TabBtn key={f} active={api.floor === f} onClick={() => api.setFloor(f)}>
-                    {f + 1} эт.
-                  </TabBtn>
-                ))}
-              </div>
-            </>
+              ))}
+            </div>
           )}
         </div>
 
@@ -169,9 +148,9 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
 
         {view === "plan" && (
           <p className="text-xs text-muted-foreground">
-            Тапните по пустой ячейке, чтобы поставить модуль {api.orient === "h" ? "6×3" : "3×6"} м.
-            Тапните по модулю, чтобы изменить назначение, повернуть или удалить. Участок {plotSideM}
-            ×{plotSideM} м, шаг сетки {CELL_M} м.
+            Тапните по пустой ячейке, чтобы поставить модуль {CELL_M}×{CELL_M} м. Тапните по модулю,
+            чтобы изменить назначение или удалить. Участок {plotSideM}×{plotSideM} м, шаг сетки{" "}
+            {CELL_M} м.
           </p>
         )}
 
@@ -226,14 +205,6 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
                 </button>
               ))}
               <div className="ml-auto flex gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                  onClick={() => api.rotateModule(selected.id)}
-                >
-                  <RotateCw className="size-3.5" /> Повернуть
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
