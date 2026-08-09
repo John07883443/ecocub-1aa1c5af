@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { Cell, ModuleItem, Role } from "./types";
+import type { ModuleItem, Role } from "./types";
 import {
-  canPlace,
+  anchorForPoint,
   computeStats,
   gridSizeForSotki,
-  occupancy,
+  maxAnchor,
   orphansAfterRemoval,
+  supportArea,
 } from "./geometry";
 import {
   DEFAULT_SOTKI,
@@ -13,13 +14,14 @@ import {
   MAX_FLOORS,
   MAX_SOTKI,
   MIN_SOTKI,
+  MIN_SUPPORT_AREA,
   TEMPLATES,
 } from "./constants";
 
 let idCounter = 0;
 const newId = () => `m${++idCounter}`;
 
-/** Центрирует стартовую планировку на текущей сетке. */
+/** Центрирует стартовую планировку на текущей сетке (координаты в метрах). */
 function seedsToModules(templateId: string, n: number): ModuleItem[] {
   const tpl = TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) return [];
@@ -27,8 +29,9 @@ function seedsToModules(templateId: string, n: number): ModuleItem[] {
   const maxX = Math.max(...tpl.seeds.map((s) => s.x));
   const minZ = Math.min(...tpl.seeds.map((s) => s.z));
   const maxZ = Math.max(...tpl.seeds.map((s) => s.z));
-  const offX = Math.max(0, Math.floor((n - (maxX - minX + 1)) / 2)) - minX;
-  const offZ = Math.max(0, Math.floor((n - (maxZ - minZ + 1)) / 2)) - minZ;
+  const max = maxAnchor(n);
+  const offX = Math.max(0, Math.round((max - (maxX - minX)) / 2)) - minX;
+  const offZ = Math.max(0, Math.round((max - (maxZ - minZ)) / 2)) - minZ;
   return tpl.seeds.map((s) => ({
     id: newId(),
     x: s.x + offX,
@@ -38,12 +41,11 @@ function seedsToModules(templateId: string, n: number): ModuleItem[] {
   }));
 }
 
-/** Каскадное удаление «повисших» модулей после изменения нижних этажей. */
+/** Каскадное удаление модулей, оставшихся без достаточной опоры. */
 function dropOrphans(modules: ModuleItem[]): ModuleItem[] {
   let kept = modules;
   for (;;) {
-    const occ = occupancy(kept);
-    const orphans = kept.filter((m) => m.floor > 0 && !occ.has(`${m.floor - 1}:${m.x}:${m.z}`));
+    const orphans = kept.filter((m) => m.floor > 0 && supportArea(m, kept) < MIN_SUPPORT_AREA);
     if (!orphans.length) return kept;
     const ids = new Set(orphans.map((o) => o.id));
     kept = kept.filter((m) => !ids.has(m.id));
@@ -72,31 +74,30 @@ export function useHouseBuilder(basePricePerM2: number) {
     [modules, sotki, basePricePerM2],
   );
 
-  // Занятость нужна плану, чтобы подсвечивать доступные для 2-го этажа ячейки.
-  const occ = useMemo(() => occupancy(modules), [modules]);
-
   const lastError = useRef<string | null>(null);
 
   const setSotki = useCallback((next: number) => {
     const clamped = Math.max(MIN_SOTKI, Math.min(MAX_SOTKI, Math.round(next)));
-    const n = gridSizeForSotki(clamped);
-    // Убираем модули, вышедшие за уменьшенную сетку, и осиротевшие верхние.
-    setModules((prev) => dropOrphans(prev.filter((m) => m.x < n && m.z < n)));
+    const max = maxAnchor(gridSizeForSotki(clamped));
+    // Убираем модули, вышедшие за уменьшенный участок, и осиротевшие верхние.
+    setModules((prev) => dropOrphans(prev.filter((m) => m.x <= max && m.z <= max)));
     setSotkiState(clamped);
   }, []);
 
-  const placeAtCell = useCallback(
-    (cell: Cell) => {
+  /** Поставить модуль по точке тапа (координаты в метрах участка). */
+  const placeAtPoint = useCallback(
+    (px: number, pz: number) => {
       lastError.current = null;
       setModules((prev) => {
-        if (!canPlace(prev, { ...cell, floor }, gridN)) {
+        const anchor = anchorForPoint(prev, px, pz, floor, gridN);
+        if (!anchor) {
           lastError.current =
             floor > 0
-              ? "Верхний этаж ставится только поверх модулей этажом ниже"
+              ? "Верхнему этажу нужна опора минимум на треть площади модуля"
               : "Здесь модуль не помещается";
           return prev;
         }
-        return [...prev, { id: newId(), x: cell.x, z: cell.z, floor, role }];
+        return [...prev, { id: newId(), x: anchor.x, z: anchor.z, floor, role }];
       });
     },
     [floor, role, gridN],
@@ -145,7 +146,6 @@ export function useHouseBuilder(basePricePerM2: number) {
     design,
     designId,
     stats,
-    occ,
     canGoUp,
     lastError,
     // действия
@@ -153,7 +153,7 @@ export function useHouseBuilder(basePricePerM2: number) {
     setFloor,
     setRole,
     setDesignId,
-    placeAtCell,
+    placeAtPoint,
     removeModule,
     selectModule,
     setModuleRole,

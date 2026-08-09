@@ -2,12 +2,12 @@ import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Sky, Edges } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
-import { CELL_M, MODULE_HEIGHT_M } from "@/lib/constructor/constants";
-import { ROLES } from "@/lib/constructor/constants";
+import { CELL_M, MODULE_HEIGHT_M, MODULE_SIDE_M, ROLES } from "@/lib/constructor/constants";
 import type { DesignPreset, ModuleItem } from "@/lib/constructor/types";
 
 const FOUNDATION_H = 0.35;
 const H = MODULE_HEIGHT_M;
+const S = MODULE_SIDE_M;
 
 interface Props {
   modules: ModuleItem[];
@@ -18,13 +18,25 @@ interface Props {
 
 type WindowSpec = { pos: [number, number, number]; rotY: number; w: number; h: number };
 
-function useOccByFloor(modules: ModuleItem[]) {
+/** Горизонтальное перекрытие двух модулей по оси (для проверки соседства граней). */
+function axisOverlap(a: number, b: number): number {
+  return Math.min(a + S, b + S) - Math.max(a, b);
+}
+
+/** Пересечение модулей в плане, м². */
+function overlapArea(a: ModuleItem, b: ModuleItem): number {
+  const ox = axisOverlap(a.x, b.x);
+  const oz = axisOverlap(a.z, b.z);
+  return ox > 0 && oz > 0 ? ox * oz : 0;
+}
+
+function useByFloor(modules: ModuleItem[]) {
   return useMemo(() => {
-    const map = new Map<number, Set<string>>();
+    const map = new Map<number, ModuleItem[]>();
     for (const m of modules) {
-      const set = map.get(m.floor) ?? new Set<string>();
-      set.add(`${m.x}:${m.z}`);
-      map.set(m.floor, set);
+      const arr = map.get(m.floor) ?? [];
+      arr.push(m);
+      map.set(m.floor, arr);
     }
     return map;
   }, [modules]);
@@ -40,19 +52,19 @@ function ModuleMesh({
   m: ModuleItem;
   design: DesignPreset;
   gridN: number;
-  sameFloor: Set<string>;
-  aboveFloor: Set<string> | undefined;
+  sameFloor: ModuleItem[];
+  aboveFloor: ModuleItem[];
 }) {
-  const toWorld = (cellCol: number) => (cellCol - gridN / 2) * CELL_M;
-  const size = CELL_M;
-  const centerX = toWorld(m.x + 0.5);
-  const centerZ = toWorld(m.z + 0.5);
+  const span = gridN * CELL_M;
+  const centerX = m.x + S / 2 - span / 2;
+  const centerZ = m.z + S / 2 - span / 2;
   const baseY = FOUNDATION_H + m.floor * H;
   const centerY = baseY + H / 2;
 
   const isTerrace = m.role === "terrace";
 
-  // Окна на внешних гранях (там, где нет соседнего модуля этого этажа).
+  // Окна на гранях, к которым не примыкает сосед этого этажа. С шагом 1 м
+  // сосед может закрывать грань частично — окно ставим, если открыто ≥ 1,5 м.
   const windows = useMemo<WindowSpec[]>(() => {
     if (isTerrace) return [];
     const specs: WindowSpec[] = [];
@@ -64,12 +76,22 @@ function ModuleMesh({
     ];
     const winY = baseY + H * 0.46;
     for (const d of dirs) {
-      if (sameFloor.has(`${m.x + d.dx}:${m.z + d.dz}`)) continue;
+      let covered = 0;
+      for (const n of sameFloor) {
+        if (n.id === m.id) continue;
+        if (d.dx !== 0) {
+          // Грань по X: сосед касается её, если стоит вплотную по X.
+          if (n.x === m.x + d.dx * S) covered = Math.max(covered, axisOverlap(n.z, m.z));
+        } else if (n.z === m.z + d.dz * S) {
+          covered = Math.max(covered, axisOverlap(n.x, m.x));
+        }
+      }
+      if (S - covered < 1.5) continue;
       const off = 0.03;
       specs.push({
-        pos: [centerX + d.dx * (size / 2 + off), winY, centerZ + d.dz * (size / 2 + off)],
+        pos: [centerX + d.dx * (S / 2 + off), winY, centerZ + d.dz * (S / 2 + off)],
         rotY: d.rotY,
-        w: size * 0.66,
+        w: S * 0.66,
         h: H * 0.5,
       });
     }
@@ -77,21 +99,28 @@ function ModuleMesh({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.id, m.x, m.z, m.floor, m.role, gridN, sameFloor]);
 
-  const roofed = !aboveFloor || !aboveFloor.has(`${m.x}:${m.z}`);
+  // Кровля: рисуем, пока модуль сверху не накрыл кубик целиком. При частичном
+  // перекрытии плита остаётся — читается как межэтажная плита у консоли.
+  const coveredAbove = useMemo(
+    () => aboveFloor.reduce((s, n) => s + overlapArea(m, n), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [m.id, m.x, m.z, aboveFloor],
+  );
+  const roofed = coveredAbove < S * S - 0.5;
 
   if (isTerrace) {
     // Терраса: настил, 4 стойки и лёгкая плоская кровля, без стен.
     const postH = H * 0.92;
     const corners: Array<[number, number]> = [
-      [centerX - size / 2 + 0.2, centerZ - size / 2 + 0.2],
-      [centerX + size / 2 - 0.2, centerZ - size / 2 + 0.2],
-      [centerX - size / 2 + 0.2, centerZ + size / 2 - 0.2],
-      [centerX + size / 2 - 0.2, centerZ + size / 2 - 0.2],
+      [centerX - S / 2 + 0.2, centerZ - S / 2 + 0.2],
+      [centerX + S / 2 - 0.2, centerZ - S / 2 + 0.2],
+      [centerX - S / 2 + 0.2, centerZ + S / 2 - 0.2],
+      [centerX + S / 2 - 0.2, centerZ + S / 2 - 0.2],
     ];
     return (
       <group>
         <mesh position={[centerX, baseY + 0.08, centerZ]} receiveShadow castShadow>
-          <boxGeometry args={[size, 0.16, size]} />
+          <boxGeometry args={[S, 0.16, S]} />
           <meshStandardMaterial color={ROLES.terrace.floor3d} roughness={0.9} />
         </mesh>
         {corners.map(([px, pz], i) => (
@@ -102,7 +131,7 @@ function ModuleMesh({
         ))}
         {roofed && (
           <mesh position={[centerX, baseY + postH, centerZ]} castShadow receiveShadow>
-            <boxGeometry args={[size + 0.2, 0.16, size + 0.2]} />
+            <boxGeometry args={[S + 0.2, 0.16, S + 0.2]} />
             <meshStandardMaterial color={design.roof} roughness={0.7} />
           </mesh>
         )}
@@ -114,7 +143,7 @@ function ModuleMesh({
     <group>
       {/* Стены */}
       <mesh position={[centerX, centerY, centerZ]} castShadow receiveShadow>
-        <boxGeometry args={[size, H, size]} />
+        <boxGeometry args={[S, H, S]} />
         <meshStandardMaterial
           color={design.wall}
           roughness={design.wallRoughness}
@@ -140,7 +169,7 @@ function ModuleMesh({
       {/* Плоская кровля с небольшим свесом */}
       {roofed && (
         <mesh position={[centerX, baseY + H + 0.12, centerZ]} castShadow receiveShadow>
-          <boxGeometry args={[size + 0.24, 0.24, size + 0.24]} />
+          <boxGeometry args={[S + 0.24, 0.24, S + 0.24]} />
           <meshStandardMaterial color={design.roof} roughness={0.7} />
         </mesh>
       )}
@@ -148,7 +177,7 @@ function ModuleMesh({
       {/* Фундамент под модулями первого этажа */}
       {m.floor === 0 && (
         <mesh position={[centerX, FOUNDATION_H / 2, centerZ]} receiveShadow castShadow>
-          <boxGeometry args={[size + 0.1, FOUNDATION_H, size + 0.1]} />
+          <boxGeometry args={[S + 0.1, FOUNDATION_H, S + 0.1]} />
           <meshStandardMaterial color="#3a3a3c" roughness={0.9} />
         </mesh>
       )}
@@ -176,7 +205,7 @@ function Ground({ design, gridN }: { design: DesignPreset; gridN: number }) {
 }
 
 export default function Scene3D({ modules, design, gridN, autoRotate }: Props) {
-  const occByFloor = useOccByFloor(modules);
+  const byFloor = useByFloor(modules);
   const span = gridN * CELL_M;
   const sun: [number, number, number] = [span * 0.8, span * 0.9, span * 0.5];
 
@@ -219,8 +248,8 @@ export default function Scene3D({ modules, design, gridN, autoRotate }: Props) {
           m={m}
           design={design}
           gridN={gridN}
-          sameFloor={occByFloor.get(m.floor) ?? new Set()}
-          aboveFloor={occByFloor.get(m.floor + 1)}
+          sameFloor={byFloor.get(m.floor) ?? []}
+          aboveFloor={byFloor.get(m.floor + 1) ?? []}
         />
       ))}
 
