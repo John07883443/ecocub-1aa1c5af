@@ -1,0 +1,30 @@
+{
+  "slug": "weekend-one",
+  "name": "Weekend One",
+  "series": "concrete",
+  "tagline": "Компактный модульный дом с панорамным остеклением",
+  "description": "Однокомнатный модульный дом из бетона для круглогодичного проживания. Высота потолков 3,15 м, панорамные окна, готовая инженерия. Идеален как дача или гостевой дом.",
+  "area_m2": 55,
+  "bedrooms": 1,
+  "bathrooms": 1,
+  "floors": 1,
+  "price_from": 5500000,
+  "cover_image": "/images/projects/weekend-one.jpg",
+  "gallery": [
+    "/images/projects/weekend-one.jpg",
+    "/images/projects/weekend-one-2.jpg",
+    "/images/interiors/living-1.jpg",
+    "/images/interiors/bedroom-1.jpg"
+  ],
+  "features": [
+    "Потолки 3,15 м",
+    "Панорамное остекление",
+    "Тёплые полы по всему периметру",
+    "Готовая черновая инженерия",
+    "Чистовая отделка фасада",
+    "Эксплуатируемая кровля"
+  ],
+  "display_order": 1,
+  "published": true,
+  "updated_at": "2026-04-22"
+}

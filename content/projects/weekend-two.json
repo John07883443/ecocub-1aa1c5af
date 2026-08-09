@@ -1,0 +1,30 @@
+{
+  "slug": "weekend-two",
+  "name": "Weekend Two",
+  "series": "concrete",
+  "tagline": "Просторный одноэтажный дом для семьи",
+  "description": "Одноэтажный модульный дом из бетона с двумя спальнями, кабинетом и гостиной с панорамным остеклением. Потолки 3,15 м.",
+  "area_m2": 124,
+  "bedrooms": 2,
+  "bathrooms": 2,
+  "floors": 1,
+  "price_from": 10000000,
+  "cover_image": "/images/projects/weekend-two.jpg",
+  "gallery": [
+    "/images/projects/weekend-two.jpg",
+    "/images/projects/weekend-two-2.jpg",
+    "/images/interiors/kitchen-1.jpg",
+    "/images/interiors/bedroom-2.jpg"
+  ],
+  "features": [
+    "Потолки 3,15 м",
+    "Две спальни и кабинет",
+    "Просторная кухня-гостиная",
+    "Два санузла",
+    "Панорамное остекление",
+    "Чистовая отделка фасада"
+  ],
+  "display_order": 3,
+  "published": true,
+  "updated_at": "2026-04-22"
+}

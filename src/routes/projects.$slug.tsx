@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, BedDouble, Bath, Layers, Maximize2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getProjectBySlug } from "@/lib/projects";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
@@ -11,22 +11,6 @@ import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { analytics } from "@/lib/analytics";
 import { useEffect } from "react";
 
-type Project = {
-  slug: string;
-  name: string;
-  series: string;
-  tagline: string | null;
-  description: string | null;
-  area_m2: number | null;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  floors: number | null;
-  price_from: number | null;
-  cover_image: string;
-  gallery: string[];
-  features: string[];
-};
-
 const seriesLabel: Record<string, string> = {
   concrete: "Бетонный модуль",
   villa: "Вилла Hi-Tech",
@@ -35,22 +19,10 @@ const seriesLabel: Record<string, string> = {
 const absUrl = (u: string) => (u.startsWith("http") ? u : `https://eco-cub.ru${u}`);
 
 export const Route = createFileRoute("/projects/$slug")({
-  loader: async ({ params }) => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("slug", params.slug)
-      .eq("published", true)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) throw notFound();
-    return {
-      project: {
-        ...data,
-        gallery: Array.isArray(data.gallery) ? (data.gallery as string[]) : [],
-        features: Array.isArray(data.features) ? (data.features as string[]) : [],
-      } as Project,
-    };
+  loader: ({ params }) => {
+    const project = getProjectBySlug(params.slug);
+    if (!project) throw notFound();
+    return { project };
   },
   head: ({ loaderData }) => {
     const p = loaderData?.project;

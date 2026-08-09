@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { getAllPosts, getCategories, getTags } from "@/lib/blog";
+import { getAllProjects } from "@/lib/projects";
 
 const SITE_URL = "https://eco-cub.ru";
 
@@ -49,18 +49,10 @@ export const Route = createFileRoute("/sitemap.xml")({
           urls.push(url(`/blog/tag/${tag.slug}`, undefined, "weekly", "0.4"));
         }
 
-        // Проекты пока живут во внешней базе — это унаследованная зависимость,
-        // снимается отдельным шагом. Ошибка здесь не должна обнулять карту сайта.
-        try {
-          const projects = await supabase
-            .from("projects")
-            .select("slug,updated_at")
-            .eq("published", true);
-          for (const project of projects.data ?? []) {
-            urls.push(url(`/projects/${project.slug}`, project.updated_at ?? undefined, "monthly", "0.7"));
-          }
-        } catch {
-          // Молча пропускаем: карта сайта без проектов лучше, чем 500 в ответ роботу.
+        for (const project of getAllProjects()) {
+          urls.push(
+            url(`/projects/${project.slug}`, project.updated_at ?? undefined, "monthly", "0.7"),
+          );
         }
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>

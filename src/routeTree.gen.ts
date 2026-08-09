@@ -20,7 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
-import { Route as ApiNotifyRouteImport } from './routes/api.notify'
+import { Route as ApiLeadRouteImport } from './routes/api.lead'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
 
@@ -79,9 +79,9 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiNotifyRoute = ApiNotifyRouteImport.update({
-  id: '/api/notify',
-  path: '/api/notify',
+const ApiLeadRoute = ApiLeadRouteImport.update({
+  id: '/api/lead',
+  path: '/api/lead',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogTagTagRoute = BlogTagTagRouteImport.update({
@@ -104,7 +104,7 @@ export interface FileRoutesByFullPath {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/api/notify': typeof ApiNotifyRoute
+  '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -120,7 +120,7 @@ export interface FileRoutesByTo {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/api/notify': typeof ApiNotifyRoute
+  '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
@@ -137,7 +137,7 @@ export interface FileRoutesById {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
-  '/api/notify': typeof ApiNotifyRoute
+  '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -155,7 +155,7 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
-    | '/api/notify'
+    | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -171,7 +171,7 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
-    | '/api/notify'
+    | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog'
@@ -187,7 +187,7 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
-    | '/api/notify'
+    | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -204,7 +204,7 @@ export interface RootRouteChildren {
   RssDotxmlRoute: typeof RssDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TechnologyRoute: typeof TechnologyRoute
-  ApiNotifyRoute: typeof ApiNotifyRoute
+  ApiLeadRoute: typeof ApiLeadRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -291,11 +291,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/notify': {
-      id: '/api/notify'
-      path: '/api/notify'
-      fullPath: '/api/notify'
-      preLoaderRoute: typeof ApiNotifyRouteImport
+    '/api/lead': {
+      id: '/api/lead'
+      path: '/api/lead'
+      fullPath: '/api/lead'
+      preLoaderRoute: typeof ApiLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/tag/$tag': {
@@ -324,7 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   RssDotxmlRoute: RssDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TechnologyRoute: TechnologyRoute,
-  ApiNotifyRoute: ApiNotifyRoute,
+  ApiLeadRoute: ApiLeadRoute,
   BlogSlugRoute: BlogSlugRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
   BlogIndexRoute: BlogIndexRoute,

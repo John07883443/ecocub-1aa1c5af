@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowRight, ShieldCheck, Clock, Layers, Hammer } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import { Parallax } from "@/components/motion/Parallax";
 
 import { site } from "@/lib/site";
 import { getAllPosts } from "@/lib/blog";
+import { getAllProjects } from "@/lib/projects";
 import { analytics } from "@/lib/analytics";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 
@@ -55,21 +55,11 @@ export const Route = createFileRoute("/")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru" }],
   }),
-  loader: async () => {
-    // Статьи — из локальных файлов, без сети и без базы.
-    const posts = getAllPosts().slice(0, 3);
-
-    // Проекты пока во внешней базе: унаследованная зависимость, снимается отдельно.
-    const projectsRes = await supabase
-      .from("projects")
-      .select("slug,name,series,tagline,area_m2,bedrooms,price_from,cover_image")
-      .eq("published", true)
-      .order("display_order", { ascending: true })
-      .limit(6);
-    if (projectsRes.error) throw projectsRes.error;
-
-    return { projects: (projectsRes.data ?? []) as ProjectCardData[], posts };
-  },
+  // Статьи и проекты — из локальных файлов: ни сети, ни базы при рендере.
+  loader: () => ({
+    projects: getAllProjects().slice(0, 6) as ProjectCardData[],
+    posts: getAllPosts().slice(0, 3),
+  }),
   errorComponent: ({ error, reset }: { error: Error; reset: () => void }) => (
     <PageLayout>
       <Container className="py-32 text-center">

@@ -14,7 +14,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase } from "@/integrations/supabase/client";
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
 import { useEffect, useRef } from "react";
@@ -104,22 +103,9 @@ export function ContactForm({
       // Паспорт происхождения заявки: откуда пришёл человек и насколько был вовлечён.
       const attribution = await buildAttribution();
 
-      const { error } = await supabase.from("submissions").insert({
-        form_type: formType,
-        name: values.name.trim(),
-        phone: values.phone.trim(),
-        email: values.email?.trim() || null,
-        message: values.message?.trim() || null,
-        project_slug: projectSlug ?? null,
-        source_page:
-          sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : null),
-        status: "new",
-        payload: attribution as unknown as never,
-      });
-      if (error) throw error;
-
-      // Мгновенное уведомление в Telegram (сбой уведомления не блокирует форму)
-      void fetch("/api/notify", {
+      // Одна точка приёма: сервер сам кладёт заявку в базу и шлёт уведомление
+      // в Telegram. Из браузера в базу больше не пишем.
+      const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -131,10 +117,11 @@ export function ContactForm({
           projectSlug,
           sourcePage:
             sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : undefined),
-          attribution,
+          payload: attribution,
           attributionSummary: attributionSummary(attribution),
         }),
-      }).catch(() => {});
+      });
+      if (!res.ok) throw new Error("Сервер не принял заявку");
 
       submitted.current = true;
       analytics.formSubmit(formType, pageRef, projectSlug);

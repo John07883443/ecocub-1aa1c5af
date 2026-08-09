@@ -1,0 +1,31 @@
+{
+  "slug": "sky-river",
+  "name": "Sky River",
+  "series": "concrete",
+  "tagline": "Двухкомнатный дом с панорамой на природу",
+  "description": "Модульный бетонный дом с двумя спальнями и просторной гостиной-кухней. Потолки 3,15 м.",
+  "area_m2": 85,
+  "bedrooms": 2,
+  "bathrooms": 1,
+  "floors": 1,
+  "price_from": 8500000,
+  "cover_image": "/images/projects/sky-river.jpg",
+  "gallery": [
+    "/images/projects/sky-river.jpg",
+    "/images/projects/sky-river-2.jpg",
+    "/images/projects/sky-river-3.jpg",
+    "/images/interiors/living-2.jpg",
+    "/images/interiors/kitchen-1.jpg"
+  ],
+  "features": [
+    "Потолки 3,15 м",
+    "Панорамные окна с видом на природу",
+    "Две спальни",
+    "Терраса с зоной барбекю",
+    "Тёплые полы",
+    "Готовая инженерия"
+  ],
+  "display_order": 2,
+  "published": true,
+  "updated_at": "2026-04-22"
+}

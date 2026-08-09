@@ -1,0 +1,31 @@
+{
+  "slug": "family-one",
+  "name": "Family One",
+  "series": "villa",
+  "tagline": "Семейный дом с тремя спальнями",
+  "description": "Просторный модульный бетонный дом для большой семьи. Три спальни, две санузла, гостиная-кухня с панорамным остеклением, потолки 3,15 м.",
+  "area_m2": 146,
+  "bedrooms": 3,
+  "bathrooms": 2,
+  "floors": 1,
+  "price_from": 12000000,
+  "cover_image": "/images/projects/family-one.jpg",
+  "gallery": [
+    "/images/projects/family-one.jpg",
+    "/images/projects/family-one-2.jpg",
+    "/images/projects/family-one-3.jpg",
+    "/images/interiors/living-1.jpg",
+    "/images/interiors/bathroom-1.jpg"
+  ],
+  "features": [
+    "Потолки 3,15 м",
+    "Три спальни",
+    "Два санузла",
+    "Гардеробные",
+    "Панорамные окна",
+    "Готовая инженерия"
+  ],
+  "display_order": 4,
+  "published": true,
+  "updated_at": "2026-04-22"
+}
