@@ -15,6 +15,7 @@ import { InteriorsGallery } from "@/components/InteriorsGallery";
 import { BlogCard } from "@/components/BlogCard";
 import { BrandSpecs } from "@/components/BrandSpecs";
 import { Configurator } from "@/components/Configurator";
+import { HouseQuiz } from "@/components/HouseQuiz";
 import { HeroSlider } from "@/components/HeroSlider";
 import { LayeredSection } from "@/components/LayeredSection";
 
@@ -289,6 +290,50 @@ function HomePage() {
 
       {/* CONFIGURATOR */}
       <Configurator />
+
+      {/* QUIZ — подбор проекта */}
+      <Section id="quiz" className="bg-secondary">
+        <Container>
+          <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
+                Подбор проекта
+              </p>
+              <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
+                Каким будет ваш EcoCub?
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                6 вопросов — и вы увидите ориентировочную площадь, стоимость под ключ и получите
+                подходящий проект. Без регистраций и обязательств.
+              </p>
+              <ul className="mt-8 space-y-4">
+                <li className="flex items-start gap-3">
+                  <Clock className="mt-0.5 size-5 shrink-0 text-accent" />
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">Меньше минуты.</span> Короткие
+                    вопросы с готовыми вариантами — ничего печатать не нужно.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Layers className="mt-0.5 size-5 shrink-0 text-accent" />
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">Расчёт сразу.</span> В конце —
+                    ориентир по площади и цене под ключ по ставке 105 000 ₽/м².
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" />
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">Живой инженер.</span> Подберёт
+                    готовый проект под ответы и пришлёт планировки — без навязчивых звонков.
+                  </span>
+                </li>
+              </ul>
+            </div>
+            <HouseQuiz />
+          </div>
+        </Container>
+      </Section>
 
       {/* TECHNOLOGY */}
       <Section id="technology" className="bg-primary text-primary-foreground">
