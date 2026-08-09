@@ -24,6 +24,8 @@ import {
   Package,
   PanelsTopLeft,
   Phone,
+  RotateCw,
+  Ruler,
   Send,
   Shirt,
   Sparkles,
@@ -387,9 +389,13 @@ const shrink = (face: P[], s: number): P[] => {
   return face.map((p) => ({ x: cx + (p.x - cx) * s, y: cy + (p.y - cy) * s }));
 };
 
-function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
+type Face = { pts: string; fill: string; opacity?: number };
+
+// Грани дома в изометрии со смещением начала (ox, oy) — переиспользуется и на участке.
+function buildHouseFaces(spec: Spec, ox = 0, oy = 0): Face[] {
   const { cols, rows, floors, roof, window: win, veranda, terrace, parking, carW, palette } = spec;
-  const faces: { pts: string; fill: string; stroke?: string; opacity?: number }[] = [];
+  const faces: Face[] = [];
+  const I = (gx: number, gy: number, z = 0) => iso(ox + gx, oy + gy, z);
 
   // Кубики-модули: рисуем от дальних к ближним, снизу вверх (painter's algorithm).
   const cells: { gx: number; gy: number; f: number }[] = [];
@@ -400,13 +406,13 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
   for (const { gx, gy, f } of cells) {
     const zt = (f + 1) * LEV;
     const zb = f * LEV;
-    const A = iso(gx, gy, zt);
-    const B = iso(gx + 1, gy, zt);
-    const C = iso(gx + 1, gy + 1, zt);
-    const D = iso(gx, gy + 1, zt);
-    const Bb = iso(gx + 1, gy, zb);
-    const Cb = iso(gx + 1, gy + 1, zb);
-    const Db = iso(gx, gy + 1, zb);
+    const A = I(gx, gy, zt);
+    const B = I(gx + 1, gy, zt);
+    const C = I(gx + 1, gy + 1, zt);
+    const D = I(gx, gy + 1, zt);
+    const Bb = I(gx + 1, gy, zb);
+    const Cb = I(gx + 1, gy + 1, zb);
+    const Db = I(gx, gy + 1, zb);
     faces.push({ pts: poly([A, B, C, D]), fill: palette.top });
     const rightFace = [B, C, Cb, Bb];
     const leftFace = [D, C, Cb, Db];
@@ -425,10 +431,10 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
 
   // Крыша поверх верхнего этажа.
   const H = floors * LEV;
-  const c00 = iso(0, 0, H);
-  const c10 = iso(cols, 0, H);
-  const c11 = iso(cols, rows, H);
-  const c01 = iso(0, rows, H);
+  const c00 = I(0, 0, H);
+  const c10 = I(cols, 0, H);
+  const c11 = I(cols, rows, H);
+  const c01 = I(0, rows, H);
   if (roof === "flat") {
     faces.push({ pts: poly([c00, c10, c11, c01]), fill: palette.roof });
     if (terrace) {
@@ -437,15 +443,15 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
     }
   } else if (roof === "gable") {
     if (cols >= rows) {
-      const r0 = iso(0, rows / 2, H + RH);
-      const r1 = iso(cols, rows / 2, H + RH);
+      const r0 = I(0, rows / 2, H + RH);
+      const r1 = I(cols, rows / 2, H + RH);
       faces.push({ pts: poly([c00, c10, r1, r0]), fill: palette.roof, opacity: 0.92 });
       faces.push({ pts: poly([c01, c11, r1, r0]), fill: palette.roof });
       faces.push({ pts: poly([c00, c01, r0]), fill: palette.left });
       faces.push({ pts: poly([c10, c11, r1]), fill: palette.right });
     } else {
-      const r0 = iso(cols / 2, 0, H + RH);
-      const r1 = iso(cols / 2, rows, H + RH);
+      const r0 = I(cols / 2, 0, H + RH);
+      const r1 = I(cols / 2, rows, H + RH);
       faces.push({ pts: poly([c00, c01, r1, r0]), fill: palette.roof, opacity: 0.92 });
       faces.push({ pts: poly([c10, c11, r1, r0]), fill: palette.roof });
       faces.push({ pts: poly([c00, c10, r0]), fill: palette.right });
@@ -453,8 +459,8 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
     }
   } else {
     // Односкатная: задняя кромка (gy=0) поднята.
-    const bn0 = iso(0, 0, H + RH);
-    const bn1 = iso(cols, 0, H + RH);
+    const bn0 = I(0, 0, H + RH);
+    const bn1 = I(cols, 0, H + RH);
     faces.push({ pts: poly([c00, c10, bn1, bn0]), fill: palette.roof, opacity: 0.9 });
     faces.push({ pts: poly([bn0, bn1, c11, c01]), fill: palette.roof });
     faces.push({ pts: poly([c00, bn0, c01]), fill: palette.left, opacity: 0.85 });
@@ -464,21 +470,19 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
   // Веранда: крытый настил перед фасадом.
   if (veranda) {
     const vy1 = rows + 0.85;
-    const d0 = iso(0, rows, 6);
-    const d1 = iso(cols, rows, 6);
-    const d2 = iso(cols, vy1, 6);
-    const d3 = iso(0, vy1, 6);
+    const d0 = I(0, rows, 6);
+    const d1 = I(cols, rows, 6);
+    const d2 = I(cols, vy1, 6);
+    const d3 = I(0, vy1, 6);
     faces.push({ pts: poly([d0, d1, d2, d3]), fill: palette.wood, opacity: 0.9 });
     // Тонкий козырёк на стойках.
     const ct = 0.62 * LEV;
-    const k0 = iso(0, rows, ct);
-    const k1 = iso(cols, rows, ct);
-    const k2 = iso(cols, vy1, ct);
-    const k3 = iso(0, vy1, ct);
+    const k0 = I(0, rows, ct);
+    const k1 = I(cols, rows, ct);
+    const k2 = I(cols, vy1, ct);
+    const k3 = I(0, vy1, ct);
     faces.push({ pts: poly([k0, k1, k2, k3]), fill: palette.roof, opacity: 0.55 });
-    const p2 = iso(cols, vy1, 6);
-    const p3 = iso(0, vy1, 6);
-    postLines(faces, [p2, p3], ct - 6, palette.right);
+    postLines(faces, [I(cols, vy1, 6), I(0, vy1, 6)], ct - 6, palette.right);
   }
 
   // Парковка слева-впереди: гараж (короб с воротами) или карпорт (навес на стойках).
@@ -489,13 +493,13 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
     const gy1 = rows + 0.95;
     if (parking === "garage") {
       const gh = 0.72 * LEV;
-      const t0 = iso(gx0, gy0, gh);
-      const t1 = iso(gx1, gy0, gh);
-      const t2 = iso(gx1, gy1, gh);
-      const t3 = iso(gx0, gy1, gh);
-      const b1 = iso(gx1, gy0, 0);
-      const b2 = iso(gx1, gy1, 0);
-      const b3 = iso(gx0, gy1, 0);
+      const t0 = I(gx0, gy0, gh);
+      const t1 = I(gx1, gy0, gh);
+      const t2 = I(gx1, gy1, gh);
+      const t3 = I(gx0, gy1, gh);
+      const b1 = I(gx1, gy0, 0);
+      const b2 = I(gx1, gy1, 0);
+      const b3 = I(gx0, gy1, 0);
       faces.push({ pts: poly([t0, t1, t2, t3]), fill: palette.top, opacity: 0.95 });
       const front = [t2, t1, b1, b2]; // южная стена — ворота
       const side = [t3, t2, b2, b3];
@@ -504,24 +508,21 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
       faces.push({ pts: poly(shrink(front, 0.78)), fill: palette.roof, opacity: 0.6 });
     } else {
       const ch = 0.7 * LEV;
-      const t0 = iso(gx0, gy0, ch);
-      const t1 = iso(gx1, gy0, ch);
-      const t2 = iso(gx1, gy1, ch);
-      const t3 = iso(gx0, gy1, ch);
+      const t0 = I(gx0, gy0, ch);
+      const t1 = I(gx1, gy0, ch);
+      const t2 = I(gx1, gy1, ch);
+      const t3 = I(gx0, gy1, ch);
       faces.push({ pts: poly([t0, t1, t2, t3]), fill: palette.roof, opacity: 0.8 });
       postLines(faces, [t0, t1, t2, t3], ch, palette.right);
     }
   }
 
-  // Габариты вьюпорта подбираем под самый крупный вариант, чтобы дом не «прыгал».
+  return faces;
+}
+
+function Polys({ faces }: { faces: Face[] }) {
   return (
-    <svg
-      viewBox="-260 -250 520 470"
-      className="h-full w-full"
-      role="img"
-      aria-label="Превью дома, собранного по вашим ответам"
-    >
-      <ellipse cx="0" cy="118" rx="180" ry="46" fill="currentColor" opacity="0.06" />
+    <>
       {faces.map((f, i) => (
         <polygon
           key={i}
@@ -533,11 +534,87 @@ function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
           strokeLinejoin="round"
         />
       ))}
+    </>
+  );
+}
+
+function HousePreview({ spec, answered }: { spec: Spec; answered: number }) {
+  const faces = buildHouseFaces(spec);
+  return (
+    <svg
+      viewBox="-260 -250 520 470"
+      className="h-full w-full"
+      role="img"
+      aria-label="Превью дома, собранного по вашим ответам"
+    >
+      <ellipse cx="0" cy="118" rx="180" ry="46" fill="currentColor" opacity="0.06" />
+      <Polys faces={faces} />
       {answered === 0 && (
         <text x="0" y="150" textAnchor="middle" fill="currentColor" opacity="0.4" fontSize="13">
           Отвечайте — дом собирается на глазах
         </text>
       )}
+    </svg>
+  );
+}
+
+/** Размеры участка: сотки и сторона квадрата в метрах (1 сотка = 100 м²). */
+const PLOTS = [
+  { sotki: 6, side: 24.5 },
+  { sotki: 10, side: 31.6 },
+  { sotki: 15, side: 38.7 },
+];
+const METERS_PER_MODULE = 6; // сторона модуля ≈ 6 м (≈ 36 м²)
+const SETBACK_M = 3; // нормативный отступ от границ участка
+
+// Превью «дом на участке»: участок в сотках, дом по центру, отступы от границ.
+function PlotPreview({ spec, sotki, orient }: { spec: Spec; sotki: number; orient: number }) {
+  const plot = PLOTS.find((p) => p.sotki === sotki) ?? PLOTS[1];
+  const side = plot.side / METERS_PER_MODULE; // сторона участка в модулях
+  const sb = SETBACK_M / METERS_PER_MODULE; // отступ в модулях
+
+  // Поворот: чётные orient меняют местами стороны дома, старший бит — зеркало.
+  const swap = orient % 2 === 1;
+  const mirror = orient >= 2;
+  const oriented: Spec = swap ? { ...spec, cols: spec.rows, rows: spec.cols } : spec;
+
+  // Центрируем дом в зоне застройки (внутри отступов).
+  const ox = (side - oriented.cols) / 2;
+  const oy = (side - oriented.rows) / 2;
+
+  const ground = [iso(0, 0), iso(side, 0), iso(side, side), iso(0, side)];
+  const inner = [iso(sb, sb), iso(side - sb, sb), iso(side - sb, side - sb), iso(sb, side - sb)];
+  const faces = buildHouseFaces(oriented, ox, oy);
+
+  const halfW = side * TW + 34;
+  const topY = spec.floors * LEV + RH + 30;
+  const botY = 2 * side * TH + 34;
+
+  return (
+    <svg
+      viewBox={`${-halfW} ${-topY} ${2 * halfW} ${topY + botY}`}
+      className="h-full w-full"
+      role="img"
+      aria-label="Дом, размещённый на участке"
+    >
+      <polygon
+        points={poly(ground)}
+        fill="#8fb56a"
+        fillOpacity="0.85"
+        stroke="#6f9450"
+        strokeWidth="1.5"
+      />
+      <polygon
+        points={poly(inner)}
+        fill="none"
+        stroke="#5c7b40"
+        strokeWidth="1.25"
+        strokeDasharray="5 4"
+        opacity="0.75"
+      />
+      <g transform={mirror ? "scale(-1,1)" : undefined}>
+        <Polys faces={faces} />
+      </g>
     </svg>
   );
 }
@@ -579,6 +656,8 @@ export function DreamHouseBuilder() {
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [sotki, setSotki] = useState(10); // размер участка для превью размещения
+  const [orient, setOrient] = useState(0); // поворот дома на участке (0..3)
 
   const startedRef = useRef(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -619,12 +698,14 @@ export function DreamHouseBuilder() {
     () => QUESTIONS.filter((q) => !q.showIf || q.showIf(answers)),
     [answers],
   );
-  const total = activeQuestions.length + 1; // +1 — результат
-  const isResult = step >= activeQuestions.length;
-  const current = activeQuestions[Math.min(step, activeQuestions.length - 1)];
-  const progress = Math.round(
-    (Math.min(step, activeQuestions.length) / activeQuestions.length) * 100,
-  );
+  // Шаги: [вопросы...] → участок → результат.
+  const plotStepIndex = activeQuestions.length;
+  const total = activeQuestions.length + 2; // + участок + результат
+  const isPlot = step === plotStepIndex;
+  const isResult = step > plotStepIndex;
+  const onPlot = step >= plotStepIndex; // на участке/результате показываем размещение
+  const current = step < plotStepIndex ? activeQuestions[step] : undefined;
+  const progress = Math.round((Math.min(step, total - 1) / (total - 1)) * 100);
 
   const spec = useMemo(() => specFromAnswers(answers), [answers]);
   const est = useMemo(() => estimate(answers), [answers]);
@@ -683,6 +764,9 @@ export function DreamHouseBuilder() {
       if (!v || (Array.isArray(v) && v.length === 0)) continue;
       lines.push(`• ${q.eyebrow}: ${Array.isArray(v) ? v.join(", ") : v}`);
     }
+    if (est.area > 0)
+      lines.push(`• Ориентир: ≈ ${est.area} м², от ${formatRub(est.price)} ₽ под ключ`);
+    lines.push(`• Участок: ${sotki} соток`);
     lines.push(`• Связь: ${channel}`);
     lines.push("Хочет ИИ-визуализацию дома мечты.");
     return lines.join("\n");
@@ -711,6 +795,8 @@ export function DreamHouseBuilder() {
     if (g("master")) parts.push(`Мастер-спальня: ${(g("master") as string).toLowerCase()}.`);
     if (g("guests")) parts.push(`Гости/родители: ${(g("guests") as string).toLowerCase()}.`);
     if (g("lifestyle")) parts.push(`Образ жизни: ${g("lifestyle")}.`);
+    parts.push(`Участок ${sotki} соток.`);
+    if (est.area > 0) parts.push(`Площадь ≈ ${est.area} м².`);
     return parts.join(" ");
   };
 
@@ -752,6 +838,8 @@ export function DreamHouseBuilder() {
           ...attribution,
           dream: answers,
           prompt: buildPrompt(),
+          plot: { sotki, orient },
+          estimate: { area: est.area, price: est.price },
           preferredChannel: channel,
         } as never,
       });
@@ -796,9 +884,14 @@ export function DreamHouseBuilder() {
       <div className="grid gap-0 md:grid-cols-[1.05fr_1fr]">
         {/* Живое превью «дом из кубиков» — на мобиле липнет к верху при прокрутке */}
         <div className="sticky top-16 z-20 flex min-h-[240px] items-center justify-center border-b border-border bg-secondary p-4 text-foreground md:static md:min-h-[440px] md:border-b-0 md:border-r">
-          <HousePreview spec={spec} answered={answeredCount} />
+          {onPlot ? (
+            <PlotPreview spec={spec} sotki={sotki} orient={orient} />
+          ) : (
+            <HousePreview spec={spec} answered={answeredCount} />
+          )}
           <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-card/80 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground backdrop-blur">
-            <Blocks className="size-3.5 text-accent" /> Ваш дом из кубиков
+            <Blocks className="size-3.5 text-accent" />{" "}
+            {onPlot ? "Дом на участке" : "Ваш дом из кубиков"}
           </span>
           {est.area > 0 && (
             <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-2 rounded-sm border border-border bg-card/85 px-3 py-2 backdrop-blur">
@@ -837,6 +930,16 @@ export function DreamHouseBuilder() {
               onConsent={setConsent}
               onBack={back}
               onSubmit={submit}
+            />
+          ) : isPlot ? (
+            <PlotStep
+              sotki={sotki}
+              orient={orient}
+              est={est}
+              onSotki={setSotki}
+              onRotate={() => setOrient((o) => (o + 1) % 4)}
+              onNext={next}
+              onBack={back}
             />
           ) : (
             current && (
@@ -951,6 +1054,103 @@ function QuestionStep({
             <ArrowLeft className="size-4" /> Назад
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PlotStep({
+  sotki,
+  orient,
+  est,
+  onSotki,
+  onRotate,
+  onNext,
+  onBack,
+}: {
+  sotki: number;
+  orient: number;
+  est: { area: number; price: number; priceMax: number };
+  onSotki: (n: number) => void;
+  onRotate: () => void;
+  onNext: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Участок</p>
+      <h3 className="mt-3 text-xl font-bold uppercase tracking-tight md:text-2xl">
+        Разместите дом на участке
+      </h3>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Прикиньте, как дом встанет на вашем участке. Пунктиром — зона застройки с отступом{" "}
+        {SETBACK_M} м от границ.
+      </p>
+
+      <div className="mt-6">
+        <label className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+          <Ruler className="size-4 text-accent" /> Размер участка
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {PLOTS.map((p) => {
+            const active = p.sotki === sotki;
+            return (
+              <button
+                key={p.sotki}
+                type="button"
+                onClick={() => onSotki(p.sotki)}
+                aria-pressed={active}
+                className={[
+                  "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "border-accent bg-accent/10 text-foreground"
+                    : "border-border text-muted-foreground hover:border-accent hover:text-foreground",
+                ].join(" ")}
+              >
+                {p.sotki} соток
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <label className="mb-2 block text-sm font-medium">Ориентация дома</label>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onRotate}
+          className="border-border hover:border-accent"
+        >
+          <RotateCw className="size-4" /> Повернуть дом
+        </Button>
+        <span className="ml-3 text-xs text-muted-foreground">положение {orient + 1} из 4</span>
+      </div>
+
+      {est.area > 0 && (
+        <div className="mt-6 rounded-sm border border-border bg-secondary/60 px-4 py-3 text-sm">
+          Дом ≈ <span className="font-semibold">{est.area} м²</span> · участок{" "}
+          <span className="font-semibold">{sotki} соток</span> · от{" "}
+          <span className="font-semibold text-accent">{formatRub(est.price)} ₽</span> под ключ
+        </div>
+      )}
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          size="lg"
+          onClick={onNext}
+          className="bg-accent text-accent-foreground hover:bg-accent/90"
+        >
+          Далее — получить визуализацию <ArrowRight />
+        </Button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" /> Назад
+        </button>
       </div>
     </div>
   );
