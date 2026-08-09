@@ -8,6 +8,12 @@ export const MODULE_HEIGHT_M = 3.15;
 /** Площадь одного модуля, м². */
 export const MODULE_AREA = MODULE_SIDE_M * MODULE_SIDE_M; // 9
 
+/** Шаг установки модуля — треть стороны кубика (1 м): модули могут
+ *  смещаться друг относительно друга, давая ступенчатые фасады и консоли. */
+export const STEP_M = MODULE_SIDE_M / 3; // 1
+/** Минимальная опора модуля верхнего этажа — треть его площади. */
+export const MIN_SUPPORT_AREA = MODULE_AREA / 3; // 3
+
 /** Терраса считается по сниженной ставке относительно жилой площади. */
 export const TERRACE_PRICE_FACTOR = 0.4;
 
@@ -81,7 +87,8 @@ export const DESIGN_PRESETS: DesignPreset[] = [
   },
 ];
 
-// Стартовые планировки. Координаты — от нуля; при загрузке центрируются на участке.
+// Стартовые планировки. Координаты — в метрах от нуля (шаг 1 м, модуль 3×3);
+// при загрузке центрируются на участке.
 export const TEMPLATES: Template[] = [
   {
     id: "studio",
@@ -89,7 +96,7 @@ export const TEMPLATES: Template[] = [
     shape: "2 модуля · 18 м²",
     seeds: [
       { x: 0, z: 0, floor: 0, role: "living" },
-      { x: 1, z: 0, floor: 0, role: "bathroom" },
+      { x: 3, z: 0, floor: 0, role: "bathroom" },
     ],
   },
   {
@@ -98,9 +105,9 @@ export const TEMPLATES: Template[] = [
     shape: "4 модуля · 36 м²",
     seeds: [
       { x: 0, z: 0, floor: 0, role: "living" },
-      { x: 1, z: 0, floor: 0, role: "kitchen" },
-      { x: 0, z: 1, floor: 0, role: "bedroom" },
-      { x: 1, z: 1, floor: 0, role: "bathroom" },
+      { x: 3, z: 0, floor: 0, role: "kitchen" },
+      { x: 0, z: 3, floor: 0, role: "bedroom" },
+      { x: 3, z: 3, floor: 0, role: "bathroom" },
     ],
   },
   {
@@ -109,13 +116,13 @@ export const TEMPLATES: Template[] = [
     shape: "8 модулей · 72 м², Г-образный",
     seeds: [
       { x: 0, z: 0, floor: 0, role: "living" },
-      { x: 1, z: 0, floor: 0, role: "living" },
-      { x: 2, z: 0, floor: 0, role: "kitchen" },
-      { x: 0, z: 1, floor: 0, role: "bedroom" },
-      { x: 1, z: 1, floor: 0, role: "bathroom" },
-      { x: 0, z: 2, floor: 0, role: "bedroom" },
+      { x: 3, z: 0, floor: 0, role: "living" },
+      { x: 6, z: 0, floor: 0, role: "kitchen" },
       { x: 0, z: 3, floor: 0, role: "bedroom" },
-      { x: 1, z: 3, floor: 0, role: "terrace" },
+      { x: 3, z: 3, floor: 0, role: "bathroom" },
+      { x: 0, z: 6, floor: 0, role: "bedroom" },
+      { x: 0, z: 9, floor: 0, role: "bedroom" },
+      { x: 4, z: 9, floor: 0, role: "terrace" },
     ],
   },
   {
@@ -124,15 +131,15 @@ export const TEMPLATES: Template[] = [
     shape: "10 модулей · 90 м², двор",
     seeds: [
       { x: 0, z: 0, floor: 0, role: "living" },
-      { x: 1, z: 0, floor: 0, role: "living" },
-      { x: 2, z: 0, floor: 0, role: "kitchen" },
-      { x: 3, z: 0, floor: 0, role: "bedroom" },
-      { x: 0, z: 1, floor: 0, role: "bedroom" },
-      { x: 3, z: 1, floor: 0, role: "bathroom" },
-      { x: 0, z: 2, floor: 0, role: "bedroom" },
-      { x: 3, z: 2, floor: 0, role: "bathroom" },
-      { x: 0, z: 3, floor: 0, role: "terrace" },
-      { x: 3, z: 3, floor: 0, role: "terrace" },
+      { x: 3, z: 0, floor: 0, role: "living" },
+      { x: 6, z: 0, floor: 0, role: "kitchen" },
+      { x: 9, z: 0, floor: 0, role: "bedroom" },
+      { x: 0, z: 3, floor: 0, role: "bedroom" },
+      { x: 9, z: 3, floor: 0, role: "bathroom" },
+      { x: 0, z: 6, floor: 0, role: "bedroom" },
+      { x: 9, z: 6, floor: 0, role: "bathroom" },
+      { x: 0, z: 9, floor: 0, role: "terrace" },
+      { x: 9, z: 9, floor: 0, role: "terrace" },
     ],
   },
   {
@@ -141,17 +148,35 @@ export const TEMPLATES: Template[] = [
     shape: "12 модулей · 108 м², 2 этажа",
     seeds: [
       { x: 0, z: 0, floor: 0, role: "living" },
-      { x: 1, z: 0, floor: 0, role: "living" },
-      { x: 2, z: 0, floor: 0, role: "kitchen" },
-      { x: 0, z: 1, floor: 0, role: "stairs" },
-      { x: 1, z: 1, floor: 0, role: "bathroom" },
-      { x: 2, z: 1, floor: 0, role: "terrace" },
+      { x: 3, z: 0, floor: 0, role: "living" },
+      { x: 6, z: 0, floor: 0, role: "kitchen" },
+      { x: 0, z: 3, floor: 0, role: "stairs" },
+      { x: 3, z: 3, floor: 0, role: "bathroom" },
+      { x: 6, z: 3, floor: 0, role: "terrace" },
       { x: 0, z: 0, floor: 1, role: "bedroom" },
+      { x: 3, z: 0, floor: 1, role: "bedroom" },
+      { x: 6, z: 0, floor: 1, role: "bedroom" },
+      { x: 0, z: 3, floor: 1, role: "stairs" },
+      { x: 3, z: 3, floor: 1, role: "bathroom" },
+      { x: 6, z: 3, floor: 1, role: "terrace" },
+    ],
+  },
+  {
+    id: "cascade",
+    name: "Каскад",
+    shape: "9 модулей · 81 м², ступени по 1 м",
+    seeds: [
+      // Первый этаж — лесенка со сдвигом в 1 м (треть кубика).
+      { x: 0, z: 0, floor: 0, role: "living" },
+      { x: 3, z: 1, floor: 0, role: "living" },
+      { x: 6, z: 2, floor: 0, role: "kitchen" },
+      { x: 0, z: 3, floor: 0, role: "stairs" },
+      { x: 3, z: 4, floor: 0, role: "bathroom" },
+      { x: 6, z: 5, floor: 0, role: "terrace" },
+      // Второй этаж — консоли: сдвиг на 1 м относительно опоры.
       { x: 1, z: 0, floor: 1, role: "bedroom" },
-      { x: 2, z: 0, floor: 1, role: "bedroom" },
-      { x: 0, z: 1, floor: 1, role: "stairs" },
-      { x: 1, z: 1, floor: 1, role: "bathroom" },
-      { x: 2, z: 1, floor: 1, role: "terrace" },
+      { x: 4, z: 1, floor: 1, role: "bedroom" },
+      { x: 1, z: 3, floor: 1, role: "bathroom" },
     ],
   },
 ];

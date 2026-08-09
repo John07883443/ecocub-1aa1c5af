@@ -148,9 +148,10 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
 
         {view === "plan" && (
           <p className="text-xs text-muted-foreground">
-            Тапните по пустой ячейке, чтобы поставить модуль {CELL_M}×{CELL_M} м. Тапните по модулю,
-            чтобы изменить назначение или удалить. Участок {plotSideM}×{plotSideM} м, шаг сетки{" "}
-            {CELL_M} м.
+            Тапните по свободному месту, чтобы поставить модуль {CELL_M}×{CELL_M} м — он прилипнет к
+            сетке с шагом 1 м (треть кубика), так что модули можно смещать друг относительно друга.
+            Тапните по модулю, чтобы изменить назначение или удалить. Участок {plotSideM}×
+            {plotSideM} м.
           </p>
         )}
 
