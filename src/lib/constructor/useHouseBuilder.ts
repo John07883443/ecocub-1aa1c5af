@@ -2,11 +2,12 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { ModuleItem, Role } from "./types";
 import {
   anchorForPoint,
+  canPlace,
   computeStats,
+  dropUnsupported,
   gridSizeForSotki,
   maxAnchor,
   orphansAfterRemoval,
-  supportArea,
 } from "./geometry";
 import {
   DEFAULT_SOTKI,
@@ -14,7 +15,6 @@ import {
   MAX_FLOORS,
   MAX_SOTKI,
   MIN_SOTKI,
-  MIN_SUPPORT_AREA,
   TEMPLATES,
 } from "./constants";
 
@@ -39,17 +39,6 @@ function seedsToModules(templateId: string, n: number): ModuleItem[] {
     floor: s.floor,
     role: s.role,
   }));
-}
-
-/** Каскадное удаление модулей, оставшихся без достаточной опоры. */
-function dropOrphans(modules: ModuleItem[]): ModuleItem[] {
-  let kept = modules;
-  for (;;) {
-    const orphans = kept.filter((m) => m.floor > 0 && supportArea(m, kept) < MIN_SUPPORT_AREA);
-    if (!orphans.length) return kept;
-    const ids = new Set(orphans.map((o) => o.id));
-    kept = kept.filter((m) => !ids.has(m.id));
-  }
 }
 
 export function useHouseBuilder(basePricePerM2: number) {
@@ -80,7 +69,7 @@ export function useHouseBuilder(basePricePerM2: number) {
     const clamped = Math.max(MIN_SOTKI, Math.min(MAX_SOTKI, Math.round(next)));
     const max = maxAnchor(gridSizeForSotki(clamped));
     // Убираем модули, вышедшие за уменьшенный участок, и осиротевшие верхние.
-    setModules((prev) => dropOrphans(prev.filter((m) => m.x <= max && m.z <= max)));
+    setModules((prev) => dropUnsupported(prev.filter((m) => m.x <= max && m.z <= max)));
     setSotkiState(clamped);
   }, []);
 
@@ -101,6 +90,33 @@ export function useHouseBuilder(basePricePerM2: number) {
       });
     },
     [floor, role, gridN],
+  );
+
+  /** Передвинуть модуль в новую позицию (координаты в метрах, шаг 1 м). */
+  const moveModule = useCallback(
+    (id: string, x: number, z: number) => {
+      lastError.current = null;
+      setModules((prev) => {
+        const target = prev.find((m) => m.id === id);
+        if (!target || (target.x === x && target.z === z)) return prev;
+        const rest = prev.filter((m) => m.id !== id);
+        const moved = { ...target, x, z };
+        if (!canPlace(rest, moved, gridN)) {
+          lastError.current =
+            target.floor > 0
+              ? "Верхнему этажу нужна опора минимум на треть площади модуля"
+              : "Сюда модуль не помещается";
+          return prev;
+        }
+        const next = [...rest, moved];
+        if (dropUnsupported(next).length !== next.length) {
+          lastError.current = "Так модули выше останутся без опоры";
+          return prev;
+        }
+        return next;
+      });
+    },
+    [gridN],
   );
 
   const removeModule = useCallback((id: string) => {
@@ -154,6 +170,7 @@ export function useHouseBuilder(basePricePerM2: number) {
     setRole,
     setDesignId,
     placeAtPoint,
+    moveModule,
     removeModule,
     selectModule,
     setModuleRole,
