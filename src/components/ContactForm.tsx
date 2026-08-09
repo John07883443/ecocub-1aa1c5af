@@ -42,6 +42,8 @@ export type ContactFormProps = {
   submitLabel?: string;
   className?: string;
   variant?: "light" | "dark";
+  /** Предзаполнить поле «Комментарий» (например, сводкой из конструктора). */
+  defaultMessage?: string;
 };
 
 export function ContactForm({
@@ -53,6 +55,7 @@ export function ContactForm({
   submitLabel = "Оставить заявку",
   className,
   variant = "light",
+  defaultMessage,
 }: ContactFormProps) {
   const [pending, setPending] = useState(false);
   const isDark = variant === "dark";
@@ -92,10 +95,20 @@ export function ContactForm({
       name: "",
       phone: "",
       email: "",
-      message: "",
+      message: defaultMessage ?? "",
       consent: false as unknown as true,
     },
   });
+
+  // Подставляем свежую сводку из конструктора, если пользователь ещё не правил поле.
+  useEffect(() => {
+    if (defaultMessage === undefined) return;
+    const current = form.getValues("message");
+    if (!current || current === defaultMessage) return;
+    if (!form.formState.dirtyFields.message) {
+      form.setValue("message", defaultMessage);
+    }
+  }, [defaultMessage, form]);
 
   const onSubmit = async (values: FormValues) => {
     setPending(true);
