@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
+import { seedFromQuiz } from "@/lib/dreamProfile";
 import { site } from "@/lib/site";
 
 /**
@@ -278,6 +279,9 @@ export function HouseQuiz() {
 
       // Ошибку показываем, только если лид не ушёл ни одним путём.
       if (!notified && error) throw error;
+
+      // Запоминаем базовые ответы — конфигуратор «Дом мечты» стартует не с нуля.
+      seedFromQuiz(answers);
 
       analytics.quizComplete();
       analytics.formSubmit("quiz", "home-quiz");
@@ -685,13 +689,32 @@ function SuccessState({
         ключ. Инженер свяжется с вами в течение часа ({channel}) и пришлёт планировки с точным
         расчётом.
       </p>
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
+      {/* Следующий шаг маршрута — конфигуратор дома мечты, ответы уже учтены. */}
+      <div className="mx-auto mt-6 max-w-md rounded-sm border border-accent/30 bg-accent/5 p-5 text-left">
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          <Blocks className="size-4 text-accent" /> Дальше — соберите дом мечты
+        </p>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Спроектируйте дом онлайн из кубиков под свои задачи, посмотрите площадь и стоимость под
+          ключ, расположите на участке. Ваши ответы уже учтены — начнём не с нуля.
+        </p>
+        <Button
+          asChild
+          className="btn-shine mt-4 w-full bg-accent text-accent-foreground hover:bg-accent/90"
+        >
+          <a href="#dream">
+            Спроектировать дом мечты <ArrowRight />
+          </a>
+        </Button>
+      </div>
+
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
         <Button asChild size="lg" variant="outline" className="border-border hover:border-accent">
           <a href={site.whatsappHref} target="_blank" rel="noopener noreferrer">
             Написать в WhatsApp
           </a>
         </Button>
-        <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+        <Button asChild size="lg" variant="outline" className="border-border hover:border-accent">
           <a href={site.phoneHref}>{site.phone}</a>
         </Button>
       </div>

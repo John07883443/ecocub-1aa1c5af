@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -44,6 +44,12 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
+import {
+  DREAM_PROFILE_EVENT,
+  loadDreamProfile,
+  persistDreamProfile,
+  type DreamAnswers,
+} from "@/lib/dreamProfile";
 import { site } from "@/lib/site";
 
 /**
@@ -342,6 +348,30 @@ const specFromAnswers = (a: Answers): Spec => {
   return { cols, rows, floors, roof, window, veranda, terrace, parking, carW, palette };
 };
 
+// Площадь и цена — та же модель, что в быстром квизе (консистентность цифр).
+const AREA_BY_SIZE: Record<string, number> = {
+  Компактный: 63,
+  Семейный: 126,
+  Просторный: 216,
+};
+const formatRub = (n: number) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
+const estimate = (a: Answers) => {
+  const area = AREA_BY_SIZE[(a.size as string) ?? ""] ?? 0;
+  const price = area * site.basePricePerM2;
+  const priceMax = Math.round(area * 1.15) * site.basePricePerM2;
+  return { area, price, priceMax };
+};
+
+const isAnswered = (v: string | string[] | undefined) =>
+  v !== undefined && (!Array.isArray(v) || v.length > 0);
+
+// Индекс первого незаполненного активного вопроса (учитывая условные шаги).
+const firstUnansweredStep = (ans: Answers): number => {
+  const active = QUESTIONS.filter((q) => !q.showIf || q.showIf(ans));
+  const idx = active.findIndex((q) => !isAnswered(ans[q.id]));
+  return idx === -1 ? active.length : idx;
+};
+
 // Изометрия 2:1.
 const TW = 40;
 const TH = 20;
@@ -548,15 +578,41 @@ export function DreamHouseBuilder() {
   const [errors, setErrors] = useState<{ name?: string; phone?: string; consent?: string }>({});
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
 
   const startedRef = useRef(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answersRef = useRef<Answers>(answers);
+  answersRef.current = answers;
 
   useEffect(() => {
     return () => {
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
     };
   }, []);
+
+  // Мержим профиль из памяти/квиза: уже данные пользователем ответы не затираем.
+  const applyProfile = useCallback((incoming: DreamAnswers, jump: boolean) => {
+    if (!incoming || Object.keys(incoming).length === 0) return;
+    const merged: Answers = { ...incoming, ...answersRef.current };
+    answersRef.current = merged;
+    setAnswers(merged);
+    setPrefilled(true);
+    if (jump && !startedRef.current) setStep(firstUnansweredStep(merged));
+  }, []);
+
+  // Предзаполнение: из localStorage при монтировании + живое событие после квиза.
+  useEffect(() => {
+    applyProfile(loadDreamProfile(), true);
+    const onProfile = (e: Event) => applyProfile((e as CustomEvent).detail as DreamAnswers, true);
+    window.addEventListener(DREAM_PROFILE_EVENT, onProfile);
+    return () => window.removeEventListener(DREAM_PROFILE_EVENT, onProfile);
+  }, [applyProfile]);
+
+  // Автосейв прогресса конфигуратора (без диспатча события — не зацикливаемся).
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) persistDreamProfile(answers);
+  }, [answers]);
 
   // Активные вопросы с учётом условных шагов.
   const activeQuestions = useMemo(
@@ -571,6 +627,7 @@ export function DreamHouseBuilder() {
   );
 
   const spec = useMemo(() => specFromAnswers(answers), [answers]);
+  const est = useMemo(() => estimate(answers), [answers]);
   const answeredCount = Object.keys(answers).length;
 
   const kickAnalytics = () => {
@@ -713,9 +770,9 @@ export function DreamHouseBuilder() {
   };
 
   return (
-    <div className="overflow-hidden rounded-sm border border-border bg-card shadow-sm">
+    <div className="rounded-sm border border-border bg-card shadow-sm">
       {/* Прогресс */}
-      <div className="border-b border-border px-6 py-4 md:px-8">
+      <div className="rounded-t-sm border-b border-border px-6 py-4 md:px-8">
         <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <span>
             {done ? "Готово" : isResult ? "Последний шаг" : `Шаг ${step + 1} из ${total}`}
@@ -728,15 +785,37 @@ export function DreamHouseBuilder() {
             style={{ width: `${done ? 100 : progress}%` }}
           />
         </div>
+        {prefilled && !done && (
+          <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Check className="size-3.5 text-accent" /> Учли ваши ответы из квиза — можно менять на
+            любом шаге.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-0 md:grid-cols-[1.05fr_1fr]">
-        {/* Живое превью «дом из кубиков» */}
-        <div className="relative flex min-h-[280px] items-center justify-center border-b border-border bg-secondary/60 p-4 text-foreground md:min-h-[420px] md:border-b-0 md:border-r">
+        {/* Живое превью «дом из кубиков» — на мобиле липнет к верху при прокрутке */}
+        <div className="sticky top-16 z-20 flex min-h-[240px] items-center justify-center border-b border-border bg-secondary p-4 text-foreground md:static md:min-h-[440px] md:border-b-0 md:border-r">
           <HousePreview spec={spec} answered={answeredCount} />
           <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-card/80 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground backdrop-blur">
             <Blocks className="size-3.5 text-accent" /> Ваш дом из кубиков
           </span>
+          {est.area > 0 && (
+            <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-2 rounded-sm border border-border bg-card/85 px-3 py-2 backdrop-blur">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Площадь</p>
+                <p className="text-sm font-bold leading-tight">≈ {est.area} м²</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Под ключ
+                </p>
+                <p className="text-sm font-bold leading-tight text-accent">
+                  от {formatRub(est.price)} ₽
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Вопрос / результат */}
@@ -912,12 +991,38 @@ function ResultStep({
     if (!v || (Array.isArray(v) && v.length === 0)) continue;
     chips.push(Array.isArray(v) ? v.join(" · ") : (v as string));
   }
+  const est = estimate(answers);
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Дом мечты собран</p>
       <h3 className="mt-3 text-xl font-bold uppercase tracking-tight md:text-2xl">
         Осталось получить визуализацию
       </h3>
+
+      {est.area > 0 && (
+        <div className="mt-5 rounded-sm border-l-2 border-accent bg-secondary p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Ориентировочная площадь
+              </p>
+              <p className="mt-1 text-3xl font-bold">
+                ≈ {est.area} <span className="text-lg font-normal">м²</span>
+              </p>
+            </div>
+            <div className="sm:text-right">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Стоимость под ключ
+              </p>
+              <p className="mt-1 text-3xl font-bold text-accent">от {formatRub(est.price)} ₽</p>
+              <p className="text-xs text-muted-foreground">
+                ≈ {(est.price / 1_000_000).toFixed(1)}–{(est.priceMax / 1_000_000).toFixed(1)} млн ₽
+                под предчистовую отделку
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {chips.map((c, i) => (
