@@ -39,15 +39,33 @@ const COLUMNS = [
   "payload",
 ];
 
+/**
+ * Не удалось прочитать существующую базу — это ошибка, а не «заявок нет».
+ * Флаг поднимается здесь и в конце превращается в ненулевой код возврата,
+ * чтобы `node leads-export.mjs > leads.csv` не выдал пустой файл, который
+ * выглядит как пустая база.
+ */
+let readFailed = false;
+
 function fromSqlite() {
   if (!existsSync(DB_PATH)) return [];
+
+  const { DatabaseSync } = require("node:sqlite");
+  const query = (db) => db.prepare(`SELECT ${COLUMNS.join(",")} FROM leads`).all();
+
+  // Сначала пробуем только читать. Если базу писали только что и остался
+  // незакрытый журнал, режим readOnly её не откроет — SQLite нужно право
+  // на запись, чтобы этот журнал накатить. Тогда открываем обычным способом.
   try {
-    const { DatabaseSync } = require("node:sqlite");
-    const db = new DatabaseSync(DB_PATH, { readOnly: true });
-    return db.prepare(`SELECT ${COLUMNS.join(",")} FROM leads`).all();
-  } catch (e) {
-    process.stderr.write(`SQLite не прочитан (${e.message})\n`);
-    return [];
+    return query(new DatabaseSync(DB_PATH, { readOnly: true }));
+  } catch {
+    try {
+      return query(new DatabaseSync(DB_PATH));
+    } catch (e) {
+      process.stderr.write(`ОШИБКА: база ${DB_PATH} есть, но не читается — ${e.message}\n`);
+      readFailed = true;
+      return [];
+    }
   }
 }
 
@@ -88,6 +106,13 @@ const cell = (v) => {
 const rows = [...fromSqlite(), ...fromJsonl()].sort((a, b) =>
   String(a.created_at).localeCompare(String(b.created_at)),
 );
+
+// Хранилище не прочиталось — CSV не печатаем вообще. Пустой файл с одними
+// заголовками неотличим от «заявок нет», а это разные вещи.
+if (readFailed) {
+  process.stderr.write("Выгрузка не выполнена. Файл не создан.\n");
+  process.exit(1);
+}
 
 if (!rows.length) {
   process.stderr.write(`Заявок не найдено. Искал: ${DB_PATH} и ${JSONL_PATH}\n`);

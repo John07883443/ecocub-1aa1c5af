@@ -137,6 +137,11 @@ async function getDb(): Promise<Db | null> {
     const path = dbPath();
     await ensureDir(path);
     const instance = new DatabaseSync(path) as unknown as Db & { exec: (sql: string) => void };
+    // WAL обязателен: сайт пишет заявки непрерывно, а выгрузка читает базу
+    // параллельно. В журнальном режиме по умолчанию читатель натыкается на
+    // незакрытый журнал и не может открыть базу вовсе — выгрузка молча
+    // возвращала бы пустоту. В WAL читатель и писатель не мешают друг другу.
+    instance.exec("PRAGMA journal_mode = WAL");
     instance.exec(SCHEMA);
     db = instance;
     return db;

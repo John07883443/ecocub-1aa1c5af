@@ -28,6 +28,8 @@ dist-ssr
 # Локальная база заявок (на боевом сервере она лежит вне каталога деплоя)
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.jsonl
 
 # Editor directories and files
