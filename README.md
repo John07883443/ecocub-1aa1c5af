@@ -1,26 +1,66 @@
-# Site Migrator
+# EcoCub — сайт eco-cub.ru
 
-а реально ли клонировать сюда мой сайт на Тильде?
+Монолитно-модульные дома из бетона. TanStack Start (React 19) + Tailwind,
+деплой на собственный VPS через GitHub Actions.
 
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://ecocub.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/11a56c57-baa4-4049-9002-d7a0650d363e).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Разработка
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+Прочее: `npm run build` — сборка, `npm run lint` — проверка, `npm run format` —
+форматирование.
+
+## Где лежат данных
+
+Внешней базы данных у сайта нет. Контент хранится в репозитории и попадает
+на сайт коммитом — версия текста всегда совпадает с версией кода:
+
+| Что | Где | Как читается |
+| --- | --- | --- |
+| Статьи блога | `content/blog/*.md` | `src/lib/blog.ts`, на этапе сборки |
+| Проекты домов | `content/projects/*.json` | `src/lib/projects.ts`, на этапе сборки |
+
+Чтобы поправить проект — правится JSON-файл. Чтобы скрыть проект, не удаляя, —
+`"published": false`. Порядок в списках задаёт `display_order`.
+
+Единственные данные, которые появляются в рантайме, — заявки с форм.
+
+## Заявки
+
+Форма отправляет `POST /api/lead`. Сервер делает две независимые вещи: пишет
+заявку в SQLite-файл на диске и шлёт уведомление в Telegram. Ошибку форма
+покажет, только если не сработал ни один из каналов. Из браузера в базу
+не пишет ничего — только через сервер.
+
+Переменные окружения — см. `.env.example`.
+
+Выгрузка в CSV (запускать на сервере):
+
+```sh
+node scripts/leads-export.mjs > leads.csv
+```
+
+## Подготовка сервера
+
+Разовый шаг, **обязательный при первом запуске и при пересоздании сервера**.
+Каталог под базу заявок должен существовать и принадлежать пользователю, под
+которым работает приложение (`deploy`). Само приложение создать его не может:
+прав на запись в `/var/lib` у `deploy` нет, и без каталога заявки будут уходить
+только в Telegram, а база останется пустой.
+
+```sh
+sudo mkdir -p /var/lib/ecocub
+sudo chown deploy:deploy /var/lib/ecocub
+sudo chmod 750 /var/lib/ecocub
+```
+
+Каталог намеренно лежит **вне каталога деплоя**: `deploy.sh` тасует `.output`
+и `.output.prev`, поэтому база рядом с приложением была бы затёрта очередной
+сборкой или уехала бы вместе с откатом.
+
+Если каталог создан уже после запуска сайта — приложение нужно перезапустить:
+недоступность базы запоминается на время жизни процесса, чтобы не сыпать
+одинаковыми ошибками в лог на каждой заявке.
