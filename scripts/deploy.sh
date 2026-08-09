@@ -40,11 +40,24 @@ grep -q '"preset": "node-server"' "$INCOMING/nitro.json" \
 
 # Каталог базы заявок. Создаётся здесь, а не руками: иначе после пересоздания
 # сервера заявки молча уходили бы только в Telegram, а база оставалась пустой.
+#
+# Строго `sudo -n`. Обычный sudo в неинтерактивной сессии по ssh не падает,
+# а ждёт ввода пароля — деплой завис бы насмерть, причём ровно на свежей
+# машине, ради которой этот блок и написан. Права deploy на sudo урезаны
+# несколькими командами, поэтому неудача здесь ожидаема и не должна ронять
+# выкладку: сайт поднимется, заявки продолжат уходить в Telegram, а починку
+# видно в логе.
 if [ ! -d "$LEADS_DIR" ]; then
-  log "создаю $LEADS_DIR"
-  sudo mkdir -p "$LEADS_DIR"
-  sudo chown deploy:deploy "$LEADS_DIR"
-  sudo chmod 750 "$LEADS_DIR"
+  if sudo -n mkdir -p "$LEADS_DIR" 2>/dev/null \
+    && sudo -n chown deploy:deploy "$LEADS_DIR" 2>/dev/null \
+    && sudo -n chmod 750 "$LEADS_DIR" 2>/dev/null; then
+    log "создал каталог базы заявок $LEADS_DIR"
+  else
+    log "ВНИМАНИЕ: каталога $LEADS_DIR нет, а создать его не вышло (нужен sudo без пароля)."
+    log "ВНИМАНИЕ: сайт поднимется, но заявки будут уходить ТОЛЬКО в Telegram, в базу — нет."
+    log "Исправить одной строкой от root:"
+    log "  mkdir -p $LEADS_DIR && chown deploy:deploy $LEADS_DIR && chmod 750 $LEADS_DIR"
+  fi
 fi
 
 # --------------------------------------------------------------------
