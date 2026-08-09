@@ -1,26 +1,85 @@
-# Site Migrator
+# EcoCub — сайт eco-cub.ru
 
-а реально ли клонировать сюда мой сайт на Тильде?
+Монолитно-модульные дома из бетона. TanStack Start (React 19) + Tailwind,
+деплой на собственный VPS через GitHub Actions.
 
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://ecocub.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/11a56c57-baa4-4049-9002-d7a0650d363e).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Разработка
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+Прочее: `npm run build` — сборка, `npm run lint` — проверка, `npm run format` —
+форматирование.
+
+## Где лежат данные
+
+| Что | Где | Как читается |
+| --- | --- | --- |
+| Статьи блога | `content/blog/*.md` | `src/lib/blog.ts`, на этапе сборки |
+| Проекты домов | таблица `projects` в Supabase | `src/lib/projects.server.ts`, в рантайме, с кэшем на минуту |
+| Проекты домов — запасной источник | `content/projects/*.json` | те же файлы, вшиты в сборку |
+| Заявки с форм | SQLite на диске сервера | `src/lib/leads.server.ts` |
+
+Статьи блога базы не касаются: они попадают на сайт коммитом и версионируются
+вместе с кодом.
+
+Проекты правятся в базе, без коммита и деплоя. Скрыть карточку, не удаляя, —
+`published = false`; порядок в списках задаёт `display_order`. Чтения идут
+**только с сервера**: ключ базы в браузер не попадает, а запросы клиента при
+переходах по сайту проходят через серверную функцию `fetchProjects`.
+
+Если база недоступна — уснула, упала, закрыт доступ, — сайт молча отдаёт
+карточки из `content/projects/*.json` и пишет предупреждение в лог. Витрина
+не должна зависеть от внешнего сервиса, поэтому файлы остаются в репозитории
+намеренно. Их стоит обновлять при заметном изменении набора проектов —
+иначе в аварийном режиме посетитель увидит устаревший список.
+
+Миграции схемы — `supabase/migrations/*.sql`, применяются `npx supabase db push`.
+
+## Заявки
+
+Форма отправляет `POST /api/lead`. Сервер делает две независимые вещи: пишет
+заявку в SQLite-файл на диске и шлёт уведомление в Telegram. Ошибку форма
+покажет, только если не сработал ни один из каналов. Из браузера в базу
+не пишет ничего — только через сервер.
+
+Переменные окружения — см. `.env.example`. На боевом сервере они задаются
+**не** в репозитории: файл `/home/deploy/ecocub.env` читается конфигом pm2
+(`/home/deploy/ecosystem.config.cjs`) и попадает в окружение процесса. Конфиг
+лежит вне каталога деплоя намеренно — при выкладке выполняется `git reset
+--hard`, который снёс бы его. Новые значения подхватываются на ближайшем
+деплое, отдельных действий не требуется.
+
+Выгрузка в CSV (запускать на сервере):
+
+```sh
+node scripts/leads-export.mjs > leads.csv
+```
+
+Выгружать можно на работающем сайте: база в режиме WAL, читатель не мешает
+записи заявок. Если базу прочитать не удалось, скрипт завершается с кодом 1
+и не создаёт файл — пустой CSV не должен выглядеть как «заявок нет».
+
+## Подготовка сервера
+
+Разовый шаг, **обязательный при первом запуске и при пересоздании сервера**.
+Каталог под базу заявок должен существовать и принадлежать пользователю, под
+которым работает приложение (`deploy`). Само приложение создать его не может:
+прав на запись в `/var/lib` у `deploy` нет, и без каталога заявки будут уходить
+только в Telegram, а база останется пустой.
+
+```sh
+sudo mkdir -p /var/lib/ecocub
+sudo chown deploy:deploy /var/lib/ecocub
+sudo chmod 750 /var/lib/ecocub
+```
+
+Каталог намеренно лежит **вне каталога деплоя**: `deploy.sh` тасует `.output`
+и `.output.prev`, поэтому база рядом с приложением была бы затёрта очередной
+сборкой или уехала бы вместе с откатом.
+
+Если каталог создан уже после запуска сайта — приложение нужно перезапустить:
+недоступность базы запоминается на время жизни процесса, чтобы не сыпать
+одинаковыми ошибками в лог на каждой заявке.

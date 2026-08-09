@@ -1,0 +1,32 @@
+{
+  "slug": "family-two",
+  "name": "Family Two",
+  "series": "villa",
+  "tagline": "Премиум-вилла Hi-Tech из бетона",
+  "description": "Премиальная вилла из бетонных модулей в стиле Hi-Tech. Три спальни, гардеробные, две ванные, кухня-гостиная с панорамой. Потолки 3,15 м.",
+  "area_m2": 163,
+  "bedrooms": 3,
+  "bathrooms": 2,
+  "floors": 1,
+  "price_from": 13000000,
+  "cover_image": "/images/projects/family-two.jpg",
+  "gallery": [
+    "/images/projects/family-two.jpg",
+    "/images/projects/family-two-2.jpg",
+    "/images/interiors/living-2.jpg",
+    "/images/interiors/bedroom-1.jpg",
+    "/images/interiors/bathroom-1.jpg"
+  ],
+  "features": [
+    "Премиум-вилла Hi-Tech",
+    "Потолки 3,15 м",
+    "Три спальни и две ванные",
+    "Кухня-гостиная с панорамой",
+    "Гардеробные",
+    "Бассейн (опция)",
+    "Эксплуатируемая кровля"
+  ],
+  "display_order": 5,
+  "published": true,
+  "updated_at": "2026-04-22"
+}

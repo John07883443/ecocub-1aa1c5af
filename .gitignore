@@ -20,6 +20,18 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Секреты окружения — только на сервере, образец в .env.example
+.env
+.env.local
+.env.*.local
+
+# Локальная база заявок (на боевом сервере она лежит вне каталога деплоя)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.jsonl
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
