@@ -42,6 +42,8 @@ export interface DesignPreset {
   id: string;
   name: string;
   description: string;
+  /** Фотореалистичный рендер фасада (нейросеть). Может отсутствовать. */
+  image?: string;
   /** Цвет стен (hex). */
   wall: string;
   wallRoughness: number;

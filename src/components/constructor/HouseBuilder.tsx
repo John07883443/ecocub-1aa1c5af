@@ -62,6 +62,7 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
   const [mounted, setMounted] = useState(false);
   const [opened3d, setOpened3d] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
+  const [imgError, setImgError] = useState<Record<string, boolean>>({});
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -324,6 +325,22 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
               </button>
             ))}
           </div>
+          {api.design.image && !imgError[api.design.id] && (
+            <figure className="mt-3">
+              <div className="relative overflow-hidden rounded-sm">
+                <img
+                  src={api.design.image}
+                  alt={`AI-визуализация фасада «${api.design.name}»`}
+                  loading="lazy"
+                  onError={() => setImgError((s) => ({ ...s, [api.design.id]: true }))}
+                  className="aspect-[16/9] w-full object-cover"
+                />
+                <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-sm bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+                  <Sparkles className="size-3" /> AI-визуализация
+                </span>
+              </div>
+            </figure>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">{api.design.description}</p>
         </div>
 
