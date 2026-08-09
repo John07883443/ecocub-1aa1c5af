@@ -25,6 +25,7 @@ const FORM_LABELS: Record<string, string> = {
   presentation: "Запрос презентации",
   callback: "Обратный звонок",
   quiz: "Квиз · подбор проекта",
+  dream: "Дом мечты · карта потребностей",
 };
 
 export const Route = createFileRoute("/api/notify")({

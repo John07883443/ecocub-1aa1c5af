@@ -16,6 +16,7 @@ import { BlogCard } from "@/components/BlogCard";
 import { BrandSpecs } from "@/components/BrandSpecs";
 import { Configurator } from "@/components/Configurator";
 import { HouseQuiz } from "@/components/HouseQuiz";
+import { DreamHouseBuilder } from "@/components/DreamHouseBuilder";
 import { HeroSlider } from "@/components/HeroSlider";
 import { LayeredSection } from "@/components/LayeredSection";
 import { Reveal } from "@/components/motion/Reveal";
@@ -344,6 +345,24 @@ function HomePage() {
             </div>
             <HouseQuiz />
           </div>
+        </Container>
+      </Section>
+
+      {/* DREAM — собрать дом мечты из кубиков */}
+      <Section id="dream" className="bg-background">
+        <Container>
+          <div className="mx-auto mb-10 max-w-3xl text-center">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Дом мечты</p>
+            <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
+              Соберите дом мечты из кубиков
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Пройдите подробную карту потребностей — от назначения и помещений до стиля, крыши и
+              остекления. Дом собирается из модулей прямо по ответам. В конце оставьте контакты и
+              вступайте в Telegram — пришлём визуализацию вашего дома мечты.
+            </p>
+          </div>
+          <DreamHouseBuilder />
         </Container>
       </Section>
 
