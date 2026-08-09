@@ -236,6 +236,26 @@ export function HouseQuiz() {
 
       const attribution = await buildAttribution();
 
+      // Доставка лида в Telegram — критичный путь и не зависит от записи в БД.
+      // RLS-политика submissions может отклонить незнакомый form_type, но заявка
+      // всё равно обязана дойти до менеджера, поэтому уведомление идёт первым.
+      const notified = await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          formType: "quiz",
+          name: name.trim(),
+          phone: phone.trim(),
+          message,
+          sourcePage: typeof window !== "undefined" ? window.location.pathname : undefined,
+          attributionSummary: attributionSummary(attribution),
+        }),
+      })
+        .then((r) => r.ok)
+        .catch(() => false);
+
+      // Сохранение в админ-базу — лучшее усилие. Если политика БД отклонит вставку
+      // (пока form_type='quiz' не добавлен в RLS), не роняем заявку: она уже в Telegram.
       const { error } = await supabase.from("submissions").insert({
         form_type: "quiz",
         name: name.trim(),
@@ -252,20 +272,12 @@ export function HouseQuiz() {
           estimate: { area: estArea, price: estPrice },
         } as never,
       });
-      if (error) throw error;
+      if (error) {
+        console.warn("Квиз: заявка не записана в БД:", error.message);
+      }
 
-      void fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formType: "quiz",
-          name: name.trim(),
-          phone: phone.trim(),
-          message,
-          sourcePage: typeof window !== "undefined" ? window.location.pathname : undefined,
-          attributionSummary: attributionSummary(attribution),
-        }),
-      }).catch(() => {});
+      // Ошибку показываем, только если лид не ушёл ни одним путём.
+      if (!notified && error) throw error;
 
       analytics.quizComplete();
       analytics.formSubmit("quiz", "home-quiz");
