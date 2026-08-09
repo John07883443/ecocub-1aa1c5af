@@ -119,8 +119,15 @@ function RootShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
       <head>
+        {/* Прогрессивное улучшение: включаем скрытые стартовые состояния
+            анимаций только когда доступен JS — до первой отрисовки, без мигания. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
         <HeadContent />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: orgJsonLd }} />
       </head>

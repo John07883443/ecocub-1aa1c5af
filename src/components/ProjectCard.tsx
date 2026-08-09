@@ -22,14 +22,14 @@ export function ProjectCard({ project }: { project: ProjectCardData }) {
     <Link
       to="/projects/$slug"
       params={{ slug: project.slug }}
-      className="group block overflow-hidden rounded-sm border border-border bg-card transition-all hover:border-accent hover:shadow-lg"
+      className="group hover-lift block h-full overflow-hidden rounded-sm border border-border bg-card hover:border-accent hover:shadow-[0_24px_50px_-24px_rgba(0,0,0,0.35)]"
     >
       <div className="aspect-[4/3] overflow-hidden bg-muted">
         <img
           src={project.cover_image}
           alt={project.name}
           loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
         />
       </div>
       <div className="p-5 md:p-6">

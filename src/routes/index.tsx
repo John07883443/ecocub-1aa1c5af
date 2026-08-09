@@ -18,6 +18,8 @@ import { Configurator } from "@/components/Configurator";
 import { HouseQuiz } from "@/components/HouseQuiz";
 import { HeroSlider } from "@/components/HeroSlider";
 import { LayeredSection } from "@/components/LayeredSection";
+import { Reveal } from "@/components/motion/Reveal";
+import { Parallax } from "@/components/motion/Parallax";
 
 import { site } from "@/lib/site";
 import { getAllPosts } from "@/lib/blog";
@@ -156,13 +158,15 @@ function HomePage() {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/55 to-transparent pb-20 pt-12 md:pb-16 md:pt-32">
           <Container>
             <div className="grid items-end gap-8 lg:grid-cols-12">
-              <h1 className="lg:col-span-7 font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.75rem,5.5vw,3.75rem)]">
-                <span className="block max-w-full whitespace-nowrap">Капитальные.</span>
-                <span className="block max-w-full whitespace-nowrap text-accent">
-                  Технологичные.
-                </span>
-              </h1>
-              <div className="lg:col-span-5">
+              <Reveal variant="up" delay={120} className="lg:col-span-7">
+                <h1 className="font-bold uppercase leading-[1.05] tracking-tight [font-size:clamp(1.75rem,5.5vw,3.75rem)]">
+                  <span className="block max-w-full whitespace-nowrap">Капитальные.</span>
+                  <span className="block max-w-full whitespace-nowrap text-accent">
+                    Технологичные.
+                  </span>
+                </h1>
+              </Reveal>
+              <Reveal variant="up" delay={280} className="lg:col-span-5">
                 <p className="max-w-md text-sm text-white/85 md:text-base">
                   Дома из бетона с заводским качеством. Сборка на участке за 10 дней.
                 </p>
@@ -170,7 +174,7 @@ function HomePage() {
                   <Button
                     asChild
                     size="lg"
-                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    className="btn-shine bg-accent text-accent-foreground hover:bg-accent/90"
                   >
                     <Link to="/portfolio">
                       Смотреть проекты <ArrowRight />
@@ -185,7 +189,7 @@ function HomePage() {
                     <Link to="/technology">Технология</Link>
                   </Button>
                 </div>
-              </div>
+              </Reveal>
             </div>
           </Container>
         </div>
@@ -197,7 +201,7 @@ function HomePage() {
       {/* COMPETITORS */}
       <Section id="comparison" className="bg-background">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Сравнение технологий
             </p>
@@ -208,38 +212,44 @@ function HomePage() {
               Мы конкурируем не с каркасниками, а с кирпичом, газобетоном, монолитом и ЖБИ-панелями
               — но строим в разы быстрее и с фиксированной сметой.
             </p>
-          </div>
+          </Reveal>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {competitors.map((c) => (
-              <div key={c.vs} className="flex flex-col rounded-sm border border-border bg-card p-6">
+            {competitors.map((c, i) => (
+              <Reveal
+                key={c.vs}
+                variant="up"
+                delay={i * 90}
+                className="hover-lift flex h-full flex-col rounded-sm border border-border bg-card p-6 hover:border-accent hover:shadow-lg"
+              >
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {c.vs}
                 </p>
                 <p className="mt-3 text-2xl font-bold text-accent">{c.stat}</p>
                 <p className="mt-2 flex-1 text-sm text-muted-foreground">{c.desc}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
-          <div className="mt-8">
+          <Reveal delay={120} className="mt-8">
             <Link
               to="/technology"
-              className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
+              className="group inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
             >
-              Полная таблица сравнения <ArrowRight className="size-4" />
+              Полная таблица сравнения{" "}
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </Link>
-          </div>
+          </Reveal>
         </Container>
       </Section>
 
       {/* COMPANY TIMELINE */}
       <Section id="about" className="bg-secondary">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">О компании</p>
             <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">
               Производство в Подмосковье
             </h2>
-          </div>
+          </Reveal>
           <CompanyTimeline />
         </Container>
       </Section>
@@ -248,7 +258,7 @@ function HomePage() {
       <Section id="modules" className="bg-background">
         <Container>
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
+            <Reveal variant="left">
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
                 Принцип LEGO
               </p>
@@ -262,28 +272,30 @@ function HomePage() {
               </p>
               <Button
                 asChild
-                className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
+                className="btn-shine mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
                 size="lg"
               >
                 <Link to="/technology">
                   Подробнее о технологии <ArrowRight />
                 </Link>
               </Button>
-            </div>
-            <div className="relative aspect-[2315/1465]">
-              <img
-                src="/images/lego-truck-base.png"
-                alt="Принцип LEGO: модули EcoCub доставляются на участок"
-                className="absolute inset-0 h-full w-full object-contain"
-              />
-              <img
-                src="/images/lego-truck-load.png"
-                alt=""
-                aria-hidden="true"
-                className="ecocub-crane-load absolute inset-0 h-full w-full object-contain"
-              />
-              <span aria-hidden="true" className="ecocub-crane-beacon" />
-            </div>
+            </Reveal>
+            <Reveal variant="right" delay={120}>
+              <Parallax speed={0.06} max={26} className="relative aspect-[2315/1465]">
+                <img
+                  src="/images/lego-truck-base.png"
+                  alt="Принцип LEGO: модули EcoCub доставляются на участок"
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+                <img
+                  src="/images/lego-truck-load.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="ecocub-crane-load absolute inset-0 h-full w-full object-contain"
+                />
+                <span aria-hidden="true" className="ecocub-crane-beacon" />
+              </Parallax>
+            </Reveal>
           </div>
         </Container>
       </Section>
@@ -336,13 +348,20 @@ function HomePage() {
       </Section>
 
       {/* TECHNOLOGY */}
-      <Section id="technology" className="bg-primary text-primary-foreground">
-        <Container>
+      <Section
+        id="technology"
+        className="relative overflow-hidden bg-primary text-primary-foreground"
+      >
+        <span
+          aria-hidden="true"
+          className="ecocub-glow left-[-10%] top-[10%] h-[45vw] max-h-[520px] w-[45vw] max-w-[520px]"
+        />
+        <Container className="relative">
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="relative">
+            <Reveal variant="left" className="relative">
               <LayeredSection />
-            </div>
-            <div>
+            </Reveal>
+            <Reveal variant="right" delay={100}>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
                 05 · Технология
               </p>
@@ -356,28 +375,20 @@ function HomePage() {
                 утепления.
               </p>
               <div className="mt-8 grid grid-cols-2 gap-6">
-                <div>
-                  <ShieldCheck className="size-6 text-accent" />
-                  <p className="mt-3 text-2xl font-bold">50 лет</p>
-                  <p className="text-sm text-white/70">гарантия на конструкцию</p>
-                </div>
-                <div>
-                  <Clock className="size-6 text-accent" />
-                  <p className="mt-3 text-2xl font-bold">{">"}120 лет</p>
-                  <p className="text-sm text-white/70">срок службы</p>
-                </div>
-                <div>
-                  <Layers className="size-6 text-accent" />
-                  <p className="mt-3 text-2xl font-bold">К0</p>
-                  <p className="text-sm text-white/70">класс пожаробезопасности</p>
-                </div>
-                <div>
-                  <Hammer className="size-6 text-accent" />
-                  <p className="mt-3 text-2xl font-bold">10 дней</p>
-                  <p className="text-sm text-white/70">монтаж на участке</p>
-                </div>
+                {[
+                  { Icon: ShieldCheck, v: "50 лет", l: "гарантия на конструкцию" },
+                  { Icon: Clock, v: ">120 лет", l: "срок службы" },
+                  { Icon: Layers, v: "К0", l: "класс пожаробезопасности" },
+                  { Icon: Hammer, v: "10 дней", l: "монтаж на участке" },
+                ].map((s, i) => (
+                  <Reveal key={s.l} variant="up" delay={200 + i * 90}>
+                    <s.Icon className="size-6 text-accent" />
+                    <p className="mt-3 text-2xl font-bold">{s.v}</p>
+                    <p className="text-sm text-white/70">{s.l}</p>
+                  </Reveal>
+                ))}
               </div>
-            </div>
+            </Reveal>
           </div>
         </Container>
       </Section>
@@ -385,7 +396,7 @@ function HomePage() {
       {/* CALCULATOR */}
       <Section id="calculator" className="bg-background">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Прозрачная цена
             </p>
@@ -396,22 +407,24 @@ function HomePage() {
               Базовая цена 105 000 ₽ за м² в комплектации под предчистовую отделку — одна ставка для
               всех проектов. Никаких «доплатите ещё» по ходу стройки.
             </p>
-          </div>
-          <PriceCalculator />
+          </Reveal>
+          <Reveal variant="up" delay={80}>
+            <PriceCalculator />
+          </Reveal>
         </Container>
       </Section>
 
       {/* WHATS INCLUDED */}
       <Section id="included" className="bg-secondary">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Что входит в стоимость
             </p>
             <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">
               Полная комплектация под ключ
             </h2>
-          </div>
+          </Reveal>
           <WhatsIncluded />
         </Container>
       </Section>
@@ -419,21 +432,24 @@ function HomePage() {
       {/* PROJECTS */}
       <Section id="projects" className="bg-background">
         <Container>
-          <div className="mb-12 flex items-end justify-between gap-4">
+          <Reveal className="mb-12 flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Проекты</p>
               <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Готовые решения</h2>
             </div>
             <Link
               to="/portfolio"
-              className="hidden items-center gap-1 text-sm font-medium hover:text-accent md:inline-flex"
+              className="group hidden items-center gap-1 text-sm font-medium hover:text-accent md:inline-flex"
             >
-              Все проекты <ArrowRight className="size-4" />
+              Все проекты{" "}
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </Link>
-          </div>
+          </Reveal>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p: ProjectCardData) => (
-              <ProjectCard key={p.slug} project={p} />
+            {projects.map((p: ProjectCardData, i: number) => (
+              <Reveal key={p.slug} variant="up" delay={i * 90} className="h-full">
+                <ProjectCard project={p} />
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -442,7 +458,7 @@ function HomePage() {
       {/* INTERIORS */}
       <Section id="interiors" className="bg-secondary">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               07 · Интерьеры
             </p>
@@ -450,7 +466,7 @@ function HomePage() {
             <p className="mt-4 text-muted-foreground">
               Потолки 3,15 м и панорамные окна позволяют реализовать любые дизайнерские решения.
             </p>
-          </div>
+          </Reveal>
           <InteriorsGallery />
         </Container>
       </Section>
@@ -458,7 +474,7 @@ function HomePage() {
       {/* STAGES */}
       <Section id="stages" className="bg-background">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Этапы сотрудничества
             </p>
@@ -466,7 +482,7 @@ function HomePage() {
             <p className="mt-4 text-muted-foreground">
               Прозрачный процесс с фиксированной сметой и оплатой 60% / 30% / 10%.
             </p>
-          </div>
+          </Reveal>
           <StagesCooperation />
         </Container>
       </Section>
@@ -475,21 +491,24 @@ function HomePage() {
       {posts.length > 0 && (
         <Section id="blog" className="bg-secondary">
           <Container>
-            <div className="mb-12 flex items-end justify-between gap-4">
+            <Reveal className="mb-12 flex items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Блог</p>
                 <h2 className="mt-3 text-3xl font-bold uppercase md:text-5xl">Из наших статей</h2>
               </div>
               <Link
                 to="/blog"
-                className="hidden items-center gap-1 text-sm font-medium hover:text-accent md:inline-flex"
+                className="group hidden items-center gap-1 text-sm font-medium hover:text-accent md:inline-flex"
               >
-                Все статьи <ArrowRight className="size-4" />
+                Все статьи{" "}
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </Link>
-            </div>
+            </Reveal>
             <div className="grid gap-6 md:grid-cols-3">
-              {posts.map((p) => (
-                <BlogCard key={p.slug} post={p} />
+              {posts.map((p, i) => (
+                <Reveal key={p.slug} variant="up" delay={i * 90} className="h-full">
+                  <BlogCard post={p} />
+                </Reveal>
               ))}
             </div>
           </Container>
@@ -497,10 +516,14 @@ function HomePage() {
       )}
 
       {/* CTA FORM */}
-      <Section id="contact" className="bg-primary text-primary-foreground">
-        <Container>
+      <Section id="contact" className="relative overflow-hidden bg-primary text-primary-foreground">
+        <span
+          aria-hidden="true"
+          className="ecocub-glow bottom-[-15%] right-[-8%] h-[50vw] max-h-[560px] w-[50vw] max-w-[560px]"
+        />
+        <Container className="relative">
           <div className="grid gap-12 lg:grid-cols-2">
-            <div>
+            <Reveal variant="left">
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
                 Связаться
               </p>
@@ -515,23 +538,26 @@ function HomePage() {
                 <a
                   href={site.phoneHref}
                   onClick={() => analytics.contactClick("phone", "home-cta")}
-                  className="block text-2xl font-semibold text-white"
+                  className="block text-2xl font-semibold text-white transition-colors hover:text-accent"
                 >
                   {site.phone}
                 </a>
-                <a href={`mailto:${site.email}`} className="block">
+                <a
+                  href={`mailto:${site.email}`}
+                  className="block transition-colors hover:text-white"
+                >
                   {site.email}
                 </a>
               </div>
-            </div>
-            <div className="rounded-sm bg-white/5 p-6 md:p-8">
+            </Reveal>
+            <Reveal variant="right" delay={120} className="rounded-sm bg-white/5 p-6 md:p-8">
               <ContactForm
                 variant="dark"
                 formType="contact"
                 sourcePage="/"
                 submitLabel="Получить расчёт"
               />
-            </div>
+            </Reveal>
           </div>
         </Container>
       </Section>

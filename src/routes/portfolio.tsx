@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
+import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/portfolio")({
@@ -56,20 +57,24 @@ function PortfolioPage() {
     <PageLayout>
       <Section className="border-b border-border">
         <Container>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Каталог</p>
-          <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Портфолио проектов</h1>
-          <p className="mt-6 max-w-2xl text-base text-muted-foreground">
-            Готовые проекты EcoCub — от компактного Weekend One на 36 м² до флагманского SkyRiver на
-            165 м². Все дома можно адаптировать под ваш участок и пожелания.
-          </p>
+          <Reveal>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Каталог</p>
+            <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Портфолио проектов</h1>
+            <p className="mt-6 max-w-2xl text-base text-muted-foreground">
+              Готовые проекты EcoCub — от компактного Weekend One на 36 м² до флагманского SkyRiver
+              на 165 м². Все дома можно адаптировать под ваш участок и пожелания.
+            </p>
+          </Reveal>
         </Container>
       </Section>
 
       <Section>
         <Container>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p: ProjectCardData) => (
-              <ProjectCard key={p.slug} project={p} />
+            {projects.map((p: ProjectCardData, i: number) => (
+              <Reveal key={p.slug} variant="up" delay={(i % 3) * 90} className="h-full">
+                <ProjectCard project={p} />
+              </Reveal>
             ))}
           </div>
         </Container>

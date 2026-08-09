@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Container } from "@/components/Container";
+import { Reveal } from "@/components/motion/Reveal";
 import { mainNav, site } from "@/lib/site";
 import logoWhite from "@/assets/logo-white.svg";
 import { analytics } from "@/lib/analytics";
@@ -10,15 +11,15 @@ export function Footer() {
     <footer className="bg-primary text-primary-foreground">
       <Container className="py-14 md:py-20">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
-          <div>
+          <Reveal variant="up">
             <img src={logoWhite} alt="EcoCub" className="mb-5 h-9 w-auto" />
             <p className="text-sm leading-relaxed text-primary-foreground/70">
               Производство и строительство современных монолитно-модульных домов из бетона в
               Московской области.
             </p>
-          </div>
+          </Reveal>
 
-          <div>
+          <Reveal variant="up" delay={90}>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">
               Разделы
             </h3>
@@ -27,16 +28,16 @@ export function Footer() {
                 <li key={item.to}>
                   <Link
                     to={item.to}
-                    className="text-sm text-primary-foreground/80 transition-colors hover:text-accent"
+                    className="nav-underline text-sm text-primary-foreground/80 transition-colors hover:text-accent"
                   >
                     {item.label}
                   </Link>
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
-          <div>
+          <Reveal variant="up" delay={180}>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">
               Контакты
             </h3>
@@ -74,9 +75,9 @@ export function Footer() {
                 Московская область
               </li>
             </ul>
-          </div>
+          </Reveal>
 
-          <div>
+          <Reveal variant="up" delay={270}>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">
               Связаться
             </h3>
@@ -100,14 +101,14 @@ export function Footer() {
                 Telegram
               </a>
             </div>
-          </div>
+          </Reveal>
         </div>
 
-        <div className="mt-12 border-t border-primary-foreground/10 pt-8">
+        <Reveal className="mt-12 border-t border-primary-foreground/10 pt-8">
           <p className="text-center text-xl font-bold uppercase tracking-tight text-white/90 md:text-2xl">
             {site.brandTagline}
           </p>
-        </div>
+        </Reveal>
 
         <div className="mt-8 flex flex-col gap-2 text-xs text-primary-foreground/50 sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} EcoCub. Все права защищены.</span>

@@ -7,6 +7,8 @@ import { EngineeringFeatures } from "@/components/EngineeringFeatures";
 import { ContactForm } from "@/components/ContactForm";
 import { LayeredSectionA } from "@/components/LayeredSectionA";
 import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/motion/Reveal";
+import { Parallax } from "@/components/motion/Parallax";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 
 export const Route = createFileRoute("/technology")({
@@ -61,28 +63,36 @@ function TechnologyPage() {
   return (
     <PageLayout headerVariant="dark">
       {/* HERO */}
-      <section className="relative bg-primary py-32 text-primary-foreground md:py-40">
+      <section className="relative overflow-hidden bg-primary py-32 text-primary-foreground md:py-40">
         <div className="absolute inset-0 opacity-30">
-          <img src="/images/tech-section.jpg" alt="" className="h-full w-full object-cover" />
+          <Parallax speed={0.14} max={70} className="h-[130%] w-full">
+            <img src="/images/tech-section.jpg" alt="" className="h-full w-full object-cover" />
+          </Parallax>
         </div>
+        <span
+          aria-hidden="true"
+          className="ecocub-glow left-[-8%] top-1/2 h-[45vw] max-h-[500px] w-[45vw] max-w-[500px] -translate-y-1/2"
+        />
         <Container className="relative">
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-            05 · Технология
-          </p>
-          <h1 className="mt-4 max-w-4xl text-4xl font-bold uppercase md:text-6xl">
-            Технология ECO·CUB
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-white/85">
-            Капитальный монолитно-модульный дом из бетона за 90 дней. Заводское качество, гарантия
-            50 лет, срок службы более 120 лет.
-          </p>
+          <Reveal>
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
+              05 · Технология
+            </p>
+            <h1 className="mt-4 max-w-4xl text-4xl font-bold uppercase md:text-6xl">
+              Технология ECO·CUB
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg text-white/85">
+              Капитальный монолитно-модульный дом из бетона за 90 дней. Заводское качество, гарантия
+              50 лет, срок службы более 120 лет.
+            </p>
+          </Reveal>
         </Container>
       </section>
 
       {/* MATERIALS — DESIGN COMPARISON (3 варианта на сравнение) */}
       <Section className="bg-background">
         <Container>
-          <div className="mb-12 max-w-3xl">
+          <Reveal className="mb-12 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Анатомия стены
             </p>
@@ -93,21 +103,21 @@ function TechnologyPage() {
               Симметричный «сэндвич» 210 мм: бетон М400 на оцинкованном каркасе с обеих сторон, ядро
               — ПСБ-С35 100 мм.
             </p>
-          </div>
+          </Reveal>
 
           {/* Variant A */}
-          <div className="mb-16">
+          <Reveal variant="scale" className="mb-16">
             <div
               className="rounded-sm p-6 text-primary-foreground md:p-10"
               style={{ backgroundColor: "#222222" }}
             >
               <LayeredSectionA />
             </div>
-          </div>
+          </Reveal>
 
           {/* Оригинальный список фич — оставляем */}
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
+            <Reveal variant="left">
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
                 Из чего сделан модуль
               </p>
@@ -115,66 +125,53 @@ function TechnologyPage() {
                 Три слоя капитальности
               </h2>
               <div className="mt-8 space-y-6">
-                <div className="flex gap-4">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-accent/10">
-                    <Layers className="size-6 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Бетон М400</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Прочность на сжатие 400 кг/см² — в 12 раз больше, чем у газоблока. Не даёт
-                      усадки.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-accent/10">
-                    <ShieldCheck className="size-6 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Оцинкованная стальная арматура</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Несущий каркас, не подверженный коррозии. Срок службы — более 120 лет.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-accent/10">
-                    <Thermometer className="size-6 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Утеплитель ПСБ-С35</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Сопротивление теплопередаче 4,1 (м²·°C)/Вт — выше нормы СНиП для Москвы.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-accent/10">
-                    <Flame className="size-6 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Класс пожаробезопасности К0</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Полностью негорючие материалы. Безопасно для семьи с детьми.
-                    </p>
-                  </div>
-                </div>
+                {[
+                  {
+                    Icon: Layers,
+                    title: "Бетон М400",
+                    desc: "Прочность на сжатие 400 кг/см² — в 12 раз больше, чем у газоблока. Не даёт усадки.",
+                  },
+                  {
+                    Icon: ShieldCheck,
+                    title: "Оцинкованная стальная арматура",
+                    desc: "Несущий каркас, не подверженный коррозии. Срок службы — более 120 лет.",
+                  },
+                  {
+                    Icon: Thermometer,
+                    title: "Утеплитель ПСБ-С35",
+                    desc: "Сопротивление теплопередаче 4,1 (м²·°C)/Вт — выше нормы СНиП для Москвы.",
+                  },
+                  {
+                    Icon: Flame,
+                    title: "Класс пожаробезопасности К0",
+                    desc: "Полностью негорючие материалы. Безопасно для семьи с детьми.",
+                  },
+                ].map((f, i) => (
+                  <Reveal key={f.title} variant="up" delay={i * 90} className="group flex gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-sm bg-accent/10 text-accent transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:bg-accent group-hover:text-accent-foreground">
+                      <f.Icon className="size-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{f.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{f.desc}</p>
+                    </div>
+                  </Reveal>
+                ))}
               </div>
-            </div>
-            <div className="rounded-sm bg-secondary p-6 md:p-10">
+            </Reveal>
+            <Reveal variant="right" delay={120} className="rounded-sm bg-secondary p-6 md:p-10">
               <p className="text-sm text-muted-foreground">
                 Все слои работают как единое целое: бетон даёт прочность, оцинкованная сталь —
                 несущий каркас, ПСБ-С35 — теплоизоляцию выше норм СНиП.
               </p>
-            </div>
+            </Reveal>
           </div>
         </Container>
       </Section>
 
       <Section className="bg-secondary">
         <Container>
-          <div className="mb-10 max-w-3xl">
+          <Reveal className="mb-10 max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Таблица сравнения
             </p>
@@ -185,15 +182,17 @@ function TechnologyPage() {
               Сравниваем монолитно-модульную технологию с традиционными способами строительства
               капитального жилья.
             </p>
-          </div>
-          <TechnologyComparison />
+          </Reveal>
+          <Reveal variant="up" delay={80}>
+            <TechnologyComparison />
+          </Reveal>
         </Container>
       </Section>
 
       {/* WHY CHEAPER THAN PANEL */}
       <Section className="bg-background">
         <Container>
-          <div className="mx-auto max-w-3xl">
+          <Reveal className="mx-auto max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
               Почему мы доступнее
             </p>
@@ -222,29 +221,35 @@ function TechnologyPage() {
               <Button
                 asChild
                 size="lg"
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                className="btn-shine bg-accent text-accent-foreground hover:bg-accent/90"
               >
                 <Link to="/portfolio">
                   Посмотреть проекты <ArrowRight />
                 </Link>
               </Button>
             </div>
-          </div>
+          </Reveal>
         </Container>
       </Section>
 
       {/* ENGINEERING */}
       <Section className="bg-background">
         <Container>
-          <EngineeringFeatures />
+          <Reveal>
+            <EngineeringFeatures />
+          </Reveal>
         </Container>
       </Section>
 
       {/* CTA */}
-      <Section className="bg-primary text-primary-foreground">
-        <Container>
+      <Section className="relative overflow-hidden bg-primary text-primary-foreground">
+        <span
+          aria-hidden="true"
+          className="ecocub-glow bottom-[-15%] right-[-8%] h-[45vw] max-h-[520px] w-[45vw] max-w-[520px]"
+        />
+        <Container className="relative">
           <div className="grid gap-12 lg:grid-cols-2">
-            <div>
+            <Reveal variant="left">
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
                 Обсудим ваш проект
               </p>
@@ -255,15 +260,15 @@ function TechnologyPage() {
                 Менеджер свяжется в течение часа, ответит на вопросы и пришлёт техническую
                 документацию.
               </p>
-            </div>
-            <div className="rounded-sm bg-white/5 p-6 md:p-8">
+            </Reveal>
+            <Reveal variant="right" delay={120} className="rounded-sm bg-white/5 p-6 md:p-8">
               <ContactForm
                 variant="dark"
                 formType="contact"
                 sourcePage="/technology"
                 submitLabel="Получить документацию"
               />
-            </div>
+            </Reveal>
           </div>
         </Container>
       </Section>

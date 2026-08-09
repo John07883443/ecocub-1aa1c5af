@@ -10,7 +10,7 @@ export function BlogCard({ post }: { post: BlogPost }) {
     <Link
       to="/blog/$slug"
       params={{ slug: post.slug }}
-      className="group flex flex-col overflow-hidden rounded-sm border border-border bg-card transition-all hover:border-accent"
+      className="group hover-lift flex h-full flex-col overflow-hidden rounded-sm border border-border bg-card hover:border-accent hover:shadow-[0_24px_50px_-24px_rgba(0,0,0,0.35)]"
     >
       {post.cover && (
         <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
@@ -18,7 +18,7 @@ export function BlogCard({ post }: { post: BlogPost }) {
             src={post.cover}
             alt={post.title}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
