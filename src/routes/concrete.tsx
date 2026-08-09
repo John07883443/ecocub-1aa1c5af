@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getProjectsBySeries } from "@/lib/projects";
+import { fetchProjects, filterBySeries } from "@/lib/projects";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
@@ -34,7 +34,9 @@ export const Route = createFileRoute("/concrete")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru/concrete" }],
   }),
-  loader: () => ({ projects: getProjectsBySeries("concrete") as ProjectCardData[] }),
+  loader: async () => ({
+    projects: filterBySeries(await fetchProjects(), "concrete") as ProjectCardData[],
+  }),
   errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
       <Container className="py-32 text-center text-destructive">{error.message}</Container>

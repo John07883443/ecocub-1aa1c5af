@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getAllProjects } from "@/lib/projects";
+import { fetchProjects } from "@/lib/projects";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/portfolio")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru/portfolio" }],
   }),
-  loader: () => ({ projects: getAllProjects() as ProjectCardData[] }),
+  loader: async () => ({ projects: (await fetchProjects()) as ProjectCardData[] }),
   errorComponent: ({ error }: { error: Error }) => (
     <PageLayout>
       <Container className="py-32 text-center text-destructive">Ошибка: {error.message}</Container>

@@ -22,7 +22,7 @@ import { Parallax } from "@/components/motion/Parallax";
 
 import { site } from "@/lib/site";
 import { getAllPosts } from "@/lib/blog";
-import { getAllProjects } from "@/lib/projects";
+import { fetchProjects } from "@/lib/projects";
 import { analytics } from "@/lib/analytics";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 
@@ -55,9 +55,9 @@ export const Route = createFileRoute("/")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru" }],
   }),
-  // Статьи и проекты — из локальных файлов: ни сети, ни базы при рендере.
-  loader: () => ({
-    projects: getAllProjects().slice(0, 6) as ProjectCardData[],
+  // Статьи — из файлов репозитория, проекты — из базы через серверную функцию.
+  loader: async () => ({
+    projects: (await fetchProjects()).slice(0, 6) as ProjectCardData[],
     posts: getAllPosts().slice(0, 3),
   }),
   errorComponent: ({ error, reset }: { error: Error; reset: () => void }) => (

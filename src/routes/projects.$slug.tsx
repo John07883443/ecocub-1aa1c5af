@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, BedDouble, Bath, Layers, Maximize2 } from "lucide-react";
-import { getProjectBySlug } from "@/lib/projects";
+import { fetchProjects, findBySlug } from "@/lib/projects";
 import { PageLayout } from "@/components/PageLayout";
 import { Container, Section } from "@/components/Container";
 import { ContactForm } from "@/components/ContactForm";
@@ -19,8 +19,8 @@ const seriesLabel: Record<string, string> = {
 const absUrl = (u: string) => (u.startsWith("http") ? u : `https://eco-cub.ru${u}`);
 
 export const Route = createFileRoute("/projects/$slug")({
-  loader: ({ params }) => {
-    const project = getProjectBySlug(params.slug);
+  loader: async ({ params }) => {
+    const project = findBySlug(await fetchProjects(), params.slug);
     if (!project) throw notFound();
     return { project };
   },
