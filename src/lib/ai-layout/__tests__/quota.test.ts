@@ -94,6 +94,29 @@ test("у каждого провайдера свой ключ и своя ба�
   );
 });
 
+test("через ретранслятор нужен его секрет, а ключ провайдера — нет", () => {
+  const relay = {
+    ...base,
+    AI_LAYOUT_PROVIDER: "openrouter",
+    AI_LAYOUT_RELAY_URL: "https://project.supabase.co/functions/v1/ai-layout-relay/",
+  };
+  // Адрес есть, секрета нет — дверь наружу оказалась бы открыта всем.
+  assert.equal(availability(readConfig(relay)).reason, "no_relay_secret");
+
+  const ok = readConfig({ ...relay, AI_LAYOUT_RELAY_SECRET: "shared" });
+  assert.equal(availability(ok).ok, true);
+  // Ключ OpenRouter на нашем сервере при этом не нужен вовсе: он в функции.
+  assert.equal(ok.apiKey, null);
+  // Хвостовой слеш не должен превращаться в двойной при обращении.
+  assert.equal(ok.relayUrl, "https://project.supabase.co/functions/v1/ai-layout-relay");
+});
+
+test("таймаут короче лимита функции Supabase на бесплатном тарифе", () => {
+  // Лимит 150 с. Свой обрыв должен наступать раньше чужого, иначе вместо
+  // внятной ошибки получим оборванное соединение неизвестно почему.
+  assert.ok(readConfig(base).timeoutMs < 150_000);
+});
+
 test("наружу не уходит ни одного секрета", () => {
   const config = readConfig({
     ...base,
@@ -101,11 +124,15 @@ test("наружу не уходит ни одного секрета", () => {
     HIGGSFIELD_API_KEY: "key-value",
     HIGGSFIELD_API_SECRET: "secret-value",
     AI_LAYOUT_SUBMIT_PATH: "secret/path",
+    AI_LAYOUT_RELAY_SECRET: "relay-secret-value",
+    AI_LAYOUT_RELAY_URL: "https://project.supabase.co/functions/v1/relay",
   });
   const serialized = JSON.stringify(publicConfig(config));
   assert.ok(!serialized.includes("key-value"));
   assert.ok(!serialized.includes("secret-value"));
   assert.ok(!serialized.includes("secret/path"));
+  assert.ok(!serialized.includes("relay-secret-value"));
+  assert.ok(!serialized.includes("supabase.co"));
   assert.deepEqual(Object.keys(JSON.parse(serialized)).sort(), [
     "available",
     "freePerVisitor",

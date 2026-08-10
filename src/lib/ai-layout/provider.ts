@@ -254,6 +254,12 @@ function errorReason(e: unknown): string {
  * Плата за простоту — картинка приходит байтами в base64, поэтому её надо
  * сохранить у себя. Это скорее плюс: чужая ссылка однажды протухнет, а
  * планировка должна открываться и через год.
+ *
+ * Отдельный режим — через ретранслятор. Боевой сервер стоит в России, и
+ * OpenRouter его не пускает: защита отбивает запрос по адресу отправителя ещё
+ * до API. Тогда запрос уходит на свою функцию за границей, а ключ провайдера
+ * живёт там же и на нашем сервере не хранится вовсе — заголовок авторизации
+ * подставляет ретранслятор. Тело запроса в обоих режимах одно и то же.
  */
 export class OpenRouterProvider implements LayoutImageProvider {
   readonly kind = "openrouter";
@@ -278,17 +284,25 @@ export class OpenRouterProvider implements LayoutImageProvider {
       input_references: [{ type: "image_url", image_url: { url: request.footprintUrl } }],
     };
 
-    try {
-      const res = await fetch(`${this.config.apiBase}/images`, {
-        method: "POST",
-        headers: {
+    const viaRelay = Boolean(this.config.relayUrl);
+    const headers: Record<string, string> = viaRelay
+      ? {
+          "Content-Type": "application/json",
+          "X-Relay-Secret": this.config.relaySecret ?? "",
+        }
+      : {
           Authorization: `Bearer ${this.config.apiKey}`,
           "Content-Type": "application/json",
           // OpenRouter просит обозначать приложение — по этим полям владелец
           // видит в кабинете, откуда пришёл расход.
           "HTTP-Referer": this.config.publicBase,
           "X-Title": "EcoCub AI layout",
-        },
+        };
+
+    try {
+      const res = await fetch(viaRelay ? this.config.relayUrl : `${this.config.apiBase}/images`, {
+        method: "POST",
+        headers,
         body: JSON.stringify(body),
         // Генерация идёт в том же запросе, поэтому ждём столько же, сколько
         // ждали бы результата опросом.

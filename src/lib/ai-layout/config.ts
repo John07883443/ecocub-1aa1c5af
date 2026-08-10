@@ -30,6 +30,13 @@ export interface AiLayoutConfig {
   apiKey: string | null;
   /** Второй ключ нужен только Higgsfield: у него авторизация парой. */
   apiSecret: string | null;
+  /**
+   * Адрес ретранслятора. Задан — запрос идёт через него, а ключ провайдера
+   * живёт там же и на нашем сервере не хранится вовсе.
+   */
+  relayUrl: string;
+  /** Общий секрет ретранслятора: без него это был бы открытый прокси. */
+  relaySecret: string | null;
   /** Абсолютный адрес сайта: провайдер забирает исходник по ссылке. */
   publicBase: string;
   /** Соль для HMAC поверх IP. Без неё посетители не различаются. */
@@ -50,7 +57,10 @@ const DEFAULTS = {
   quality: "low",
   freePerVisitor: 1,
   dailyLimit: 50,
-  timeoutMs: 180_000,
+  // На двадцать секунд меньше, чем лимит функции Supabase на бесплатном
+  // тарифе (150 с). Так мы получаем внятную ошибку раньше, чем ретранслятор
+  // оборвётся сам, а не гадаем, что произошло.
+  timeoutMs: 140_000,
 };
 
 function num(value: string | undefined, fallback: number): number {
@@ -84,6 +94,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AiLayoutConfig
     // У каждого провайдера свой ключ: перепутать их нельзя даже случайно.
     apiKey: (provider === "higgsfield" ? env.HIGGSFIELD_API_KEY : env.OPENROUTER_API_KEY) || null,
     apiSecret: env.HIGGSFIELD_API_SECRET || null,
+    relayUrl: (env.AI_LAYOUT_RELAY_URL || "").replace(/\/+$/, ""),
+    relaySecret: env.AI_LAYOUT_RELAY_SECRET || null,
     publicBase: (env.AI_LAYOUT_PUBLIC_BASE || "https://eco-cub.ru").replace(/\/+$/, ""),
     visitorSecret: env.AI_LAYOUT_VISITOR_SECRET || null,
     timeoutMs: num(env.AI_LAYOUT_TIMEOUT_MS, DEFAULTS.timeoutMs),
@@ -97,7 +109,13 @@ export function availability(config: AiLayoutConfig): { ok: boolean; reason?: st
   if (!config.visitorSecret) return { ok: false, reason: "no_visitor_secret" };
 
   if (config.provider === "openrouter") {
-    if (!config.apiKey) return { ok: false, reason: "no_credentials" };
+    // Через ретранслятор ключ провайдера нам не нужен: он лежит там.
+    // Зато обязателен общий секрет, иначе дверь наружу открыта всем.
+    if (config.relayUrl) {
+      if (!config.relaySecret) return { ok: false, reason: "no_relay_secret" };
+    } else if (!config.apiKey) {
+      return { ok: false, reason: "no_credentials" };
+    }
   }
   if (config.provider === "higgsfield") {
     if (!config.apiKey || !config.apiSecret) return { ok: false, reason: "no_credentials" };
