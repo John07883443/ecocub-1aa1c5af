@@ -91,10 +91,19 @@ rsync -a --delete "$INCOMING/" "$APP_DIR/.output/"
 # start-or-reload: определение процесса раньше жило только в сохранённом
 # состоянии pm2. Потеря этого состояния означала, что `pm2 reload` падает
 # с «процесс не найден», а поднимать приходится руками, по памяти.
+#
+# Перезапуск делается ПО ФАЙЛУ КОНФИГА, а не по имени процесса. Разница не
+# косметическая: по имени pm2 не перечитывает ecosystem.config.cjs, то есть не
+# выполняет заново readEnvFile('/home/deploy/ecocub.env'), и подмешивает
+# окружение текущей оболочки. Новые переменные до приложения не доезжают даже
+# после полной выкладки — деплой зелёный, в логах пусто, а process.env пуст.
+# Проверено на живом сервере 10.08.2026: после reload по имени в
+# /proc/<pid>/environ новых переменных не оказалось, старые остались с
+# первого старта по конфигу.
 
 if pm2 describe "$PM2_NAME" > /dev/null 2>&1; then
   log "перезапускаю процесс"
-  pm2 reload "$PM2_NAME" --update-env > /dev/null
+  pm2 reload "$PM2_CONFIG" --update-env > /dev/null
 else
   log "процесса нет — запускаю по конфигу"
   pm2 start "$PM2_CONFIG" > /dev/null
@@ -120,7 +129,7 @@ fi
 log "сайт не отвечает — возвращаю предыдущую сборку"
 if [ -d "$APP_DIR/.output.prev" ]; then
   rsync -a --delete "$APP_DIR/.output.prev/" "$APP_DIR/.output/"
-  pm2 reload "$PM2_NAME" --update-env > /dev/null || pm2 start "$PM2_CONFIG" > /dev/null
+  pm2 reload "$PM2_CONFIG" --update-env > /dev/null || pm2 start "$PM2_CONFIG" > /dev/null
   for _ in $(seq 1 "$HEALTH_TRIES"); do
     sleep 2
     if curl -sf -o /dev/null --max-time 5 "$HEALTH_URL"; then
