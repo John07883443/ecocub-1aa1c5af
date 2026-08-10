@@ -19,9 +19,12 @@ export interface AiLayoutConfig {
   freePerVisitor: number;
   /** Потолок на все генерации за сутки — защита кошелька от всплеска. */
   dailyLimit: number;
-  /** Путь, по которому создаётся задание. В публичной документации его нет. */
+  /**
+   * Переопределение пути создания задания. Обычно не нужно: у платформы
+   * идентификатор модели и есть путь, и по умолчанию берётся он.
+   */
   submitPath: string;
-  /** Идентификатор модели: уходит полем job_type в теле запроса. */
+  /** Идентификатор модели. Он же — путь запроса: POST /{jobType}. */
   jobType: string;
   /** Тариф генерации. Выбран по замерам этапа 0: 1k + low = 0.5 кредита. */
   resolution: string;
@@ -85,14 +88,19 @@ export function availability(config: AiLayoutConfig): { ok: boolean; reason?: st
   if (!config.visitorSecret) return { ok: false, reason: "no_visitor_secret" };
 
   if (config.provider === "higgsfield") {
-    // Публичная документация Higgsfield описывает только text-to-image и не
-    // называет адрес, по которому создаётся задание с исходным изображением.
-    // Угадывать его нельзя: промах — это либо ошибка, либо чужая модель за
-    // деньги владельца. Пока путь не задан явно, провайдер не работает.
     if (!config.apiKey || !config.apiSecret) return { ok: false, reason: "no_credentials" };
-    if (!config.submitPath) return { ok: false, reason: "no_submit_path" };
+    if (!submitPath(config)) return { ok: false, reason: "no_submit_path" };
   }
   return { ok: true };
+}
+
+/**
+ * Куда уходит запрос на генерацию. У платформы идентификатор модели служит и
+ * путём: POST /gpt_image_2. Явная настройка нужна только на случай, если
+ * маршрутизация изменится, — тогда её меняют без правки кода.
+ */
+export function submitPath(config: AiLayoutConfig): string {
+  return (config.submitPath || config.jobType).replace(/^\/+|\/+$/g, "");
 }
 
 /**

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { availability, publicConfig, readConfig } from "../config.ts";
+import { availability, publicConfig, readConfig, submitPath } from "../config.ts";
 import { clientIp, jobKey, normalizeIp, visitorHash } from "../quota.server.ts";
 import { createProvider, MockLayoutProvider } from "../provider.ts";
 
@@ -28,23 +28,34 @@ test("без соли посетители неразличимы, поэтом�
   assert.equal(availability(config).reason, "no_visitor_secret");
 });
 
-test("боевой провайдер не стартует, пока не задан адрес создания задания", () => {
-  const withKeys = {
-    ...base,
-    AI_LAYOUT_PROVIDER: "higgsfield",
-    HIGGSFIELD_API_KEY: "k",
-    HIGGSFIELD_API_SECRET: "s",
-  };
-  // Публичная документация адрес не называет, поэтому догадка запрещена.
-  assert.equal(availability(readConfig(withKeys)).reason, "no_submit_path");
-  assert.equal(
-    availability(readConfig({ ...withKeys, AI_LAYOUT_SUBMIT_PATH: "requests" })).ok,
-    true,
-  );
-  // Адрес без ключей — тоже не повод идти в сеть.
+test("боевой провайдер не стартует без ключей", () => {
   assert.equal(
     availability(readConfig({ ...base, AI_LAYOUT_PROVIDER: "higgsfield" })).reason,
     "no_credentials",
+  );
+  assert.equal(
+    availability(
+      readConfig({
+        ...base,
+        AI_LAYOUT_PROVIDER: "higgsfield",
+        HIGGSFIELD_API_KEY: "k",
+        HIGGSFIELD_API_SECRET: "s",
+      }),
+    ).ok,
+    true,
+  );
+});
+
+test("путь запроса — это идентификатор модели, но его можно переопределить", () => {
+  assert.equal(submitPath(readConfig(base)), "gpt_image_2");
+  assert.equal(
+    submitPath(readConfig({ ...base, AI_LAYOUT_JOB_TYPE: "other_model" })),
+    "other_model",
+  );
+  // Ведущие и хвостовые слеши не должны склеиваться в двойные.
+  assert.equal(
+    submitPath(readConfig({ ...base, AI_LAYOUT_SUBMIT_PATH: "/v2/images/" })),
+    "v2/images",
   );
 });
 

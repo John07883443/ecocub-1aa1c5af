@@ -10,7 +10,7 @@
  * есть ссылка на картинку и статус, ключей в нём нет.
  */
 
-import type { AiLayoutConfig } from "./config.ts";
+import { submitPath, type AiLayoutConfig } from "./config.ts";
 
 export interface LayoutRequest {
   /** Абсолютная ссылка на исходник — провайдер забирает его сам. */
@@ -86,16 +86,15 @@ export class ManualLayoutProvider implements LayoutImageProvider {
  * GET /requests/{id}/status со значениями queued / in_progress / nsfw /
  * failed / completed, результат лежит в массиве images.
  *
- * НЕ подтверждено документацией: форма запроса на генерацию с исходным
- * изображением — публично описан только text-to-image. Тело ниже собрано по
- * форме, которую видно в MCP-клиенте платформы (job_type, medias с парой
- * role/value, params с тарифом) и которую отдельно подтвердил ассистент
- * Higgsfield. Два независимых наблюдения — довод, но не замена живой проверке.
+ * Форма запроса с исходным изображением публично не описана — её назвал
+ * ассистент платформы: идентификатор модели служит путём (POST /gpt_image_2),
+ * исходник передаётся массивом medias, тариф — объектом params, а в ответе
+ * приходят request_id и готовая ссылка status_url.
  *
- * Адрес, по которому задание создаётся, публично не назван, поэтому остаётся
- * обязательной настройкой: пока AI_LAYOUT_SUBMIT_PATH не задан, провайдер не
- * запускается вовсе. Промах по адресу — это либо ошибка, либо чужая модель за
- * деньги владельца, и выключенная функция лучше догадки.
+ * Тело собрано ровно по присланному примеру cURL. Отдельно отмечу расхождение:
+ * в первом ответе модель предлагалось дублировать полем job_type в теле, но в
+ * примере запроса его нет. Выбран пример — он конкретнее, а лишнее поле в теле
+ * скорее вызовет отказ, чем поможет.
  */
 export class HiggsfieldProvider implements LayoutImageProvider {
   readonly kind = "higgsfield";
@@ -118,7 +117,6 @@ export class HiggsfieldProvider implements LayoutImageProvider {
 
   async start(request: LayoutRequest): Promise<LayoutResult> {
     const body = {
-      job_type: this.config.jobType,
       prompt: request.prompt,
       // Квадрат: исходник рисуется квадратным, и менять пропорции нельзя —
       // иначе контур поедет вместе с кадром.
@@ -133,7 +131,7 @@ export class HiggsfieldProvider implements LayoutImageProvider {
     };
 
     try {
-      const res = await fetch(`${this.config.apiBase}/${this.config.submitPath}`, {
+      const res = await fetch(`${this.config.apiBase}/${submitPath(this.config)}`, {
         method: "POST",
         headers: this.headers(),
         body: JSON.stringify(body),
@@ -144,6 +142,7 @@ export class HiggsfieldProvider implements LayoutImageProvider {
       const json = (await res.json()) as {
         id?: string;
         request_id?: string;
+        status_url?: string;
         status?: string;
         images?: Array<{ url?: string }>;
       };
@@ -151,20 +150,26 @@ export class HiggsfieldProvider implements LayoutImageProvider {
       const ready = json.images?.[0]?.url;
       if (ready) return { status: "completed", imageUrl: ready };
 
-      const id = json.request_id || json.id;
-      if (!id) return { status: "failed", reason: "no_request_id" };
-      return { status: "pending", externalId: id };
+      // Ссылку на опрос платформа присылает готовой — берём её, а не склеиваем
+      // свою: так адрес переживёт смену маршрутизации на той стороне.
+      const external = json.status_url || json.request_id || json.id;
+      if (!external) return { status: "failed", reason: "no_request_id" };
+      return { status: "pending", externalId: external };
     } catch (e) {
       return { status: "failed", reason: errorReason(e) };
     }
   }
 
   async poll(externalId: string): Promise<LayoutResult> {
+    // externalId — либо готовая ссылка status_url, либо один request_id.
+    const url = externalId.startsWith("https://")
+      ? externalId
+      : `${this.config.apiBase}/requests/${encodeURIComponent(externalId)}/status`;
     try {
-      const res = await fetch(
-        `${this.config.apiBase}/requests/${encodeURIComponent(externalId)}/status`,
-        { headers: this.headers(), signal: AbortSignal.timeout(15_000) },
-      );
+      const res = await fetch(url, {
+        headers: this.headers(),
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!res.ok) return { status: "failed", reason: `http_${res.status}` };
 
       const json = (await res.json()) as {
@@ -173,11 +178,14 @@ export class HiggsfieldProvider implements LayoutImageProvider {
       };
       switch (json.status) {
         case "completed": {
-          const url = json.images?.[0]?.url;
-          return url
-            ? { status: "completed", imageUrl: url }
+          const image = json.images?.[0]?.url;
+          return image
+            ? { status: "completed", imageUrl: image }
             : { status: "failed", reason: "empty_result" };
         }
+        // Документация называет queued и in_progress, ответ на создание
+        // задания — ещё и pending. Разбираем все три как «ещё не готово».
+        case "pending":
         case "queued":
         case "in_progress":
           return { status: "pending", externalId };
