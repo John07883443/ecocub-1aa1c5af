@@ -9,6 +9,7 @@
     "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test:v3": "node --experimental-strip-types --test \"src/lib/v3/__tests__/*.test.ts\"",
     "format": "prettier --write ."
   },
   "dependencies": {

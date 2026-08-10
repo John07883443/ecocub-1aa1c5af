@@ -120,3 +120,34 @@ export const analytics = {
   /** Квиз пройден и заявка отправлена. */
   quizComplete: () => track("QUIZ_COMPLETE"),
 };
+
+/**
+ * События экспериментальной версии /constructor-ai-v3.
+ * Отдельный неймспейс V3_*, чтобы в Метрике эксперимент читался одним срезом
+ * и не смешивался с боевыми воронками. Персональные данные и свободный текст
+ * пользователя в параметры не передаются — только ID, этапы и диапазоны.
+ */
+export const analyticsV3 = {
+  opened: () => track("V3_OPENED"),
+  pathSelected: (path: "guided" | "manual" | "resume") => track("V3_PATH_SELECTED", { path }),
+  quizStarted: () => track("V3_QUIZ_STARTED"),
+  quizCompleted: () => track("V3_QUIZ_COMPLETED"),
+  lifestyleStarted: () => track("V3_LIFESTYLE_STARTED"),
+  lifestyleCompleted: (questionsShown: number) =>
+    track("V3_LIFESTYLE_COMPLETED", { questionsShown }),
+  recommendationsShown: (count: number, topPlanId?: string) =>
+    track("V3_RECOMMENDATIONS_SHOWN", { count, topPlanId }),
+  planSelected: (planId: string, kind: string) => track("V3_PLAN_SELECTED", { planId, kind }),
+  planModified: (action: string, planId?: string) => track("V3_PLAN_MODIFIED", { action, planId }),
+  plotStarted: () => track("V3_PLOT_STARTED"),
+  plotCompleted: (fits: boolean) => track("V3_PLOT_COMPLETED", { fits }),
+  facadeSelected: (presetId: string) => track("V3_FACADE_SELECTED", { presetId }),
+  renderRequested: (projectId: string, provider: string) =>
+    track("V3_RENDER_REQUESTED", { projectId, provider }),
+  telegramClicked: (projectId: string) => track("V3_TELEGRAM_CLICKED", { projectId }),
+  leadSubmitted: (projectId: string, planId?: string) =>
+    track("V3_LEAD_SUBMITTED", { projectId, planId }),
+  projectRestored: (projectId: string) => track("V3_PROJECT_RESTORED", { projectId }),
+  error: (stage: string, message: string) =>
+    track("V3_ERROR", { stage, message: message.slice(0, 120) }),
+};

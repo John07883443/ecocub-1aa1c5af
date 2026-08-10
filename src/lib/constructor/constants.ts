@@ -1,4 +1,5 @@
-import type { DesignPreset, RoleMeta, Role, Template } from "./types";
+// .ts в импорте — для запуска доменных тестов через node --experimental-strip-types.
+import type { DesignPreset, RoleMeta, Role, Template } from "./types.ts";
 
 /** Метры на одну ячейку сетки (сторона). */
 export const CELL_M = 3;
