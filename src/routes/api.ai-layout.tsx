@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { availability, publicConfig, readConfig } from "@/lib/ai-layout/config";
 import { buildFootprint } from "@/lib/ai-layout/footprint";
+import { describeNudges, relaxJoints } from "@/lib/ai-layout/relax";
 import { buildLayoutPrompt, clampProgram, PROMPT_VERSION } from "@/lib/ai-layout/prompt";
 import { createProvider, type LayoutResult } from "@/lib/ai-layout/provider";
 import {
@@ -102,7 +103,16 @@ export const Route = createFileRoute("/api/ai-layout")({
           return Response.json({ ok: false, reason: normalized.reason }, { status: 400 });
         }
 
-        const footprint = buildFootprint(normalized.value.modules);
+        // Тесные стыки разжимаются ДО построения контура. Человек волен
+        // сдвинуть кубик так, что между двумя модулями останется метр стыка,
+        // а дверь 800 мм туда физически не встаёт — модель в такой геометрии
+        // либо нарисует дверь сквозь стену, либо оставит комнату без входа.
+        // Правит геометрия, а не модель: контур перерисовывается уже
+        // исправленным, и накладка поверх результата снова совпадает с ним.
+        const relaxed = relaxJoints(normalized.value.modules);
+        const modules = relaxed.modules;
+
+        const footprint = buildFootprint(modules);
         if (!footprint.modules.length) {
           return Response.json({ ok: false, reason: "empty_footprint" }, { status: 400 });
         }
@@ -110,18 +120,16 @@ export const Route = createFileRoute("/api/ai-layout")({
 
         const visitor = visitorHash(clientIp(request.headers), config.visitorSecret!);
         const key = jobKey(
-          canonicalKeySource(
-            { modules: normalized.value.modules, program },
-            config.model,
-            PROMPT_VERSION,
-          ),
+          canonicalKeySource({ modules, program }, config.model, PROMPT_VERSION),
           visitor,
         );
 
         // Повтор того же запроса возвращает прежний результат и не платит
         // второй раз. Неудачную попытку повторить можно — она не в счёт.
         const existing = await findJob(key);
-        if (existing && existing.status !== "failed") return Response.json(present(existing));
+        if (existing && existing.status !== "failed") {
+          return Response.json({ ...present(existing), notice: describeNudges(relaxed.nudges) });
+        }
 
         if ((await visitorSpent(visitor)) >= config.freePerVisitor) {
           return Response.json({ ok: false, reason: "limit_visitor" }, { status: 429 });
@@ -140,7 +148,7 @@ export const Route = createFileRoute("/api/ai-layout")({
           isMock: config.provider === "mock",
           reason: null,
           createdAt: new Date().toISOString(),
-          payload: JSON.stringify({ modules: normalized.value.modules, program }),
+          payload: JSON.stringify({ modules, program }),
         };
         await saveJob(reserved);
 
@@ -162,7 +170,9 @@ export const Route = createFileRoute("/api/ai-layout")({
 
         const updated = applyResult(reserved, result);
         await saveJob(updated);
-        return Response.json(present(updated));
+        // Если геометрию пришлось поправить — человек должен об этом узнать,
+        // а не гадать, почему дом на картинке чуть отличается от собранного.
+        return Response.json({ ...present(updated), notice: describeNudges(relaxed.nudges) });
       },
     },
   },

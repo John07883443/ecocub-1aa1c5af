@@ -37,6 +37,8 @@ interface JobResponse {
   imageUrl?: string | null;
   isMock?: boolean;
   reason?: string | null;
+  /** Сообщение о том, что геометрию пришлось поправить перед генерацией. */
+  notice?: string;
 }
 
 const ENTRANCES: EntranceSide[] = ["north", "east", "south", "west"];
@@ -75,6 +77,9 @@ export function AiLayoutBlock({ modules, onRequestQuote }: AiLayoutBlockProps) {
   const [isMock, setIsMock] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limited, setLimited] = useState(false);
+  // Правка геометрии не ошибка, но и не мелочь: дом на картинке будет чуть
+  // отличаться от собранного, и человек должен узнать об этом от нас.
+  const [notice, setNotice] = useState<string>("");
 
   const startedAt = useRef(0);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,6 +120,7 @@ export function AiLayoutBlock({ modules, onRequestQuote }: AiLayoutBlockProps) {
   const finish = useCallback((data: JobResponse) => {
     setImageUrl(data.imageUrl ?? null);
     setIsMock(!!data.isMock);
+    setNotice(data.notice || "");
     setStatus("done");
     analyticsAiLayout.succeeded(Math.round((Date.now() - startedAt.current) / 1000));
   }, []);
@@ -153,6 +159,7 @@ export function AiLayoutBlock({ modules, onRequestQuote }: AiLayoutBlockProps) {
     if (!footprint.modules.length) return;
     setStatus("working");
     setError(null);
+    setNotice("");
     setImageUrl(null);
     startedAt.current = Date.now();
     analyticsAiLayout.requested(footprint.modules.length, bedrooms, bathrooms);
@@ -299,6 +306,12 @@ export function AiLayoutBlock({ modules, onRequestQuote }: AiLayoutBlockProps) {
       {status === "done" && !imageUrl && (
         <p className="mt-4 rounded-sm border border-border bg-background p-3 text-sm text-foreground">
           Запрос принят. Планировку подготовит наш инженер и пришлёт вместе с расчётом.
+        </p>
+      )}
+
+      {status === "done" && notice && (
+        <p className="mt-4 rounded-sm border border-border bg-muted/40 p-3 text-sm text-foreground">
+          {notice}
         </p>
       )}
 

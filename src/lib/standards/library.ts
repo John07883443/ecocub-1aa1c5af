@@ -3,6 +3,8 @@ import * as wm from "./weekend-mini.ts";
 import * as f1 from "./family-one.ts";
 import * as f2 from "./family-two.ts";
 import * as sf from "./super-family.ts";
+import * as nas from "./nasledie.ts";
+import * as din from "./dinastiya.ts";
 import { moduleFootprintM2 } from "./derive.ts";
 
 /**
@@ -122,6 +124,36 @@ export const REFERENCE_LAYOUTS: ReferenceLayout[] = [
       "П-образный дом на три крыла. Общая зона делится на кухню-гостиную 22,4 и столовую 11,4 — один объём, две зоны без двери между ними. Спальня родителей со своим гардеробом и санузлом вынесена в отдельное крыло, две детские — в другие. Прихожая 7 м² работает распределителем между крыльями. Второй санузел, постирочная и котельная собраны у прихожей. В одном вырезе лежит терраса, во втором — зелёный двор.",
     solutionEn:
       "A U-shaped house with three wings. The common zone splits into a 22.4 m2 kitchen-living area and an 11.4 m2 dining area: one volume, two zones, no door between them. The main bedroom with its own walk-in closet and bathroom occupies a separate wing; two children rooms take the others. A 7 m2 hallway works as the distributor between wings. The second bathroom, the laundry and the boiler room are grouped next to the hallway. One notch holds the terrace, the other a small green courtyard.",
+  },
+  {
+    id: "nasledie",
+    name: "Nasledie",
+    footprintM2: 131.3,
+    moduleCount: 12,
+    bedrooms: 3,
+    bathrooms: 2,
+    widthM: 10.26,
+    depthM: 12.8,
+    compactness: 0.86,
+    solutionRu:
+      "Двенадцать модулей, три на четыре. Кухня-гостиная 44,4 занимает целый угол дома на всю его глубину. Мастер-спальня собрана блоком: спальня, гардероб и свой санузел. Две детские — у противоположного торца, между ними общая ванная. Появляются два разных помещения для прохода: прихожая 9,6 у входа и коридор 8,5 к спальням. Прачечная и котельная вынесены в отдельный сервисный угол.",
+    solutionEn:
+      "Twelve modules, three by four. The 44.4 m2 kitchen-living room takes a whole corner of the house across its full depth. The main bedroom forms a suite: bedroom, walk-in closet and its own bathroom. Two children rooms sit at the opposite end with a shared bathroom between them. Circulation splits into two separate rooms: a 9.6 m2 entrance hallway and an 8.5 m2 corridor to the bedrooms. Laundry and boiler room occupy their own service corner.",
+  },
+  {
+    id: "dinastiya",
+    name: "Dinastiya",
+    footprintM2: 175.1,
+    moduleCount: 16,
+    bedrooms: 3,
+    bathrooms: 3,
+    widthM: 13.68,
+    depthM: 12.8,
+    compactness: 0.85,
+    solutionRu:
+      "Шестнадцать модулей, четыре на четыре, раскладка симметричная. Гостиная с кухней-столовой 46,6 посередине. Мастер-спальня 14,2 с ванной 9 и гардеробом — у одного торца. Две детские по 13,1 зеркально по краям другого торца, между ними общая ванная и кладовые. Гостевой С/У у прихожей. Сервис вырос в блок: прачечная-кладовая 9,6 и котельная 5.",
+    solutionEn:
+      "Sixteen modules, four by four, symmetrical layout. The 46.6 m2 living room with kitchen and dining sits in the middle. The 14.2 m2 main bedroom with its 9 m2 bathroom and closet takes one end. Two 13.1 m2 children rooms mirror each other at the corners of the other end, with a shared bathroom and storage between them. A small guest toilet sits by the hallway. The service block grew to a 9.6 m2 laundry-storage and a 5 m2 boiler room.",
   },
 ];
 

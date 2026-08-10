@@ -104,27 +104,29 @@ export const DESIGN_PRESETS: DesignPreset[] = [
 
 // Стартовые планировки. Координаты — в метрах от нуля (кратны шагу, модуль 3×3);
 // при загрузке центрируются на участке.
+
 /**
- * Готовые раскладки.
+ * Готовые планировки — реальные проекты.
  *
- * Первые четыре повторяют построенные проекты — их разбор лежит в
- * `src/lib/standards`. Смысл в том, чтобы человек не собирал дом с нуля, а
- * брал заведомо рабочую планировку и достраивал под себя: добавил кубик под
- * кабинет, отодвинул спальню, убрал террасу. Раскладка приблизительная —
- * конструктор пока считает модуль квадратом 3 × 3 м, а на чертеже он
- * 3,2 × 3,42 (см. docs/STANDARDS.md), — поэтому это опорная форма и состав
- * помещений, а не копия чертежа.
+ * Раньше здесь стояли абстрактные фигуры: «Студия», «Куб», «П-образный».
+ * Человеку они говорили мало: непонятно, влезет ли в «Куб» семья и чем он
+ * отличается от «Каскада». Теперь в списке семь построенных домов — разбор
+ * каждого лежит в `src/lib/standards`. Стартовать с проверенного дома и
+ * достроить кубик под кабинет проще, чем собирать форму с нуля.
  *
- * Дальше идут абстрактные фигуры: они остались как быстрый старт для тех,
- * кому ни один готовый проект не подходит.
+ * Раскладка приблизительная: конструктор пока считает модуль квадратом 3 × 3 м,
+ * а на чертеже он 3,2 × 3,42 (см. docs/STANDARDS.md). Переносится состав
+ * помещений и форма, а не обводка чертежа. Число модулей при этом настоящее, и
+ * площадь получается близкой к каталожной — 9 м² на модуль в конструкторе
+ * примерно равны площади настоящего модуля внутри стен.
  */
 export const TEMPLATES: Template[] = [
   {
     id: "weekend-mini",
     name: "Weekend Mini",
-    shape: "3 модуля · Г-образный · спальня и общая комната",
+    shape: "3 модуля · 27 м² · Г-образный",
     reference: "weekend-mini",
-    note: "Компактный дом выходного дня: терраса в вырезе буквы Г",
+    note: "Спальня, общая комната с кухней, санузел. Терраса в вырезе буквы Г",
     seeds: [
       { x: 0, z: 0, floor: 0, role: "bedroom" },
       { x: 3, z: 0, floor: 0, role: "bathroom" },
@@ -135,7 +137,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "weekend-one",
     name: "Weekend One",
-    shape: "4 модуля в линию · смещение на полмодуля",
+    shape: "4 модуля · 36 м² · линия со смещением",
     reference: "weekend-one",
     note: "Кухня-гостиная из двух модулей, спальня целым модулем, террасы в уступах",
     seeds: [
@@ -152,7 +154,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "family-one",
     name: "Family One",
-    shape: "6 модулей · 3 × 2 · две спальни",
+    shape: "6 модулей · 54 м² · 2 спальни",
     reference: "family-one",
     note: "Кухня и гостиная одним объёмом, спальни по углам, мокрый блок у входа",
     seeds: [
@@ -170,7 +172,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "family-two",
     name: "Family Two",
-    shape: "8 модулей · 4 × 2 · три спальни",
+    shape: "8 модулей · 72 м² · 3 спальни",
     reference: "family-two",
     note: "Общая комната ядром на всю глубину, три спальни открываются прямо в неё",
     seeds: [
@@ -190,23 +192,86 @@ export const TEMPLATES: Template[] = [
   {
     id: "super-family",
     name: "Super Family",
-    shape: "8 модулей · П-образный · три спальни, два санузла",
+    shape: "11 модулей · 99 м² · П-образный, 3 спальни",
     reference: "super-family",
-    note: "Спальня родителей отдельным крылом, детские — в других, терраса и двор в вырезах",
+    note: "Спальня родителей отдельным крылом, детские в других, терраса и двор в вырезах",
     seeds: [
-      { x: 0, z: 9, floor: 0, role: "terrace" },
-      { x: 3, z: 9, floor: 0, role: "terrace" },
+      { x: 0, z: 9, floor: 0, role: "bedroom" },
+      { x: 3, z: 9, floor: 0, role: "living" },
       { x: 6, z: 9, floor: 0, role: "bedroom" },
-      { x: 0, z: 6, floor: 0, role: "kitchen" },
+      { x: 0, z: 6, floor: 0, role: "bathroom" },
       { x: 3, z: 6, floor: 0, role: "living" },
-      { x: 6, z: 6, floor: 0, role: "bathroom" },
+      { x: 6, z: 6, floor: 0, role: "living" },
       { x: 0, z: 3, floor: 0, role: "living" },
-      { x: 3, z: 3, floor: 0, role: "bathroom" },
-      { x: 6, z: 3, floor: 0, role: "bedroom" },
+      { x: 3, z: 3, floor: 0, role: "kitchen" },
+      { x: 6, z: 3, floor: 0, role: "bathroom" },
       { x: 0, z: 0, floor: 0, role: "bedroom" },
+      { x: 6, z: 0, floor: 0, role: "living" },
       { x: 3, z: 0, floor: 0, role: "terrace" },
+      { x: 0, z: 12, floor: 0, role: "terrace" },
+      { x: 3, z: 12, floor: 0, role: "terrace" },
     ],
   },
+  {
+    id: "nasledie",
+    name: "Nasledie",
+    shape: "12 модулей · 108 м² · 3 спальни, 2 санузла",
+    reference: "nasledie",
+    note: "Мастер-спальня блоком с гардеробом и своим санузлом, отдельный коридор к детским",
+    seeds: [
+      { x: 0, z: 9, floor: 0, role: "bedroom" },
+      { x: 3, z: 9, floor: 0, role: "living" },
+      { x: 6, z: 9, floor: 0, role: "living" },
+      { x: 0, z: 6, floor: 0, role: "bathroom" },
+      { x: 3, z: 6, floor: 0, role: "living" },
+      { x: 6, z: 6, floor: 0, role: "kitchen" },
+      { x: 0, z: 3, floor: 0, role: "living" },
+      { x: 3, z: 3, floor: 0, role: "bathroom" },
+      { x: 6, z: 3, floor: 0, role: "living" },
+      { x: 0, z: 0, floor: 0, role: "bedroom" },
+      { x: 3, z: 0, floor: 0, role: "bedroom" },
+      { x: 6, z: 0, floor: 0, role: "living" },
+      { x: 3, z: 12, floor: 0, role: "terrace" },
+      { x: 6, z: 12, floor: 0, role: "terrace" },
+    ],
+  },
+  {
+    id: "dinastiya",
+    name: "Dinastiya",
+    shape: "15 модулей · 135 м² · 3 спальни, 3 санузла",
+    reference: "dinastiya",
+    note: "Симметричная раскладка: детские зеркально по краям, мастер-спальня с другого торца",
+    seeds: [
+      { x: 0, z: 9, floor: 0, role: "bedroom" },
+      { x: 3, z: 9, floor: 0, role: "living" },
+      { x: 6, z: 9, floor: 0, role: "living" },
+      { x: 9, z: 9, floor: 0, role: "bedroom" },
+      { x: 0, z: 6, floor: 0, role: "bathroom" },
+      { x: 3, z: 6, floor: 0, role: "living" },
+      { x: 6, z: 6, floor: 0, role: "living" },
+      { x: 9, z: 6, floor: 0, role: "bathroom" },
+      { x: 0, z: 3, floor: 0, role: "living" },
+      { x: 3, z: 3, floor: 0, role: "kitchen" },
+      { x: 6, z: 3, floor: 0, role: "living" },
+      { x: 9, z: 3, floor: 0, role: "bathroom" },
+      { x: 0, z: 0, floor: 0, role: "bedroom" },
+      { x: 3, z: 0, floor: 0, role: "living" },
+      { x: 6, z: 0, floor: 0, role: "living" },
+      { x: 9, z: 0, floor: 0, role: "terrace" },
+      { x: 3, z: 12, floor: 0, role: "terrace" },
+    ],
+  },
+];
+
+/**
+ * Абстрактные фигуры прежнего списка.
+ *
+ * В правой колонке конструктора их больше нет — там теперь реальные проекты.
+ * Здесь они остались потому, что на них держатся экспериментальные версии
+ * конструктора (`src/lib/v3`, `src/lib/v31`): выкинуть значило бы сломать
+ * подбор планов там, ничего не улучшив в боевом.
+ */
+export const LEGACY_TEMPLATES: Template[] = [
   {
     id: "studio",
     name: "Студия",
@@ -299,3 +364,6 @@ export const TEMPLATES: Template[] = [
     ],
   },
 ];
+
+/** Все раскладки, включая устаревшие: для поиска шаблона по идентификатору. */
+export const ALL_TEMPLATES: Template[] = [...TEMPLATES, ...LEGACY_TEMPLATES];

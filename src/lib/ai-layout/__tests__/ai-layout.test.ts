@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
+import { MIN_PASSAGE_M, describeNudges, findTightJoints, relaxJoints } from "../relax.ts";
+import { isConnected } from "../../constructor/geometry.ts";
+
 import { buildFootprint, entrancePoint } from "../footprint.ts";
 import { isPng } from "../png.ts";
 import { renderFootprintPng } from "../render.ts";
@@ -309,4 +312,53 @@ test("хранилище принимает только PNG и только б�
   assert.equal(await saveImage("../../etc/passwd", png), null);
   assert.equal(await readImage("../../etc/passwd"), null);
   assert.equal(await readImage("d".repeat(40)), null);
+});
+
+test("тесный стык разжимается минимальным сдвигом, а не пересборкой", () => {
+  // Дверь 800 плюс перегородки по 210 не встают в метровый стык: конструктор
+  // такую раскладку разрешает, а построить её нельзя.
+  assert.equal(MIN_PASSAGE_M, 1.5);
+
+  const tight = [
+    { id: "a", x: 0, z: 0, floor: 0, role: "living" as const },
+    { id: "b", x: 3, z: 2, floor: 0, role: "bedroom" as const },
+  ];
+  assert.equal(findTightJoints(tight).length, 1);
+
+  const relaxed = relaxJoints(tight);
+  assert.equal(relaxed.unresolved.length, 0);
+  assert.equal(relaxed.nudges.length, 1);
+  // Сдвиг ровно на недостающие полметра — не больше.
+  const nudge = relaxed.nudges[0];
+  assert.equal(Math.abs(nudge.dxM) + Math.abs(nudge.dzM), 0.5);
+  assert.ok(nudge.reason.includes("800"));
+  // Дом остался связным и не потерял модулей.
+  assert.equal(relaxed.modules.length, tight.length);
+  assert.ok(isConnected(relaxed.modules));
+});
+
+test("нормальная геометрия не трогается вовсе", () => {
+  const fine = lShaped();
+  const relaxed = relaxJoints(fine);
+  assert.deepEqual(relaxed.nudges, []);
+  assert.deepEqual(
+    relaxed.modules.map((m) => `${m.x},${m.z}`),
+    fine.map((m) => `${m.x},${m.z}`),
+  );
+  assert.equal(describeNudges([]), "");
+});
+
+test("правка не отрывает модуль от соседей", () => {
+  // Три в линию, последний пристыкован уголком. Сдвиг обязан открыть проход,
+  // не потеряв ни одного стыка: иначе дом развалится на части.
+  const chain = [
+    { id: "a", x: 0, z: 0, floor: 0, role: "living" as const },
+    { id: "b", x: 3, z: 0, floor: 0, role: "living" as const },
+    { id: "c", x: 6, z: 2.5, floor: 0, role: "bedroom" as const },
+  ];
+  const relaxed = relaxJoints(chain);
+  assert.equal(relaxed.unresolved.length, 0);
+  assert.ok(isConnected(relaxed.modules));
+  assert.equal(relaxed.modules.length, 3);
+  assert.match(describeNudges(relaxed.nudges), /дверь между ними не помещалась/);
 });

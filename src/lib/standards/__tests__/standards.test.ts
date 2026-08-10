@@ -11,7 +11,7 @@ import {
   OUTDOOR_AREAS,
   AREA_POLICY,
   AREA_TOLERANCE,
-  GRID_CONFLICT,
+  GRID_RECONCILIATION,
   PLANNING_RULES,
 } from "../ecocub.ts";
 import { PATTERNS, REFERENCE_PROJECTS, patternBriefing } from "../patterns.ts";
@@ -38,6 +38,8 @@ import * as wm from "../weekend-mini.ts";
 import * as f1 from "../family-one.ts";
 import * as f2 from "../family-two.ts";
 import * as sf from "../super-family.ts";
+import * as nas from "../nasledie.ts";
+import * as din from "../dinastiya.ts";
 import {
   CELL_M,
   MODULE_AREA,
@@ -295,16 +297,70 @@ test("сетка Family повторяется на двух проектах �
   assert.equal(f1.DIMENSIONS.overallDepthMm, f2.DIMENSIONS.overallDepthMm);
 });
 
-test("расхождение сеток Weekend и Family зафиксировано, а не сглажено", () => {
-  // Это главный открытый вопрос стандарта. Пока он открыт, площади Family
-  // нельзя считать по модулю Weekend, и об этом должно быть видно машине.
-  assert.equal(GRID_CONFLICT.familyGridPitchMm, f1.DIMENSIONS.gridPitchXMm);
-  assert.equal(GRID_CONFLICT.weekendModulePitchMm, MODULE.externalWidthMm);
+test("сетка Family и модуль альбома — это один модуль, а не два", () => {
+  // Расхождение казалось непримиримым, пока не пришли планы Nasledie и
+  // Dinastiya: 3393 сравнивали не с тем габаритом. Это 3420 по отделке.
+  assert.equal(GRID_RECONCILIATION.finishedPitchMm, f1.DIMENSIONS.gridPitchXMm);
+  assert.equal(GRID_RECONCILIATION.moduleDepthMm, MODULE.externalDepthMm);
   assert.equal(
-    GRID_CONFLICT.differenceMm,
-    GRID_CONFLICT.familyGridPitchMm - GRID_CONFLICT.weekendModulePitchMm,
+    GRID_RECONCILIATION.differenceMm,
+    GRID_RECONCILIATION.moduleDepthMm - GRID_RECONCILIATION.finishedPitchMm,
   );
-  assert.ok(GRID_CONFLICT.differenceMm > 100, "расхождение больше строительного допуска");
+  assert.ok(GRID_RECONCILIATION.differenceMm < 40, "разница ушла в толщину отделки");
+  assert.ok(GRID_RECONCILIATION.resolvedBy.length >= 2, "развязано двумя независимыми планами");
+});
+
+test("габариты Nasledie и Dinastiya раскладываются на модуль альбома без остатка", () => {
+  // Самое сильное подтверждение стандарта после самого альбома: каталожные
+  // планы CUBAX делятся на 3420 и 3200 нацело.
+  for (const p of [nas, din]) {
+    assert.equal(
+      p.DIMENSIONS.baysXMm.reduce((a: number, b: number) => a + b, 0),
+      p.DIMENSIONS.overallWidthMm,
+    );
+    for (const bay of p.DIMENSIONS.baysXMm) assert.equal(bay, MODULE.externalDepthMm);
+    for (const bay of p.DIMENSIONS.baysZMm) assert.equal(bay, MODULE.externalWidthMm);
+    assert.equal(p.DIMENSIONS.overallWidthMm % MODULE.externalDepthMm, 0);
+    assert.equal(p.DIMENSIONS.overallDepthMm % MODULE.externalWidthMm, 0);
+  }
+  // Каждое число модуля с плана Nasledie выводится из стандарта — это и есть
+  // доказательство, что альбом и каталог описывают один и тот же модуль.
+  const derived = new Set([
+    MODULE.wallThicknessMm,
+    MODULE.wallThicknessMm * 2,
+    MODULE.clearWidthMm,
+    MODULE.clearDepthMm,
+    MODULE.externalWidthMm,
+    MODULE.clearDepthMm + MODULE.wallThicknessMm,
+    MODULE.externalDepthMm,
+    MODULE.externalDepthMm * 2,
+  ]);
+  for (const n of nas.DIMENSIONS.moduleNumbersOnPlan) {
+    assert.ok(derived.has(n), `${n} с плана Nasledie не выводится из стандарта`);
+  }
+  for (const n of din.DIMENSIONS.moduleNumbersOnPlan) assert.ok(derived.has(n));
+});
+
+test("сумма помещений сходится с подписью на плане у Nasledie и Dinastiya", () => {
+  for (const p of [nas, din]) {
+    const sum = p.ROOMS.reduce((s, r) => s + r.areaM2, 0);
+    assert.ok(Math.abs(sum - p.CATALOG.planSumM2) < 0.05, `${p.SOURCE.doc}: ${sum}`);
+  }
+});
+
+test("сервис растёт ступенями: один санузел, два, три", () => {
+  // Правило подбора: по числу санузлов видно масштаб дома.
+  assert.equal(f2.CATALOG.bathrooms, 1);
+  assert.equal(sf.CATALOG.bathrooms, 2);
+  assert.equal(nas.CATALOG.bathrooms, 2);
+  assert.equal(din.CATALOG.bathrooms, 3);
+  // Мастер-спальня как блок появляется вместе со вторым санузлом.
+  assert.equal(nas.MASTER_SUITE.rooms.length, 3);
+  assert.ok(din.MASTER_SUITE.areaM2 > nas.MASTER_SUITE.areaM2);
+  // И только на 133 м² спальни наконец перерастают 11 м².
+  assert.ok(
+    Math.max(...din.ROOMS.filter((r) => r.name.includes("спальная")).map((r) => r.areaM2)) > 13,
+  );
 });
 
 test("габариты помещений на планах Family сходятся с подписанными площадями", () => {
@@ -349,7 +405,7 @@ test("сумма площадей сходится с карточкой кат�
 });
 
 test("каждый паттерн двуязычен, подтверждён и попадает в промпт", () => {
-  assert.ok(PATTERNS.length >= 30);
+  assert.ok(PATTERNS.length >= 35);
   const ids = new Set<string>();
   for (const p of PATTERNS) {
     assert.ok(p.rule.length > 20, `${p.id}: пустая формулировка`);
@@ -365,8 +421,8 @@ test("каждый паттерн двуязычен, подтверждён и 
   assert.match(briefing, /must stay strictly inside the given footprint/);
 });
 
-test("опорных проектов пять, и у каждого назван источник", () => {
-  assert.equal(REFERENCE_PROJECTS.length, 5);
+test("опорных проектов семь, и у каждого назван источник", () => {
+  assert.equal(REFERENCE_PROJECTS.length, 7);
   assert.equal(REFERENCE_LAYOUTS.length, REFERENCE_PROJECTS.length);
   for (const p of REFERENCE_PROJECTS) {
     assert.ok(p.evidence.length > 10);
@@ -376,7 +432,7 @@ test("опорных проектов пять, и у каждого назва�
 
 test("готовые раскладки конструктора ссылаются на реальные проекты и не разваливаются", () => {
   const referenced = TEMPLATES.filter((t) => t.reference);
-  assert.equal(referenced.length, 5, "пять опорных проектов — пять стартовых раскладок");
+  assert.equal(referenced.length, 7, "семь опорных проектов — семь стартовых раскладок");
   const known = new Set(REFERENCE_LAYOUTS.map((l) => l.id));
   for (const t of referenced) {
     assert.ok(known.has(t.reference!), `${t.id}: ссылка на несуществующий проект`);
@@ -427,11 +483,11 @@ test("образец в промпте не отменяет контур", () =
   assert.ok(text.includes(m.layout.solutionEn));
 });
 
-test("сетка 3393 подтверждена третьим проектом подряд", () => {
-  // Одно наблюдение — случайность, три совпадения — система. Именно поэтому
-  // расхождение с модулем Weekend нельзя списать на опечатку в чертеже.
+test("сетка 3393 подтверждена тремя проектами подряд", () => {
+  // Одно наблюдение — случайность, три совпадения — система. Систему потом
+  // удалось объяснить: тот же модуль, размеченный по чистовой отделке.
   for (const p of [f1, f2, sf])
-    assert.equal(p.DIMENSIONS.gridPitchXMm, GRID_CONFLICT.familyGridPitchMm);
+    assert.equal(p.DIMENSIONS.gridPitchXMm, GRID_RECONCILIATION.finishedPitchMm);
   assert.equal(sf.DIMENSIONS.gridPitchXMm * 3, sf.DIMENSIONS.overallWidthMm);
   assert.equal(sf.DIMENSIONS.partitionMm, f1.DIMENSIONS.partitionMm);
   // Тонкая перегородка санузлов — новая толщина, которой не было у Family.

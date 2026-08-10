@@ -4,6 +4,8 @@ import * as wm from "./weekend-mini.ts";
 import * as f1 from "./family-one.ts";
 import * as f2 from "./family-two.ts";
 import * as sf from "./super-family.ts";
+import * as nas from "./nasledie.ts";
+import * as din from "./dinastiya.ts";
 
 /**
  * Паттерны проектирования EcoCub, выведенные из построенных проектов.
@@ -180,6 +182,38 @@ export const PATTERNS: DesignPattern[] = [
     rule: "П-образный дом даёт два выреза: в одном терраса, во втором зелёный двор между крыльями.",
     en: "A U-shaped house creates two notches: one holds the terrace, the other a small green courtyard between the wings.",
     evidence: "Super Family: терраса 20,8 в одном вырезе, озеленённый двор во втором.",
+  },
+  {
+    id: "master-suite",
+    group: "layout",
+    rule: "На домах от 110 м² спальня родителей превращается в блок: спальня, свой санузел и гардероб рядом, вход один.",
+    en: "From about 110 m2 the main bedroom becomes a suite: bedroom, its own bathroom and a walk-in closet grouped together behind a single entrance.",
+    evidence:
+      "Nasledie: спальня 11,3 + гардероб 3,6 + С/У 3,8 = 18,7 м². Dinastiya: спальня 14,2 + ванная 9 + гардероб 3,3 = 26,5 м².",
+  },
+  {
+    id: "bathrooms-scale-with-size",
+    group: "layout",
+    rule: "Число санузлов — мера масштаба: один до 75 м², два на 90–115, три на 130 и выше. Третий — гостевой у прихожей.",
+    en: "The number of bathrooms scales with the house: one below 75 m2, two between 90 and 115, three above 130. The third one is a small guest toilet next to the hallway.",
+    evidence:
+      "Family Two 74 м² — один. Super Family 92 и Nasledie 113 — два. Dinastiya 133 — три: главная ванная 9, общая 3,7 и гостевой С/У 2.",
+  },
+  {
+    id: "children-mirrored",
+    group: "layout",
+    rule: "Детские ставятся зеркально по краям одного торца, между ними — общая ванная и кладовые.",
+    en: "Children rooms are placed symmetrically at the two corners of one end of the house, with the shared bathroom and storage between them.",
+    evidence:
+      "Dinastiya: детские по 13,1 по краям торца, между ними общая ванная 3,7 и С/У 2. Super Family: детские в разных крыльях от спальни родителей.",
+  },
+  {
+    id: "service-block-grows",
+    group: "layout",
+    rule: "Технические помещения растут вместе с домом: котельная 2 м² на среднем доме превращается в блок прачечной с кладовой на 9,6 и котельной на 5.",
+    en: "Technical rooms grow with the house: a 2 m2 boiler closet in a mid-size house becomes a service block with a 9.6 m2 laundry-storage and a 5 m2 boiler room.",
+    evidence:
+      "Family Two 74 м²: котельная 2. Nasledie 113 м²: прачечная 3,6 и кладовая. Dinastiya 133 м²: прачечная-кладовая 9,6 и котельная 5.",
   },
 
   // ── Проёмы и остекление ───────────────────────────────────────────────
@@ -389,5 +423,21 @@ export const REFERENCE_PROJECTS = [
     modules: 11,
     shape: "П-образная, два выреза",
     evidence: "размерный план",
+  },
+  {
+    id: "nasledie",
+    name: "Nasledie",
+    areaM2: nas.CATALOG.planSumM2,
+    modules: 12,
+    shape: "прямоугольная, 3 × 4 модуля",
+    evidence: "размерный план, снял расхождение сеток",
+  },
+  {
+    id: "dinastiya",
+    name: "Dinastiya",
+    areaM2: din.CATALOG.planSumM2,
+    modules: 16,
+    shape: "прямоугольная, 4 × 4 модуля",
+    evidence: "размерный план, вторичное подтверждение модуля",
   },
 ];

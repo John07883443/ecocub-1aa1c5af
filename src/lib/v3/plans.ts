@@ -18,7 +18,7 @@
  * в constraints.
  */
 
-import { MODULE_AREA, ROLES, TEMPLATES } from "../constructor/constants.ts";
+import { ALL_TEMPLATES, MODULE_AREA, ROLES } from "../constructor/constants.ts";
 import { canPlace, minAnchor, supportArea } from "../constructor/geometry.ts";
 import { MIN_SUPPORT_AREA } from "../constructor/constants.ts";
 import type { ModuleItem, Role } from "../constructor/types.ts";
@@ -361,7 +361,7 @@ const TEMPLATE_META: Record<
 };
 
 function templatePlan(templateId: string): EcoCubPlan | null {
-  const tpl = TEMPLATES.find((t) => t.id === templateId);
+  const tpl = ALL_TEMPLATES.find((t) => t.id === templateId);
   const meta = TEMPLATE_META[templateId];
   if (!tpl || !meta) return null;
   const cells = tpl.seeds.map((s) => cell(s.floor, s.x, s.z, s.role));
@@ -396,7 +396,7 @@ function templatePlan(templateId: string): EcoCubPlan | null {
 
 export const PLAN_LIBRARY: EcoCubPlan[] = [
   ...CATALOG.map(catalogPlan),
-  ...TEMPLATES.map((t) => templatePlan(t.id)).filter((p): p is EcoCubPlan => p !== null),
+  ...ALL_TEMPLATES.map((t) => templatePlan(t.id)).filter((p): p is EcoCubPlan => p !== null),
 ];
 
 export function findPlan(id: string): EcoCubPlan | undefined {

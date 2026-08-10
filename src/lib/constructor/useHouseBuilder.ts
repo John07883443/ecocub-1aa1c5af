@@ -18,7 +18,7 @@ import {
   MAX_FLOORS,
   MAX_SOTKI,
   MIN_SOTKI,
-  TEMPLATES,
+  ALL_TEMPLATES,
 } from "./constants";
 
 let idCounter = 0;
@@ -33,9 +33,18 @@ const newId = () => `m${++idCounter}`;
  */
 const UNIVERSAL_ROLE: Role = "living";
 
+/**
+ * С чего открывается конструктор.
+ *
+ * Раньше это была абстрактная фигура «Семья L». Теперь — Family One:
+ * настоящий проект на две спальни, который человек может узнать в каталоге,
+ * а не безымянная буква Г.
+ */
+const DEFAULT_TEMPLATE_ID = "family-one";
+
 /** Центрирует стартовую планировку на текущей сетке (координаты в метрах). */
 function seedsToModules(templateId: string, n: number): ModuleItem[] {
-  const tpl = TEMPLATES.find((t) => t.id === templateId);
+  const tpl = ALL_TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) return [];
   const minX = Math.min(...tpl.seeds.map((s) => s.x));
   const maxX = Math.max(...tpl.seeds.map((s) => s.x));
@@ -61,7 +70,7 @@ export function useHouseBuilder(basePricePerM2: number) {
   const gridN = useMemo(() => gridSizeForSotki(sotki), [sotki]);
 
   const [modules, setModules] = useState<ModuleItem[]>(() =>
-    seedsToModules("l-family", gridSizeForSotki(DEFAULT_SOTKI)),
+    seedsToModules(DEFAULT_TEMPLATE_ID, gridSizeForSotki(DEFAULT_SOTKI)),
   );
   const [floor, setFloor] = useState(0);
   // Роль остаётся в API ради совместимости с экспериментальными версиями,
