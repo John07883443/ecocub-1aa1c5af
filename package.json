@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test:core": "node --experimental-strip-types --test \"src/lib/constructor/__tests__/*.test.ts\"",
+    "test:ai-layout": "node --experimental-strip-types --test \"src/lib/ai-layout/__tests__/*.test.ts\"",
     "test:v3": "node --experimental-strip-types --test \"src/lib/v3/__tests__/*.test.ts\"",
     "test:v31": "node --experimental-strip-types --test \"src/lib/v31/__tests__/*.test.ts\"",
     "test:header": "node scripts/header-stability.mjs",

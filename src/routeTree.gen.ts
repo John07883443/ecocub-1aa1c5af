@@ -25,8 +25,10 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ApiLeadRouteImport } from './routes/api.lead'
+import { Route as ApiAiLayoutRouteImport } from './routes/api.ai-layout'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
+import { Route as ApiAiLayoutFootprintRouteImport } from './routes/api.ai-layout.footprint'
 
 const TechnologyRoute = TechnologyRouteImport.update({
   id: '/technology',
@@ -108,6 +110,11 @@ const ApiLeadRoute = ApiLeadRouteImport.update({
   path: '/api/lead',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiLayoutRoute = ApiAiLayoutRouteImport.update({
+  id: '/api/ai-layout',
+  path: '/api/ai-layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogTagTagRoute = BlogTagTagRouteImport.update({
   id: '/blog/tag/$tag',
   path: '/blog/tag/$tag',
@@ -117,6 +124,11 @@ const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
   id: '/blog/category/$category',
   path: '/blog/category/$category',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiLayoutFootprintRoute = ApiAiLayoutFootprintRouteImport.update({
+  id: '/footprint',
+  path: '/footprint',
+  getParentRoute: () => ApiAiLayoutRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -132,10 +144,12 @@ export interface FileRoutesByFullPath {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
+  '/api/ai-layout': typeof ApiAiLayoutRouteWithChildren
   '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
+  '/api/ai-layout/footprint': typeof ApiAiLayoutFootprintRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
 }
@@ -152,10 +166,12 @@ export interface FileRoutesByTo {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
+  '/api/ai-layout': typeof ApiAiLayoutRouteWithChildren
   '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
+  '/api/ai-layout/footprint': typeof ApiAiLayoutFootprintRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
 }
@@ -173,10 +189,12 @@ export interface FileRoutesById {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
+  '/api/ai-layout': typeof ApiAiLayoutRouteWithChildren
   '/api/lead': typeof ApiLeadRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
+  '/api/ai-layout/footprint': typeof ApiAiLayoutFootprintRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
 }
@@ -195,10 +213,12 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
+    | '/api/ai-layout'
     | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
+    | '/api/ai-layout/footprint'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
   fileRoutesByTo: FileRoutesByTo
@@ -215,10 +235,12 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
+    | '/api/ai-layout'
     | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog'
+    | '/api/ai-layout/footprint'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
   id:
@@ -235,10 +257,12 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
+    | '/api/ai-layout'
     | '/api/lead'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
+    | '/api/ai-layout/footprint'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
   fileRoutesById: FileRoutesById
@@ -256,6 +280,7 @@ export interface RootRouteChildren {
   RssDotxmlRoute: typeof RssDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TechnologyRoute: typeof TechnologyRoute
+  ApiAiLayoutRoute: typeof ApiAiLayoutRouteWithChildren
   ApiLeadRoute: typeof ApiLeadRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
@@ -378,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai-layout': {
+      id: '/api/ai-layout'
+      path: '/api/ai-layout'
+      fullPath: '/api/ai-layout'
+      preLoaderRoute: typeof ApiAiLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/tag/$tag': {
       id: '/blog/tag/$tag'
       path: '/blog/tag/$tag'
@@ -392,8 +424,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogCategoryCategoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai-layout/footprint': {
+      id: '/api/ai-layout/footprint'
+      path: '/footprint'
+      fullPath: '/api/ai-layout/footprint'
+      preLoaderRoute: typeof ApiAiLayoutFootprintRouteImport
+      parentRoute: typeof ApiAiLayoutRoute
+    }
   }
 }
+
+interface ApiAiLayoutRouteChildren {
+  ApiAiLayoutFootprintRoute: typeof ApiAiLayoutFootprintRoute
+}
+
+const ApiAiLayoutRouteChildren: ApiAiLayoutRouteChildren = {
+  ApiAiLayoutFootprintRoute: ApiAiLayoutFootprintRoute,
+}
+
+const ApiAiLayoutRouteWithChildren = ApiAiLayoutRoute._addFileChildren(
+  ApiAiLayoutRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -408,6 +459,7 @@ const rootRouteChildren: RootRouteChildren = {
   RssDotxmlRoute: RssDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TechnologyRoute: TechnologyRoute,
+  ApiAiLayoutRoute: ApiAiLayoutRouteWithChildren,
   ApiLeadRoute: ApiLeadRoute,
   BlogSlugRoute: BlogSlugRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
