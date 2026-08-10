@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { PlanEditor } from "./PlanEditor";
 import { StatsPanel } from "./StatsPanel";
 import { AiLayoutBlock } from "./AiLayoutBlock";
+import { PlanBlock } from "./PlanBlock";
 import { useHouseBuilder } from "@/lib/constructor/useHouseBuilder";
 import { canRemove } from "@/lib/constructor/geometry";
 import {
@@ -321,8 +322,13 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
         )}
       </div>
 
-      {/* AI-планировка. Блок сам себя скрывает, пока функция выключена
-          на сервере, поэтому здесь никаких условий не нужно. */}
+      {/* Планировка по правилам: считается на месте, из геометрии дома. */}
+      <PlanBlock modules={api.modules} />
+
+      {/* Генерация нейросетью. Блок сам себя скрывает, пока функция выключена
+          на сервере, — а выключена она с тех пор, как планировку стал считать
+          планировщик. Оставлен намеренно: если у чертежа найдётся слепое
+          пятно, возвращаться будет к чему. */}
       <AiLayoutBlock modules={api.modules} onRequestQuote={onRequestQuote} />
     </div>
   );

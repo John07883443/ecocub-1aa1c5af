@@ -2,6 +2,7 @@
 import type { ModuleItem, Role } from "../constructor/types.ts";
 import { MODULE } from "../standards/ecocub.ts";
 import { emptyHouse, newModuleId, newRoomId } from "./actions.ts";
+import { assignRoles } from "./program.ts";
 import { computeAdjacency } from "./geometry.ts";
 import { relayoutAll } from "./furniture.ts";
 import type { HouseState, ModuleFootprint, RoomType, RoomZone } from "./types.ts";
@@ -51,7 +52,10 @@ function mergeable(type: RoomType): boolean {
  * по общим граням — так кухня-гостиная получает единый контур и одну
  * расстановку мебели, а не две одинаковые в каждой ячейке.
  */
-export function houseFromModules(source: ModuleItem[]): HouseState {
+export function houseFromModules(input: ModuleItem[]): HouseState {
+  // Кубики приходят одинаковыми: боевой конструктор роли не различает.
+  // Назначение помещений — отдельный шаг, выведенный из семи проектов.
+  const source = assignRoles(input);
   const modules: ModuleFootprint[] = source.map((m) => ({
     id: newModuleId(),
     floor: m.floor,
