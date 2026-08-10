@@ -28,34 +28,33 @@ test("без соли посетители неразличимы, поэтом�
   assert.equal(availability(config).reason, "no_visitor_secret");
 });
 
-test("боевой провайдер не стартует без ключей", () => {
+test("боевой провайдер не стартует без ключей и без пути", () => {
+  const keys = {
+    ...base,
+    AI_LAYOUT_PROVIDER: "higgsfield",
+    HIGGSFIELD_API_KEY: "k",
+    HIGGSFIELD_API_SECRET: "s",
+  };
   assert.equal(
     availability(readConfig({ ...base, AI_LAYOUT_PROVIDER: "higgsfield" })).reason,
     "no_credentials",
   );
+  assert.equal(availability(readConfig(keys)).reason, "no_submit_path");
   assert.equal(
-    availability(
-      readConfig({
-        ...base,
-        AI_LAYOUT_PROVIDER: "higgsfield",
-        HIGGSFIELD_API_KEY: "k",
-        HIGGSFIELD_API_SECRET: "s",
-      }),
-    ).ok,
+    availability(readConfig({ ...keys, AI_LAYOUT_SUBMIT_PATH: "vendor/model" })).ok,
     true,
   );
 });
 
-test("путь запроса — это идентификатор модели, но его можно переопределить", () => {
-  assert.equal(submitPath(readConfig(base)), "gpt_image_2");
-  assert.equal(
-    submitPath(readConfig({ ...base, AI_LAYOUT_JOB_TYPE: "other_model" })),
-    "other_model",
-  );
+test("путь запроса не подставляется сам: угадать его нельзя", () => {
+  // Идентификатор модели путём не является — живой запрос по нему вернул
+  // model_not_found, потому что путь у платформы составной.
+  assert.equal(submitPath(readConfig(base)), "");
+  assert.equal(submitPath(readConfig({ ...base, AI_LAYOUT_JOB_TYPE: "gpt_image_2" })), "");
   // Ведущие и хвостовые слеши не должны склеиваться в двойные.
   assert.equal(
-    submitPath(readConfig({ ...base, AI_LAYOUT_SUBMIT_PATH: "/v2/images/" })),
-    "v2/images",
+    submitPath(readConfig({ ...base, AI_LAYOUT_SUBMIT_PATH: "/openai/gpt-image-2/" })),
+    "openai/gpt-image-2",
   );
 });
 
