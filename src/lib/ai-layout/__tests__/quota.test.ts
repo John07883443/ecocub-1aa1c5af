@@ -28,33 +28,31 @@ test("без соли посетители неразличимы, поэтом�
   assert.equal(availability(config).reason, "no_visitor_secret");
 });
 
-test("боевой провайдер не стартует, пока не заданы путь модели и поле исходника", () => {
+test("боевой провайдер не стартует, пока не задан адрес создания задания", () => {
   const withKeys = {
     ...base,
     AI_LAYOUT_PROVIDER: "higgsfield",
     HIGGSFIELD_API_KEY: "k",
     HIGGSFIELD_API_SECRET: "s",
   };
-  assert.equal(availability(readConfig(withKeys)).reason, "no_model_path");
+  // Публичная документация адрес не называет, поэтому догадка запрещена.
+  assert.equal(availability(readConfig(withKeys)).reason, "no_submit_path");
   assert.equal(
-    availability(readConfig({ ...withKeys, AI_LAYOUT_MODEL_PATH: "vendor/model" })).reason,
-    "no_reference_field",
-  );
-  assert.equal(
-    availability(
-      readConfig({
-        ...withKeys,
-        AI_LAYOUT_MODEL_PATH: "vendor/model",
-        AI_LAYOUT_REFERENCE_FIELD: "image_url",
-      }),
-    ).ok,
+    availability(readConfig({ ...withKeys, AI_LAYOUT_SUBMIT_PATH: "requests" })).ok,
     true,
   );
-  // Ключи без пути модели — тоже не повод идти в сеть.
+  // Адрес без ключей — тоже не повод идти в сеть.
   assert.equal(
     availability(readConfig({ ...base, AI_LAYOUT_PROVIDER: "higgsfield" })).reason,
     "no_credentials",
   );
+});
+
+test("тариф модели по умолчанию — тот, что выбран по замерам этапа 0", () => {
+  const config = readConfig(base);
+  assert.equal(config.jobType, "gpt_image_2");
+  assert.equal(config.resolution, "1k");
+  assert.equal(config.quality, "low");
 });
 
 test("наружу не уходит ни одного секрета", () => {
@@ -63,13 +61,12 @@ test("наружу не уходит ни одного секрета", () => {
     AI_LAYOUT_PROVIDER: "higgsfield",
     HIGGSFIELD_API_KEY: "key-value",
     HIGGSFIELD_API_SECRET: "secret-value",
-    AI_LAYOUT_MODEL_PATH: "vendor/model",
-    AI_LAYOUT_REFERENCE_FIELD: "image_url",
+    AI_LAYOUT_SUBMIT_PATH: "secret/path",
   });
   const serialized = JSON.stringify(publicConfig(config));
   assert.ok(!serialized.includes("key-value"));
   assert.ok(!serialized.includes("secret-value"));
-  assert.ok(!serialized.includes("vendor/model"));
+  assert.ok(!serialized.includes("secret/path"));
   assert.deepEqual(Object.keys(JSON.parse(serialized)).sort(), [
     "available",
     "freePerVisitor",

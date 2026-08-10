@@ -79,16 +79,23 @@ export class ManualLayoutProvider implements LayoutImageProvider {
 /* ------------------------------------------------------------------ */
 
 /**
- * Боевой провайдер поверх задокументированного контракта Higgsfield:
- * база https://platform.higgsfield.ai, заголовок `Authorization: Key id:secret`,
- * запрос уходит POST'ом на путь модели, состояние читается с
- * GET /requests/{id}/status, готовый результат лежит в массиве images.
+ * Боевой провайдер Higgsfield.
  *
- * Чего в публичной документации нет — так это модели, принимающей исходное
- * изображение: описаны только text-to-image. Поэтому путь модели и имя поля
- * для ссылки на исходник берутся из окружения, а не зашиты здесь. Пока их не
- * задали, availability() не пускает провайдера в работу — лучше выключенная
- * функция, чем запрос наугад по чужому платному пути.
+ * Подтверждено официальной документацией: база platform.higgsfield.ai,
+ * заголовок `Authorization: Key id:secret`, состояние читается с
+ * GET /requests/{id}/status со значениями queued / in_progress / nsfw /
+ * failed / completed, результат лежит в массиве images.
+ *
+ * НЕ подтверждено документацией: форма запроса на генерацию с исходным
+ * изображением — публично описан только text-to-image. Тело ниже собрано по
+ * форме, которую видно в MCP-клиенте платформы (job_type, medias с парой
+ * role/value, params с тарифом) и которую отдельно подтвердил ассистент
+ * Higgsfield. Два независимых наблюдения — довод, но не замена живой проверке.
+ *
+ * Адрес, по которому задание создаётся, публично не назван, поэтому остаётся
+ * обязательной настройкой: пока AI_LAYOUT_SUBMIT_PATH не задан, провайдер не
+ * запускается вовсе. Промах по адресу — это либо ошибка, либо чужая модель за
+ * деньги владельца, и выключенная функция лучше догадки.
  */
 export class HiggsfieldProvider implements LayoutImageProvider {
   readonly kind = "higgsfield";
@@ -110,17 +117,23 @@ export class HiggsfieldProvider implements LayoutImageProvider {
   }
 
   async start(request: LayoutRequest): Promise<LayoutResult> {
-    const body: Record<string, unknown> = {
+    const body = {
+      job_type: this.config.jobType,
       prompt: request.prompt,
+      // Квадрат: исходник рисуется квадратным, и менять пропорции нельзя —
+      // иначе контур поедет вместе с кадром.
       aspect_ratio: "1:1",
-      // Ключ идемпотентности уходит и на сторону провайдера: если он его
-      // поддерживает, повтор не станет второй оплаченной генерацией.
+      // Бэкенд забирает картинку по прямой ссылке, поэтому предварительная
+      // загрузка не нужна: отдаём адрес своего же маршрута с контуром.
+      medias: [{ role: "image", value: request.footprintUrl }],
+      params: { resolution: this.config.resolution, quality: this.config.quality },
+      // Если платформа знает про идемпотентность, повтор не станет второй
+      // оплаченной генерацией. Если не знает — лишнее поле её не сломает.
       idempotency_key: request.key,
-      [this.config.referenceField]: request.footprintUrl,
     };
 
     try {
-      const res = await fetch(`${this.config.apiBase}/${this.config.modelPath}`, {
+      const res = await fetch(`${this.config.apiBase}/${this.config.submitPath}`, {
         method: "POST",
         headers: this.headers(),
         body: JSON.stringify(body),

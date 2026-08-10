@@ -111,7 +111,7 @@ export const Route = createFileRoute("/api/ai-layout")({
         const key = jobKey(
           canonicalKeySource(
             { modules: normalized.value.modules, program },
-            config.modelPath || config.provider,
+            config.jobType,
             PROMPT_VERSION,
           ),
           visitor,

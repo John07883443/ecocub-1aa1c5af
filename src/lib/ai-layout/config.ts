@@ -19,10 +19,13 @@ export interface AiLayoutConfig {
   freePerVisitor: number;
   /** Потолок на все генерации за сутки — защита кошелька от всплеска. */
   dailyLimit: number;
-  /** Путь модели у провайдера: в документации это часть URL, а не поле тела. */
-  modelPath: string;
-  /** Имя поля, в котором провайдер ждёт ссылку на исходник. */
-  referenceField: string;
+  /** Путь, по которому создаётся задание. В публичной документации его нет. */
+  submitPath: string;
+  /** Идентификатор модели: уходит полем job_type в теле запроса. */
+  jobType: string;
+  /** Тариф генерации. Выбран по замерам этапа 0: 1k + low = 0.5 кредита. */
+  resolution: string;
+  quality: string;
   apiBase: string;
   apiKey: string | null;
   apiSecret: string | null;
@@ -36,6 +39,10 @@ export interface AiLayoutConfig {
 
 const DEFAULTS = {
   apiBase: "https://platform.higgsfield.ai",
+  // Выбор этапа 0: точный контур и полная планировка за 0.5 кредита.
+  jobType: "gpt_image_2",
+  resolution: "1k",
+  quality: "low",
   freePerVisitor: 1,
   dailyLimit: 50,
   timeoutMs: 180_000,
@@ -58,8 +65,10 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AiLayoutConfig
     provider: provider === "higgsfield" || provider === "manual" ? provider : "mock",
     freePerVisitor: num(env.AI_LAYOUT_FREE_PER_VISITOR, DEFAULTS.freePerVisitor),
     dailyLimit: num(env.AI_LAYOUT_DAILY_LIMIT, DEFAULTS.dailyLimit),
-    modelPath: (env.AI_LAYOUT_MODEL_PATH || "").replace(/^\/+|\/+$/g, ""),
-    referenceField: env.AI_LAYOUT_REFERENCE_FIELD || "",
+    submitPath: env.AI_LAYOUT_SUBMIT_PATH || "",
+    jobType: env.AI_LAYOUT_JOB_TYPE || DEFAULTS.jobType,
+    resolution: env.AI_LAYOUT_RESOLUTION || DEFAULTS.resolution,
+    quality: env.AI_LAYOUT_QUALITY || DEFAULTS.quality,
     apiBase: (env.AI_LAYOUT_API_BASE || DEFAULTS.apiBase).replace(/\/+$/, ""),
     apiKey: env.HIGGSFIELD_API_KEY || null,
     apiSecret: env.HIGGSFIELD_API_SECRET || null,
@@ -76,13 +85,12 @@ export function availability(config: AiLayoutConfig): { ok: boolean; reason?: st
   if (!config.visitorSecret) return { ok: false, reason: "no_visitor_secret" };
 
   if (config.provider === "higgsfield") {
-    // Документация Higgsfield описывает только text-to-image и не называет ни
-    // пути модели с приёмом исходника, ни имени поля для него. Угадывать их
-    // нельзя: неверный путь — это либо ошибка, либо чужая модель за деньги
-    // владельца. Поэтому оба значения обязаны прийти из окружения явно.
+    // Публичная документация Higgsfield описывает только text-to-image и не
+    // называет адрес, по которому создаётся задание с исходным изображением.
+    // Угадывать его нельзя: промах — это либо ошибка, либо чужая модель за
+    // деньги владельца. Пока путь не задан явно, провайдер не работает.
     if (!config.apiKey || !config.apiSecret) return { ok: false, reason: "no_credentials" };
-    if (!config.modelPath) return { ok: false, reason: "no_model_path" };
-    if (!config.referenceField) return { ok: false, reason: "no_reference_field" };
+    if (!config.submitPath) return { ok: false, reason: "no_submit_path" };
   }
   return { ok: true };
 }
