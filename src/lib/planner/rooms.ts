@@ -169,7 +169,109 @@ function applySingleDoorRule(
     for (const j of ranked.slice(1)) closed.add(j);
   }
 
-  return joints.map((j) => (closed.has(j) ? { ...j, state: "closed" as JointState } : j));
+  const capped = joints.map((j) => (closed.has(j) ? { ...j, state: "closed" as JointState } : j));
+  return reopenIsolated(capped, house, roomById, moduleById);
+}
+
+/**
+ * Вернуть проход помещениям, которые правило одной двери замуровало.
+ *
+ * Случай не выдуманный: дом из четырёх кубиков, где кухня граничит только со
+ * спальней и санузлом. Обе — приватные, обе выбрали своей единственной дверью
+ * гостиную, и кухня осталась без единого входа. На чертеже это выглядело как
+ * запертая комната, и правильно выглядело: войти в неё было нельзя.
+ *
+ * Экономия на дверях никогда не стоит запертой комнаты, поэтому связность
+ * сильнее правила одной двери. Проход возвращается самый уместный: сначала в
+ * общую зону, потом по длине стыка. Разрешается это двумя проходами — сперва
+ * чиним комнаты без выхода вообще, затем куски дома, отрезанные от входа.
+ */
+function reopenIsolated(
+  joints: ModuleJoint[],
+  house: HouseState,
+  roomById: Map<string, RoomZone>,
+  moduleById: Map<string, ModuleFootprint>,
+): ModuleJoint[] {
+  const roomIdOf = (moduleId: string) => moduleById.get(moduleId)?.roomId ?? "";
+  const passable = (j: ModuleJoint) => j.state !== "closed" && j.state !== "unknown";
+  let result = joints;
+
+  const outerJoints = (roomId: string) => {
+    const ids = new Set(house.rooms.find((r) => r.id === roomId)?.moduleIds ?? []);
+    return result.filter((j) => ids.has(j.aId) !== ids.has(j.bId));
+  };
+
+  const best = (candidates: ModuleJoint[], ids: Set<string>) =>
+    [...candidates].sort((p, q) => {
+      const other = (j: ModuleJoint) =>
+        roomById.get(roomIdOf(ids.has(j.aId) ? j.bId : j.aId))?.type;
+      const byPreference = doorPreference(other(q)) - doorPreference(other(p));
+      if (byPreference !== 0) return byPreference;
+      const span = (j: ModuleJoint) => j.to - j.from;
+      if (span(q) !== span(p)) return span(q) - span(p);
+      return jointKey(p.aId, p.bId).localeCompare(jointKey(q.aId, q.bId));
+    })[0];
+
+  const open = (target: ModuleJoint) =>
+    result.map((j) => (j === target ? { ...j, state: "door" as JointState } : j));
+
+  // 1. Комнаты вообще без выхода.
+  for (const room of house.rooms) {
+    const ids = new Set(room.moduleIds);
+    const outer = outerJoints(room.id);
+    if (!outer.length || outer.some(passable)) continue;
+    const pick = best(outer, ids);
+    if (pick) result = open(pick);
+  }
+
+  // 2. Куски дома, отрезанные от главного. Комната с выходом в такой же
+  //    запертый угол формально проходима, а по факту недостижима.
+  for (let guard = 0; guard < house.rooms.length; guard += 1) {
+    const reachable = reachableRooms(result, house, roomIdOf);
+    if (reachable.size >= house.rooms.length) break;
+    const cut = house.rooms.find((r) => !reachable.has(r.id));
+    if (!cut) break;
+    const ids = new Set(cut.moduleIds);
+    const bridge = outerJoints(cut.id).filter(
+      (j) => !passable(j) && reachable.has(roomIdOf(ids.has(j.aId) ? j.bId : j.aId)),
+    );
+    const pick = best(bridge, ids);
+    if (!pick) break;
+    result = open(pick);
+  }
+
+  return result;
+}
+
+/** Комнаты, достижимые от первой по проходимым стыкам. */
+function reachableRooms(
+  joints: ModuleJoint[],
+  house: HouseState,
+  roomIdOf: (moduleId: string) => string,
+): Set<string> {
+  const start = house.rooms[0];
+  if (!start) return new Set();
+  const links = new Map<string, Set<string>>();
+  for (const room of house.rooms) links.set(room.id, new Set());
+  for (const j of joints) {
+    if (j.state === "closed" || j.state === "unknown") continue;
+    const a = roomIdOf(j.aId);
+    const b = roomIdOf(j.bId);
+    if (!a || !b || a === b) continue;
+    links.get(a)?.add(b);
+    links.get(b)?.add(a);
+  }
+  const seen = new Set([start.id]);
+  const queue = [start.id];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const next of links.get(cur) ?? []) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return seen;
 }
 
 /** Есть ли у комнаты выход: дверь, проём или объединённое пространство. */
@@ -234,6 +336,11 @@ export function computeAreas(house: HouseState): AreaBreakdown {
 export function deriveOpenings(house: HouseState, floor: number): Opening[] {
   const out: Opening[] = [];
   const noWindows: RoomType[] = ["bathroom", "storage", "stairs"];
+  // В какую комнату ведёт входная дверь. Прихожая, если она есть; иначе —
+  // общая зона, как в компактных проектах, где входят прямо в неё
+  // (Weekend Mini). Дом без входной двери — не дом, а чертёж с ошибкой:
+  // ровно так и выглядела первая версия плана.
+  const entryRoomId = pickEntryRoom(house, floor);
 
   for (const room of house.rooms) {
     if (room.floor !== floor) continue;
@@ -246,8 +353,12 @@ export function deriveOpenings(house: HouseState, floor: number): Opening[] {
       .sort((a, b) => b.length - a.length);
     if (!exterior.length) continue;
 
-    if (room.type === "entryway") {
-      const wall = exterior[0];
+    if (room.id === entryRoomId) {
+      // Вход ставится на самую южную наружную стену: подъезд к участку в
+      // конструкторе снизу. Если южной нет — на самую длинную.
+      const wall =
+        [...exterior].sort((a, b) => southness(b) - southness(a) || b.length - a.length)[0] ??
+        exterior[0];
       out.push({
         id: `entry-${room.id}`,
         kind: "entry",
@@ -256,7 +367,7 @@ export function deriveOpenings(house: HouseState, floor: number): Opening[] {
         widthM: 1.1,
         axis: wall.axis,
       });
-      continue;
+      // Комната со входом получает и окна: вход не заменяет освещение.
     }
     if (noWindows.includes(room.type)) continue;
 
@@ -274,6 +385,26 @@ export function deriveOpenings(house: HouseState, floor: number): Opening[] {
     }
   }
   return out;
+}
+
+/**
+ * Куда ведёт входная дверь.
+ *
+ * Порядок предпочтения тот же, что у единственной двери приватных комнат:
+ * прихожая, общая зона, кухня. Спальня и санузел входом не бывают ни при
+ * каких обстоятельствах — если в доме нет ничего лучше, вход не рисуется
+ * вовсе, и это честнее выдуманной двери в спальню с улицы.
+ */
+function pickEntryRoom(house: HouseState, floor: number): string | null {
+  const suitable = house.rooms
+    .filter((r) => r.floor === floor && doorPreference(r.type) > 0)
+    .sort((a, b) => doorPreference(b.type) - doorPreference(a.type) || a.id.localeCompare(b.id));
+  return suitable[0]?.id ?? null;
+}
+
+/** Насколько стена смотрит на юг — там подъезд к участку. */
+function southness(wall: { axis: "x" | "z"; at: number }): number {
+  return wall.axis === "z" ? wall.at : -Infinity;
 }
 
 /** Упрощённые стены комнаты — без зависимостей от планировщика мебели. */

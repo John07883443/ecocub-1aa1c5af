@@ -104,7 +104,7 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
   // 2. Санузлы — наоборот, ближе к входу и в самых зажатых модулях: окно им
   //    не нужно, а стояк лучше держать компактно.
   const baths = Math.min(bathroomCount(n), Math.max(0, n - bedrooms - 1));
-  const forBath = nodes
+  const bathCandidates = nodes
     .filter((node) => !assigned.has(node.index))
     .sort(
       (a, b) =>
@@ -112,16 +112,31 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
         a.depth - b.depth ||
         a.exterior - b.exterior ||
         a.index - b.index,
-    )
-    .slice(0, baths);
-  for (const node of forBath) assigned.set(node.index, "bathroom");
+    );
+  // Санузел не должен разрезать общую зону надвое. На доме из четырёх кубиков
+  // неудачный выбор оставлял две гостиные по диагонали — формально два
+  // помещения, а по смыслу одна разорванная комната. Поэтому из кандидатов
+  // берётся первый, после которого общая зона остаётся односвязной.
+  for (let placed = 0; placed < baths; placed += 1) {
+    const free = bathCandidates.filter((node) => !assigned.has(node.index));
+    const pick = free.find((node) => publicStaysConnected(nodes, assigned, node.index)) ?? free[0];
+    if (!pick) break;
+    assigned.set(pick.index, "bathroom");
+  }
 
-  // 3. Кухня — один модуль общей зоны у наружной стены, подальше от санузлов.
+  // 3. Кухня — модуль общей зоны у наружной стены, но обязательно вплотную к
+  //    другому модулю общей зоны. Кухня, отрезанная от гостиной по диагонали,
+  //    превращается в отдельную комнату, куда ведёт дверь из спальни — именно
+  //    это и получилось на доме из четырёх кубиков.
+  //
+  //    Если такого модуля нет, кухня не выделяется вовсе: дом получает одну
+  //    кухню-гостиную, как в компактных проектах.
   const rest = nodes.filter((node) => !assigned.has(node.index));
-  const kitchen = [...rest].sort(
-    (a, b) => b.exterior - a.exterior || b.depth - a.depth || a.index - b.index,
-  )[0];
-  if (kitchen && rest.length > 1) assigned.set(kitchen.index, "kitchen");
+  const restIds = new Set(rest.map((node) => node.index));
+  const kitchen = [...rest]
+    .filter((node) => rest.some((o) => o.index !== node.index && touches(node, o)))
+    .sort((a, b) => b.exterior - a.exterior || b.depth - a.depth || a.index - b.index)[0];
+  if (kitchen && restIds.size > 1) assigned.set(kitchen.index, "kitchen");
 
   // 4. Остальное — общая зона: смежные модули сольются в одно помещение.
   const roles = open.map((m, i) => ({ ...m, role: assigned.get(i) ?? ("living" as Role) }));
@@ -133,6 +148,41 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
 
   const terraces = [...fixed.entries()].map(([m, role]) => ({ ...m, role }));
   return [...roles, ...terraces, ...upper];
+}
+
+/**
+ * Останется ли общая зона односвязной, если отдать ещё один модуль санузлу.
+ *
+ * Общая зона — это всё, что не назначено приватным помещением. Разрывать её
+ * нельзя: две гостиные по диагонали читаются как ошибка планировки, а не как
+ * замысел.
+ */
+function publicStaysConnected(
+  nodes: Node[],
+  assigned: Map<number, Role>,
+  candidate: number,
+): boolean {
+  const rest = nodes.filter((node) => node.index !== candidate && !assigned.has(node.index));
+  if (rest.length <= 1) return true;
+  const seen = new Set([rest[0].index]);
+  const queue = [rest[0]];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const node of rest) {
+      if (seen.has(node.index) || !touches(cur, node)) continue;
+      seen.add(node.index);
+      queue.push(node);
+    }
+  }
+  return seen.size === rest.length;
+}
+
+/** Соприкасаются ли два модуля гранью. */
+function touches(a: { x: number; z: number }, b: { x: number; z: number }): boolean {
+  return (
+    (Math.abs(a.x - b.x) === MODULE_SIDE_M && Math.abs(a.z - b.z) < MODULE_SIDE_M) ||
+    (Math.abs(a.z - b.z) === MODULE_SIDE_M && Math.abs(a.x - b.x) < MODULE_SIDE_M)
+  );
 }
 
 function describe(modules: ModuleItem[]): Node[] {

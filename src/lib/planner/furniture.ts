@@ -171,23 +171,31 @@ export function roomGeometry(house: HouseState, roomId: string): RoomGeometry | 
           length: part.to - part.from,
         });
 
-        // Перед дверью нужен свободный проход.
+        // Перед дверью нужен свободный проход. Глубина зависит от того, что
+        // за дверь: перед распахнутым проёмом в общую зону нужен полноценный
+        // подход, а перед обычной межкомнатной дверью достаточно нормативного
+        // прохода. Раньше и туда и туда закладывалось 0,9 м, и в спальне
+        // 2,78 × 3,00 с двумя дверями кровать переставала помещаться.
         if (hasDoor) {
+          const clearance =
+            joint && (joint.state === "opening" || joint.state === "open")
+              ? ENTRY_CLEARANCE_M
+              : MIN_CLEARANCE_M;
           const c = (part.from + part.to) / 2;
           const halfW = Math.min(0.5, (part.to - part.from) / 2);
           if (side.axis === "x") {
             blocked.push({
-              x: side.inside === 1 ? side.at : side.at - ENTRY_CLEARANCE_M,
+              x: side.inside === 1 ? side.at : side.at - clearance,
               z: c - halfW,
-              w: ENTRY_CLEARANCE_M,
+              w: clearance,
               d: halfW * 2,
             });
           } else {
             blocked.push({
               x: c - halfW,
-              z: side.inside === 1 ? side.at : side.at - ENTRY_CLEARANCE_M,
+              z: side.inside === 1 ? side.at : side.at - clearance,
               w: halfW * 2,
-              d: ENTRY_CLEARANCE_M,
+              d: clearance,
             });
           }
         }

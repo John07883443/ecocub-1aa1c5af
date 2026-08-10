@@ -107,14 +107,16 @@ test("во всех готовых раскладках мебель встаё�
     const house = houseFromModules(template.seeds.map((s, i) => ({ id: `m${i}`, ...s })));
     for (const room of house.rooms) {
       rooms += 1;
-      if ((house.layouts[room.id]?.items ?? []).length > 0) furnished += 1;
+      const items = house.layouts[room.id]?.items ?? [];
+      if (items.length > 0) furnished += 1;
+      // Отдельно и строго: ни одно закрытое помещение не имеет права остаться
+      // пустым. Пустой может быть только терраса, зажатая модулями со всех
+      // сторон, — лежаку нужна свободная грань.
+      else assert.equal(room.type, "terrace", `${template.id}: ${room.type} без мебели`);
     }
   }
   assert.ok(rooms > 50, "проверяем все семь раскладок целиком");
   assert.ok(furnished / rooms >= 0.9, `меблировано ${furnished} из ${rooms}`);
-  // Все закрытые помещения обязаны быть меблированы: пустой может остаться
-  // только терраса.
-  assert.ok(furnished >= 56, `меблировано ${furnished} из ${rooms}`);
 });
 
 test("одна и та же раскладка всегда даёт одну и ту же планировку", () => {
@@ -186,4 +188,124 @@ test("удаление модуля убирает и его комнату, е�
 
 test("высота потолков — одна константа 3.15 и она не меняется действиями", () => {
   assert.equal(CEILING_HEIGHT_M, 3.15);
+});
+
+test("в любом доме есть входная дверь и нет запертых комнат", () => {
+  // Оба дефекта нашлись на живом примере: дом из четырёх кубиков, где кухня
+  // граничила только со спальней и санузлом. Обе приватные комнаты выбрали
+  // своей единственной дверью гостиную, и кухня осталась замурована. Входной
+  // двери при этом не было вовсе ни в одном доме: вход рисовался только для
+  // прихожей, а прихожую планировщик не назначает.
+  const shapes: Array<[string, Array<[number, number]>]> = [
+    [
+      "два кубика",
+      [
+        [0, 0],
+        [3, 0],
+      ],
+    ],
+    [
+      "квадрат 2×2",
+      [
+        [0, 0],
+        [3, 0],
+        [0, 3],
+        [3, 3],
+      ],
+    ],
+    [
+      "линия из трёх",
+      [
+        [0, 0],
+        [3, 0],
+        [6, 0],
+      ],
+    ],
+    [
+      "Г из пяти",
+      [
+        [0, 0],
+        [3, 0],
+        [6, 0],
+        [0, 3],
+        [0, 6],
+      ],
+    ],
+    [
+      "квадрат 3×3",
+      [
+        [0, 0],
+        [3, 0],
+        [6, 0],
+        [0, 3],
+        [3, 3],
+        [6, 3],
+        [0, 6],
+        [3, 6],
+        [6, 6],
+      ],
+    ],
+    [
+      "П из восьми",
+      [
+        [0, 0],
+        [3, 0],
+        [6, 0],
+        [0, 3],
+        [6, 3],
+        [0, 6],
+        [3, 6],
+        [6, 6],
+      ],
+    ],
+  ];
+
+  for (const [label, cells] of shapes) {
+    const house = houseFromModules(
+      cells.map(([x, z], i) => ({ id: `m${i}`, x, z, floor: 0, role: "living" as const })),
+    );
+    const entries = deriveOpenings(house, 0).filter((o) => o.kind === "entry");
+    assert.equal(entries.length, 1, `${label}: входная дверь должна быть ровно одна`);
+    for (const room of house.rooms) {
+      assert.ok(roomHasRoute(house, room.id), `${label}: ${room.type} заперта`);
+    }
+  }
+});
+
+test("общая зона не разрезается санузлом надвое", () => {
+  // Две гостиные по диагонали читаются как ошибка планировки, а не замысел.
+  const house = houseFromModules(
+    (
+      [
+        [0, 0],
+        [3, 0],
+        [0, 3],
+        [3, 3],
+      ] as Array<[number, number]>
+    ).map(([x, z], i) => ({
+      id: `m${i}`,
+      x,
+      z,
+      floor: 0,
+      role: "living" as const,
+    })),
+  );
+  const publicRooms = house.rooms.filter((r) => r.type === "living" || r.type === "kitchen");
+  const modules = house.modules.filter((m) => publicRooms.some((r) => r.id === m.roomId));
+  // Все модули общей зоны должны быть связаны между собой по граням.
+  const seen = new Set([modules[0].id]);
+  const queue = [modules[0]];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const m of modules) {
+      if (seen.has(m.id)) continue;
+      const touches =
+        (Math.abs(m.x - cur.x) === 3 && Math.abs(m.z - cur.z) < 3) ||
+        (Math.abs(m.z - cur.z) === 3 && Math.abs(m.x - cur.x) < 3);
+      if (!touches) continue;
+      seen.add(m.id);
+      queue.push(m);
+    }
+  }
+  assert.equal(seen.size, modules.length, "общая зона разорвана");
 });
