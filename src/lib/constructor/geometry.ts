@@ -1,5 +1,5 @@
 // Расширение .ts в относительных импортах — намеренно: доменная логика
-// новой версии конструктора (src/lib/v3) гоняется юнит-тестами через
+// конструктора гоняется юнит-тестами через
 // `node --experimental-strip-types --test`, а Node в ESM-режиме требует
 // полные пути. Vite и tsconfig (allowImportingTsExtensions) это разрешают.
 import type { Cell, HouseStats, ModuleItem } from "./types.ts";
