@@ -18,10 +18,15 @@ export interface LayoutRequest {
   prompt: string;
   /** Ключ идемпотентности: тот же ключ не должен списывать деньги дважды. */
   key: string;
+  /**
+   * Куда положить картинку, если провайдер вернул байты, а не ссылку.
+   * Возвращает адрес на сайте либо null, если сохранить не удалось.
+   */
+  store?: (key: string, bytes: Uint8Array) => Promise<string | null>;
 }
 
 export type LayoutResult =
-  | { status: "completed"; imageUrl: string; isMock?: boolean }
+  | { status: "completed"; imageUrl: string; isMock?: boolean; costUsd?: number }
   | { status: "pending"; externalId: string }
   | { status: "queued_manual" }
   | { status: "failed"; reason: string };
@@ -229,8 +234,102 @@ function errorReason(e: unknown): string {
   return name === "TimeoutError" || name === "AbortError" ? "timeout" : "network";
 }
 
+/* ------------------------------------------------------------------ */
+/* OpenRouter                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Провайдер OpenRouter.
+ *
+ * Взят вместо прямой интеграции с Higgsfield по трём причинам, и все три
+ * выяснились на живых запросах. У Higgsfield нужная модель через публичный
+ * REST недоступна, каталога путей нет вовсе, а его собственный ассистент
+ * дважды назвал неверный адрес. У OpenRouter та же модель `openai/gpt-image-2`
+ * есть в каталоге, каталог отдаётся программно, а документация публичная.
+ *
+ * Технически проще: запрос синхронный, картинка приходит в том же ответе, и
+ * механика опроса статуса не нужна вовсе — а это самая хрупкая часть любой
+ * интеграции с генерацией.
+ *
+ * Плата за простоту — картинка приходит байтами в base64, поэтому её надо
+ * сохранить у себя. Это скорее плюс: чужая ссылка однажды протухнет, а
+ * планировка должна открываться и через год.
+ */
+export class OpenRouterProvider implements LayoutImageProvider {
+  readonly kind = "openrouter";
+  readonly label = "OpenRouter";
+
+  private readonly config: AiLayoutConfig;
+
+  constructor(config: AiLayoutConfig) {
+    this.config = config;
+  }
+
+  async start(request: LayoutRequest): Promise<LayoutResult> {
+    const body = {
+      model: this.config.model,
+      prompt: request.prompt,
+      // Квадрат: исходник рисуется квадратным, менять пропорции нельзя —
+      // иначе контур поедет вместе с кадром.
+      aspect_ratio: "1:1",
+      quality: this.config.quality,
+      // Бэкенд скачивает исходник по прямой ссылке, предварительная загрузка
+      // не нужна: отдаём адрес своего же маршрута с контуром.
+      input_references: [{ type: "image_url", image_url: { url: request.footprintUrl } }],
+    };
+
+    try {
+      const res = await fetch(`${this.config.apiBase}/images`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          "Content-Type": "application/json",
+          // OpenRouter просит обозначать приложение — по этим полям владелец
+          // видит в кабинете, откуда пришёл расход.
+          "HTTP-Referer": this.config.publicBase,
+          "X-Title": "EcoCub AI layout",
+        },
+        body: JSON.stringify(body),
+        // Генерация идёт в том же запросе, поэтому ждём столько же, сколько
+        // ждали бы результата опросом.
+        signal: AbortSignal.timeout(this.config.timeoutMs),
+      });
+      if (!res.ok) return { status: "failed", reason: await describeError(res) };
+
+      const json = (await res.json()) as {
+        data?: Array<{ b64_json?: string; url?: string; media_type?: string }>;
+        usage?: { cost?: number };
+      };
+      const first = json.data?.[0];
+      if (!first) return { status: "failed", reason: "empty_result" };
+      const costUsd = typeof json.usage?.cost === "number" ? json.usage.cost : undefined;
+
+      // Ссылка, если провайдер вдруг её вернул: сохранять нечего.
+      if (first.url) return { status: "completed", imageUrl: first.url, costUsd };
+
+      if (!first.b64_json || !request.store) {
+        return { status: "failed", reason: "empty_result" };
+      }
+      const bytes = decodeBase64(first.b64_json);
+      const stored = await request.store(request.key, bytes);
+      if (!stored) return { status: "failed", reason: "store_failed" };
+      return { status: "completed", imageUrl: stored, costUsd };
+    } catch (e) {
+      return { status: "failed", reason: errorReason(e) };
+    }
+  }
+}
+
+function decodeBase64(value: string): Uint8Array {
+  // Провайдер может прислать и data:-URI, и голый base64.
+  const clean = value.includes(",") ? value.slice(value.indexOf(",") + 1) : value;
+  return Uint8Array.from(Buffer.from(clean, "base64"));
+}
+
 export function createProvider(config: AiLayoutConfig): LayoutImageProvider {
   switch (config.provider) {
+    case "openrouter":
+      return new OpenRouterProvider(config);
     case "higgsfield":
       return new HiggsfieldProvider(config);
     case "manual":

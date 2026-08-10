@@ -233,3 +233,31 @@ function expectFail(r: ReturnType<typeof normalizeRequest>): string {
 function round(v: number): number {
   return Math.round(v * 1e6) / 1e6;
 }
+
+/* ------------------------------------------------------------------ */
+/* Хранилище готовых планировок                                        */
+/* ------------------------------------------------------------------ */
+
+test("хранилище принимает только PNG и только безопасный ключ", async () => {
+  const { mkdtempSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  process.env.LEADS_DB_PATH = `${mkdtempSync(`${tmpdir()}/ecocub-`)}/leads.db`;
+  const { saveImage, readImage } = await import("../store.server.ts");
+
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
+  const key = "a".repeat(40);
+
+  const url = await saveImage(key, png);
+  assert.equal(url, `/api/ai-layout/result?key=${key}`);
+  const back = await readImage(key);
+  assert.ok(back && Buffer.from(back).equals(Buffer.from(png)));
+
+  // Не PNG — не сохраняем: раздавать чужой тип со своего домена незачем.
+  assert.equal(await saveImage("b".repeat(40), new Uint8Array([1, 2, 3])), null);
+  // Пустой ответ провайдера.
+  assert.equal(await saveImage("c".repeat(40), new Uint8Array(0)), null);
+  // Ключ участвует в пути к файлу — обход каталогов должен отсекаться.
+  assert.equal(await saveImage("../../etc/passwd", png), null);
+  assert.equal(await readImage("../../etc/passwd"), null);
+  assert.equal(await readImage("d".repeat(40)), null);
+});

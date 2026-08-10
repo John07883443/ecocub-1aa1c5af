@@ -28,6 +28,7 @@ import { Route as ApiLeadRouteImport } from './routes/api.lead'
 import { Route as ApiAiLayoutRouteImport } from './routes/api.ai-layout'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
+import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.result'
 import { Route as ApiAiLayoutFootprintRouteImport } from './routes/api.ai-layout.footprint'
 
 const TechnologyRoute = TechnologyRouteImport.update({
@@ -125,6 +126,11 @@ const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
   path: '/blog/category/$category',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiLayoutResultRoute = ApiAiLayoutResultRouteImport.update({
+  id: '/result',
+  path: '/result',
+  getParentRoute: () => ApiAiLayoutRoute,
+} as any)
 const ApiAiLayoutFootprintRoute = ApiAiLayoutFootprintRouteImport.update({
   id: '/footprint',
   path: '/footprint',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/api/ai-layout/footprint': typeof ApiAiLayoutFootprintRoute
+  '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
 }
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
   '/api/ai-layout/footprint': typeof ApiAiLayoutFootprintRoute
+  '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
 }
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/api/ai-layout/footprint': typeof ApiAiLayoutFootprintRoute
+  '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
 }
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/projects/$slug'
     | '/blog/'
     | '/api/ai-layout/footprint'
+    | '/api/ai-layout/result'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
   fileRoutesByTo: FileRoutesByTo
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/projects/$slug'
     | '/blog'
     | '/api/ai-layout/footprint'
+    | '/api/ai-layout/result'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
   id:
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/projects/$slug'
     | '/blog/'
     | '/api/ai-layout/footprint'
+    | '/api/ai-layout/result'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
   fileRoutesById: FileRoutesById
@@ -424,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogCategoryCategoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai-layout/result': {
+      id: '/api/ai-layout/result'
+      path: '/result'
+      fullPath: '/api/ai-layout/result'
+      preLoaderRoute: typeof ApiAiLayoutResultRouteImport
+      parentRoute: typeof ApiAiLayoutRoute
+    }
     '/api/ai-layout/footprint': {
       id: '/api/ai-layout/footprint'
       path: '/footprint'
@@ -436,10 +455,12 @@ declare module '@tanstack/react-router' {
 
 interface ApiAiLayoutRouteChildren {
   ApiAiLayoutFootprintRoute: typeof ApiAiLayoutFootprintRoute
+  ApiAiLayoutResultRoute: typeof ApiAiLayoutResultRoute
 }
 
 const ApiAiLayoutRouteChildren: ApiAiLayoutRouteChildren = {
   ApiAiLayoutFootprintRoute: ApiAiLayoutFootprintRoute,
+  ApiAiLayoutResultRoute: ApiAiLayoutResultRoute,
 }
 
 const ApiAiLayoutRouteWithChildren = ApiAiLayoutRoute._addFileChildren(

@@ -58,11 +58,40 @@ test("путь запроса не подставляется сам: угада
   );
 });
 
-test("тариф модели по умолчанию — тот, что выбран по замерам этапа 0", () => {
+test("по умолчанию — OpenRouter и модель, выбранная по замерам этапа 0", () => {
   const config = readConfig(base);
-  assert.equal(config.jobType, "gpt_image_2");
-  assert.equal(config.resolution, "1k");
+  assert.equal(config.model, "openai/gpt-image-2");
   assert.equal(config.quality, "low");
+  assert.equal(config.apiBase, "https://openrouter.ai/api/v1");
+});
+
+test("у каждого провайдера свой ключ и своя база", () => {
+  const env = {
+    ...base,
+    OPENROUTER_API_KEY: "or-key",
+    HIGGSFIELD_API_KEY: "hf-key",
+    HIGGSFIELD_API_SECRET: "hf-secret",
+  };
+  const openrouter = readConfig({ ...env, AI_LAYOUT_PROVIDER: "openrouter" });
+  assert.equal(openrouter.apiKey, "or-key");
+  assert.equal(availability(openrouter).ok, true);
+
+  const higgsfield = readConfig({
+    ...env,
+    AI_LAYOUT_PROVIDER: "higgsfield",
+    AI_LAYOUT_SUBMIT_PATH: "vendor/model",
+  });
+  assert.equal(higgsfield.apiKey, "hf-key");
+  assert.equal(higgsfield.apiBase, "https://platform.higgsfield.ai");
+  assert.equal(availability(higgsfield).ok, true);
+
+  // Ключ Higgsfield не открывает OpenRouter и наоборот.
+  assert.equal(
+    availability(
+      readConfig({ ...base, AI_LAYOUT_PROVIDER: "openrouter", HIGGSFIELD_API_KEY: "hf" }),
+    ).reason,
+    "no_credentials",
+  );
 });
 
 test("наружу не уходит ни одного секрета", () => {

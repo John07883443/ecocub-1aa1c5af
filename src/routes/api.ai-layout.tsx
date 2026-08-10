@@ -15,6 +15,7 @@ import {
   type JobRecord,
 } from "@/lib/ai-layout/quota.server";
 import { canonicalKeySource, normalizeRequest } from "@/lib/ai-layout/request";
+import { saveImage } from "@/lib/ai-layout/store.server";
 
 /**
  * /api/ai-layout — генерация эскизной планировки по собранному дому.
@@ -111,7 +112,7 @@ export const Route = createFileRoute("/api/ai-layout")({
         const key = jobKey(
           canonicalKeySource(
             { modules: normalized.value.modules, program },
-            config.jobType,
+            config.model,
             PROMPT_VERSION,
           ),
           visitor,
@@ -148,7 +149,16 @@ export const Route = createFileRoute("/api/ai-layout")({
           footprintUrl: `${config.publicBase}/api/ai-layout/footprint?key=${key}`,
           prompt: buildLayoutPrompt(footprint, program),
           key,
+          // Провайдер, возвращающий байты, кладёт картинку к нам: чужая
+          // ссылка однажды протухнет, а планировка должна открываться и потом.
+          store: saveImage,
         });
+
+        // Настоящая цена запроса приходит в ответе — записываем её в лог,
+        // иначе расход виден только в чужом кабинете и задним числом.
+        if (result.status === "completed" && result.costUsd !== undefined) {
+          console.info(`AI-планировка: генерация выполнена, стоимость $${result.costUsd}`);
+        }
 
         const updated = applyResult(reserved, result);
         await saveJob(updated);

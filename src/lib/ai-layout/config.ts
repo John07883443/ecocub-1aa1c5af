@@ -7,8 +7,8 @@
  * уходит только publicConfig(), где секретов нет по построению.
  */
 
-/** Заглушка, боевой провайдер и ручной режим — других вариантов нет. */
-export type ProviderKind = "mock" | "higgsfield" | "manual";
+/** Заглушка, два боевых провайдера и ручной режим — других вариантов нет. */
+export type ProviderKind = "mock" | "openrouter" | "higgsfield" | "manual";
 
 export interface AiLayoutConfig {
   enabled: boolean;
@@ -19,15 +19,16 @@ export interface AiLayoutConfig {
   freePerVisitor: number;
   /** Потолок на все генерации за сутки — защита кошелька от всплеска. */
   dailyLimit: number;
-  /** Путь создания задания у провайдера. Обязателен: угадать его нельзя. */
+  /** Путь создания задания у Higgsfield. Обязателен: угадать его нельзя. */
   submitPath: string;
-  /** Идентификатор модели. Участвует в ключе идемпотентности. */
-  jobType: string;
+  /** Идентификатор модели у выбранного провайдера. Входит в ключ запроса. */
+  model: string;
   /** Тариф генерации. Выбран по замерам этапа 0: 1k + low = 0.5 кредита. */
   resolution: string;
   quality: string;
   apiBase: string;
   apiKey: string | null;
+  /** Второй ключ нужен только Higgsfield: у него авторизация парой. */
   apiSecret: string | null;
   /** Абсолютный адрес сайта: провайдер забирает исходник по ссылке. */
   publicBase: string;
@@ -38,9 +39,13 @@ export interface AiLayoutConfig {
 }
 
 const DEFAULTS = {
-  apiBase: "https://platform.higgsfield.ai",
-  // Выбор этапа 0: точный контур и полная планировка за 0.5 кредита.
-  jobType: "gpt_image_2",
+  // Провайдер по умолчанию — OpenRouter: у Higgsfield нужная модель через
+  // публичный REST недоступна, а каталога путей нет вовсе (см. INTEGRATION.md).
+  apiBase: "https://openrouter.ai/api/v1",
+  higgsfieldBase: "https://platform.higgsfield.ai",
+  // Выбор этапа 0: единственная модель, удержавшая контур и давшая полную
+  // планировку. У OpenRouter она называется так же, с дефисами.
+  model: "openai/gpt-image-2",
   resolution: "1k",
   quality: "low",
   freePerVisitor: 1,
@@ -62,15 +67,22 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AiLayoutConfig
   return {
     enabled: flag(env.AI_LAYOUT_ENABLED),
     killSwitch: flag(env.AI_LAYOUT_KILL_SWITCH),
-    provider: provider === "higgsfield" || provider === "manual" ? provider : "mock",
+    provider:
+      provider === "openrouter" || provider === "higgsfield" || provider === "manual"
+        ? provider
+        : "mock",
     freePerVisitor: num(env.AI_LAYOUT_FREE_PER_VISITOR, DEFAULTS.freePerVisitor),
     dailyLimit: num(env.AI_LAYOUT_DAILY_LIMIT, DEFAULTS.dailyLimit),
     submitPath: env.AI_LAYOUT_SUBMIT_PATH || "",
-    jobType: env.AI_LAYOUT_JOB_TYPE || DEFAULTS.jobType,
+    model: env.AI_LAYOUT_MODEL || DEFAULTS.model,
     resolution: env.AI_LAYOUT_RESOLUTION || DEFAULTS.resolution,
     quality: env.AI_LAYOUT_QUALITY || DEFAULTS.quality,
-    apiBase: (env.AI_LAYOUT_API_BASE || DEFAULTS.apiBase).replace(/\/+$/, ""),
-    apiKey: env.HIGGSFIELD_API_KEY || null,
+    apiBase: (
+      env.AI_LAYOUT_API_BASE ||
+      (provider === "higgsfield" ? DEFAULTS.higgsfieldBase : DEFAULTS.apiBase)
+    ).replace(/\/+$/, ""),
+    // У каждого провайдера свой ключ: перепутать их нельзя даже случайно.
+    apiKey: (provider === "higgsfield" ? env.HIGGSFIELD_API_KEY : env.OPENROUTER_API_KEY) || null,
     apiSecret: env.HIGGSFIELD_API_SECRET || null,
     publicBase: (env.AI_LAYOUT_PUBLIC_BASE || "https://eco-cub.ru").replace(/\/+$/, ""),
     visitorSecret: env.AI_LAYOUT_VISITOR_SECRET || null,
@@ -84,6 +96,9 @@ export function availability(config: AiLayoutConfig): { ok: boolean; reason?: st
   if (!config.enabled) return { ok: false, reason: "disabled" };
   if (!config.visitorSecret) return { ok: false, reason: "no_visitor_secret" };
 
+  if (config.provider === "openrouter") {
+    if (!config.apiKey) return { ok: false, reason: "no_credentials" };
+  }
   if (config.provider === "higgsfield") {
     if (!config.apiKey || !config.apiSecret) return { ok: false, reason: "no_credentials" };
     if (!submitPath(config)) return { ok: false, reason: "no_submit_path" };
