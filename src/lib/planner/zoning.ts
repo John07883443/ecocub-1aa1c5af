@@ -4,6 +4,7 @@ import { MODULE } from "../standards/ecocub.ts";
 import { emptyHouse, newModuleId, newRoomId } from "./actions.ts";
 import { assignRoles } from "./program.ts";
 import { computeAdjacency } from "./geometry.ts";
+import { computeJoints } from "./rooms.ts";
 import { relayoutAll } from "./furniture.ts";
 import type { HouseState, ModuleFootprint, RoomType, RoomZone } from "./types.ts";
 
@@ -103,7 +104,30 @@ export function houseFromModules(input: ModuleItem[]): HouseState {
     }
   }
 
-  return relayoutAll({ ...emptyHouse(), modules, rooms });
+  return relayoutAll(retypeCirculation({ ...emptyHouse(), modules, rooms }));
+}
+
+/**
+ * Комната, в которую ведут три и более дверей, — это не гостиная, а холл.
+ *
+ * Прогон по всем формам из девяти кубиков нашёл около полусотни домов, где
+ * один модуль общей зоны окружён соседями со всех сторон. Диван туда не
+ * встаёт и встать не может: зоны прохода перед четырьмя дверями не оставляют
+ * стены. Настаивать на гостиной здесь бессмысленно — в реальных проектах
+ * такое помещение и называется коридором или прихожей (Nasledie, коридор
+ * 8,5 м²), а мебели в нём ровно столько, сколько помещается у одной стены.
+ */
+function retypeCirculation(house: HouseState): HouseState {
+  const joints = computeJoints(house);
+  const rooms = house.rooms.map((room) => {
+    if (room.type !== "living" || room.moduleIds.length !== 1) return room;
+    const ids = new Set(room.moduleIds);
+    const doors = joints.filter(
+      (j) => ids.has(j.aId) !== ids.has(j.bId) && j.state !== "closed" && j.state !== "unknown",
+    );
+    return doors.length >= 3 ? { ...room, type: "entryway" as const } : room;
+  });
+  return { ...house, rooms };
 }
 
 /**

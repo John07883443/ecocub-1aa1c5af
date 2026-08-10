@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { houseFromModules } from "@/lib/planner/zoning";
 import { computeAreas } from "@/lib/planner/rooms";
 import { ROOM_TYPES } from "@/lib/planner/constants";
+import { auditHouse, errors } from "@/lib/planner/audit";
 import type { ModuleItem } from "@/lib/constructor/types";
 
 import { PlanView } from "./plan/PlanView";
@@ -29,7 +30,15 @@ export function PlanBlock({ modules }: { modules: ModuleItem[] }) {
   // Помещения, которым планировщик не смог подобрать расстановку. Молчать о
   // них нельзя: пустая комната на чертеже выглядит как недоделка, а причина
   // всегда конкретная — модуль зажат соседями и мебель не встаёт по нормам.
-  const unresolved = ground.filter((r) => !(house.layouts[r.id]?.items ?? []).length);
+  const unresolved = ground.filter(
+    (r) =>
+      r.type !== "terrace" && r.type !== "entryway" && !(house.layouts[r.id]?.items ?? []).length,
+  );
+
+  // Аудит гоняется и в тестах по всем формам дома, и здесь, на живой сборке.
+  // Если инвариант всё-таки нарушен, честнее сказать об этом прямо, чем
+  // показать чертёж, по которому нельзя жить.
+  const problems = errors(auditHouse(house));
 
   return (
     <section className="mt-6 rounded-sm border border-border bg-card p-4 sm:p-5">
@@ -60,6 +69,12 @@ export function PlanBlock({ modules }: { modules: ModuleItem[] }) {
           </li>
         ))}
       </ul>
+
+      {problems.length > 0 && (
+        <p className="mt-3 text-xs text-foreground">
+          Схему стоит проверить инженеру: {problems.map((p) => p.message.toLowerCase()).join("; ")}.
+        </p>
+      )}
 
       {unresolved.length > 0 && (
         <p className="mt-3 text-xs text-muted-foreground">

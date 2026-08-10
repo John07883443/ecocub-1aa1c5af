@@ -396,10 +396,20 @@ export function deriveOpenings(house: HouseState, floor: number): Opening[] {
  * вовсе, и это честнее выдуманной двери в спальню с улицы.
  */
 function pickEntryRoom(house: HouseState, floor: number): string | null {
-  const suitable = house.rooms
-    .filter((r) => r.floor === floor && doorPreference(r.type) > 0)
-    .sort((a, b) => doorPreference(b.type) - doorPreference(a.type) || a.id.localeCompare(b.id));
-  return suitable[0]?.id ?? null;
+  // Мало быть подходящей по типу — нужна наружная стена, в которую дверь
+  // физически встанет. Прогон по всем формам из восьми кубиков нашёл дома,
+  // где лучшая по типу комната зажата внутри и наружу не выходит вовсе; там
+  // вход просто не рисовался, и дом оставался без входа.
+  const fits = (roomId: string) =>
+    (roomGeometryLite(house, roomId) ?? []).some((w) => w.exterior && w.length >= 2.4);
+
+  return (
+    house.rooms
+      .filter((r) => r.floor === floor && doorPreference(r.type) > 0 && fits(r.id))
+      .sort(
+        (a, b) => doorPreference(b.type) - doorPreference(a.type) || a.id.localeCompare(b.id),
+      )[0]?.id ?? null
+  );
 }
 
 /** Насколько стена смотрит на юг — там подъезд к участку. */

@@ -90,16 +90,20 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
   //    семи проектах спальня уводится от прихожей, а угловые потому, что
   //    спальне нужно окно.
   const bedrooms = Math.min(bedroomCount(n), Math.max(0, n - 2));
-  const forBedroom = [...nodes]
-    .sort(
-      (a, b) =>
-        b.exterior - a.exterior ||
-        b.depth - a.depth ||
-        a.neighbours - b.neighbours ||
-        a.index - b.index,
-    )
-    .slice(0, bedrooms);
-  for (const node of forBedroom) assigned.set(node.index, "bedroom");
+  const bedroomCandidates = [...nodes].sort(
+    (a, b) =>
+      b.exterior - a.exterior ||
+      b.depth - a.depth ||
+      a.neighbours - b.neighbours ||
+      a.index - b.index,
+  );
+  for (let placed = 0; placed < bedrooms; placed += 1) {
+    const pick = bedroomCandidates.find(
+      (node) => !assigned.has(node.index) && canBePrivate(nodes, assigned, node.index),
+    );
+    if (!pick) break;
+    assigned.set(pick.index, "bedroom");
+  }
 
   // 2. Санузлы — наоборот, ближе к входу и в самых зажатых модулях: окно им
   //    не нужно, а стояк лучше держать компактно.
@@ -119,7 +123,7 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
   // берётся первый, после которого общая зона остаётся односвязной.
   for (let placed = 0; placed < baths; placed += 1) {
     const free = bathCandidates.filter((node) => !assigned.has(node.index));
-    const pick = free.find((node) => publicStaysConnected(nodes, assigned, node.index)) ?? free[0];
+    const pick = free.find((node) => canBePrivate(nodes, assigned, node.index));
     if (!pick) break;
     assigned.set(pick.index, "bathroom");
   }
@@ -151,7 +155,42 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
 }
 
 /**
- * Останется ли общая зона односвязной, если отдать ещё один модуль санузлу.
+ * Можно ли отдать этот модуль под приватное помещение.
+ *
+ * Два условия, и оба вылезли из живых прогонов.
+ *
+ * Первое: у приватной комнаты должен остаться сосед из общей зоны. Иначе
+ * единственная дверь спальни ведёт в санузел — а через санузел в спальню не
+ * ходят. На крестообразном доме из восьми кубиков так и вышло: три спальни
+ * открывались в один санузел, и мебель в нём перестала помещаться.
+ *
+ * Второе: общая зона не должна разорваться. Две гостиные по диагонали
+ * читаются как ошибка планировки, а не как замысел.
+ */
+function canBePrivate(nodes: Node[], assigned: Map<number, Role>, candidate: number): boolean {
+  const node = nodes.find((x) => x.index === candidate);
+  if (!node) return false;
+  // Проверяем не только кандидата, но и всех, кого уже назначили: соседний
+  // модуль мог быть их единственным выходом в общую зону. Крестообразный дом
+  // из восьми кубиков ловится именно здесь — там санузел вставал в центр, и
+  // три уже назначенные спальни разом теряли выход, начиная открываться в
+  // него.
+  const stillPublic = (index: number) => !assigned.has(index) && index !== candidate;
+  const hasPublicNeighbour = (node_: Node) =>
+    nodes.some((o) => o.index !== node_.index && stillPublic(o.index) && touches(node_, o));
+
+  if (!hasPublicNeighbour(node)) return false;
+  for (const other of nodes) {
+    if (!assigned.has(other.index)) continue;
+    if (assigned.get(other.index) === "terrace") continue;
+    if (!hasPublicNeighbour(other)) return false;
+  }
+  return publicStaysConnected(nodes, assigned, candidate);
+}
+
+/**
+ * Останется ли общая зона односвязной, если отдать ещё один модуль приватному
+ * помещению.
  *
  * Общая зона — это всё, что не назначено приватным помещением. Разрывать её
  * нельзя: две гостиные по диагонали читаются как ошибка планировки, а не как
