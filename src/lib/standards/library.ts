@@ -2,6 +2,7 @@ import * as wo from "./weekend-one.ts";
 import * as wm from "./weekend-mini.ts";
 import * as f1 from "./family-one.ts";
 import * as f2 from "./family-two.ts";
+import * as sf from "./super-family.ts";
 import { moduleFootprintM2 } from "./derive.ts";
 
 /**
@@ -106,6 +107,21 @@ export const REFERENCE_LAYOUTS: ReferenceLayout[] = [
       "Восемь пролётов, четыре на два. Кухня-гостиная 35 м² занимает два средних пролёта на всю глубину дома и работает распределителем: все три спальни открываются прямо в неё. Спальни угловые, по 9,1–9,6 м². Мокрый блок с прихожей и котельной вдвинут в общую комнату с южной стороны. Две террасы под вылетом кровли.",
     solutionEn:
       "Eight bays, four by two. The 35 m2 kitchen-living room occupies the two middle bays across the full depth and works as the distributor: all three bedrooms open directly into it. Bedrooms are in the corners, 9.1 to 9.6 m2 each. The wet block with the hallway and boiler room is pushed into the common room from the south side. Two terraces sit under the roof overhang.",
+  },
+  {
+    id: "super-family",
+    name: "Super Family",
+    footprintM2: 106.4,
+    moduleCount: 11,
+    bedrooms: 3,
+    bathrooms: 2,
+    widthM: 10.18,
+    depthM: 13.19,
+    compactness: 0.72,
+    solutionRu:
+      "П-образный дом на три крыла. Общая зона делится на кухню-гостиную 22,4 и столовую 11,4 — один объём, две зоны без двери между ними. Спальня родителей со своим гардеробом и санузлом вынесена в отдельное крыло, две детские — в другие. Прихожая 7 м² работает распределителем между крыльями. Второй санузел, постирочная и котельная собраны у прихожей. В одном вырезе лежит терраса, во втором — зелёный двор.",
+    solutionEn:
+      "A U-shaped house with three wings. The common zone splits into a 22.4 m2 kitchen-living area and an 11.4 m2 dining area: one volume, two zones, no door between them. The main bedroom with its own walk-in closet and bathroom occupies a separate wing; two children rooms take the others. A 7 m2 hallway works as the distributor between wings. The second bathroom, the laundry and the boiler room are grouped next to the hallway. One notch holds the terrace, the other a small green courtyard.",
   },
 ];
 

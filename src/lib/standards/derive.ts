@@ -1,4 +1,4 @@
-import { MODULE } from "./ecocub.ts";
+import { AREA_POLICY, MODULE } from "./ecocub.ts";
 import type { JointKind, Mm, ModuleInstance } from "./types.ts";
 
 /**
@@ -30,6 +30,15 @@ export function moduleClearM2(): number {
 /** Тёплый контур: столько модулей — столько наружных площадей. */
 export function warmContourM2(moduleCount: number): number {
   return m2(moduleCount * MODULE.externalWidthMm * MODULE.externalDepthMm);
+}
+
+/**
+ * Жилая площадь дома по правилу подачи: тёплый контур целиком, округление в
+ * большую сторону, террасы сюда не входят — они идут отдельной строкой.
+ */
+export function livingAreaM2(moduleCount: number): number {
+  const exact = warmContourM2(moduleCount);
+  return AREA_POLICY.rounding === "up" ? Math.ceil(exact * 10) / 10 : Math.round(exact * 10) / 10;
 }
 
 /** Толщина стены в стыке: общая стена — одна, спина к спине — две. */

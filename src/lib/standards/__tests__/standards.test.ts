@@ -9,6 +9,8 @@ import {
   MODULE,
   OPENING_HEIGHTS,
   OUTDOOR_AREAS,
+  AREA_POLICY,
+  AREA_TOLERANCE,
   GRID_CONFLICT,
   PLANNING_RULES,
 } from "../ecocub.ts";
@@ -23,6 +25,7 @@ import {
   bounds,
   chainSumMm,
   conformance,
+  livingAreaM2,
   moduleClearM2,
   moduleFootprintM2,
   offsetStepMm,
@@ -34,6 +37,7 @@ import * as wo from "../weekend-one.ts";
 import * as wm from "../weekend-mini.ts";
 import * as f1 from "../family-one.ts";
 import * as f2 from "../family-two.ts";
+import * as sf from "../super-family.ts";
 import {
   CELL_M,
   MODULE_AREA,
@@ -345,7 +349,7 @@ test("сумма площадей сходится с карточкой кат�
 });
 
 test("каждый паттерн двуязычен, подтверждён и попадает в промпт", () => {
-  assert.ok(PATTERNS.length >= 25);
+  assert.ok(PATTERNS.length >= 30);
   const ids = new Set<string>();
   for (const p of PATTERNS) {
     assert.ok(p.rule.length > 20, `${p.id}: пустая формулировка`);
@@ -361,8 +365,9 @@ test("каждый паттерн двуязычен, подтверждён и 
   assert.match(briefing, /must stay strictly inside the given footprint/);
 });
 
-test("опорных проектов четыре, и у каждого назван источник", () => {
-  assert.equal(REFERENCE_PROJECTS.length, 4);
+test("опорных проектов пять, и у каждого назван источник", () => {
+  assert.equal(REFERENCE_PROJECTS.length, 5);
+  assert.equal(REFERENCE_LAYOUTS.length, REFERENCE_PROJECTS.length);
   for (const p of REFERENCE_PROJECTS) {
     assert.ok(p.evidence.length > 10);
     assert.ok(p.areaM2 > 0);
@@ -371,7 +376,7 @@ test("опорных проектов четыре, и у каждого наз�
 
 test("готовые раскладки конструктора ссылаются на реальные проекты и не разваливаются", () => {
   const referenced = TEMPLATES.filter((t) => t.reference);
-  assert.equal(referenced.length, 4, "четыре опорных проекта — четыре стартовые раскладки");
+  assert.equal(referenced.length, 5, "пять опорных проектов — пять стартовых раскладок");
   const known = new Set(REFERENCE_LAYOUTS.map((l) => l.id));
   for (const t of referenced) {
     assert.ok(known.has(t.reference!), `${t.id}: ссылка на несуществующий проект`);
@@ -399,6 +404,7 @@ test("подбор образца находит масштаб, а не про�
   assert.equal(matchReference(sig(45, 4, 12, 5))?.layout.id, "weekend-one");
   assert.equal(matchReference(sig(72, 6, 10, 7))?.layout.id, "family-one");
   assert.equal(matchReference(sig(99, 9, 14, 7))?.layout.id, "family-two");
+  assert.equal(matchReference(sig(108, 11, 10, 13))?.layout.id, "super-family");
   // Один кубик не похож ни на что: лучше без образца, чем с чужим.
   assert.equal(matchReference(sig(9, 1, 3, 3)), null);
   // Похожесть всегда в границах и не выдумывается.
@@ -419,4 +425,52 @@ test("образец в промпте не отменяет контур", () =
   assert.match(text, /CLOSEST BUILT PROJECT/);
   assert.match(text, /Do NOT copy its outline/);
   assert.ok(text.includes(m.layout.solutionEn));
+});
+
+test("сетка 3393 подтверждена третьим проектом подряд", () => {
+  // Одно наблюдение — случайность, три совпадения — система. Именно поэтому
+  // расхождение с модулем Weekend нельзя списать на опечатку в чертеже.
+  for (const p of [f1, f2, sf])
+    assert.equal(p.DIMENSIONS.gridPitchXMm, GRID_CONFLICT.familyGridPitchMm);
+  assert.equal(sf.DIMENSIONS.gridPitchXMm * 3, sf.DIMENSIONS.overallWidthMm);
+  assert.equal(sf.DIMENSIONS.partitionMm, f1.DIMENSIONS.partitionMm);
+  // Тонкая перегородка санузлов — новая толщина, которой не было у Family.
+  assert.ok(sf.DIMENSIONS.thinPartitionMm < sf.DIMENSIONS.partitionMm);
+});
+
+test("дом растёт сервисом и общими зонами, а не спальнями", () => {
+  const bedrooms = (rooms: { name: string; areaM2: number }[]) =>
+    rooms.filter((r) => r.name.startsWith("Спальная") || r.name.startsWith("Детская"));
+  const small = bedrooms(f1.ROOMS).map((r) => r.areaM2);
+  const large = bedrooms(sf.ROOMS).map((r) => r.areaM2);
+  // Дом вырос с 56 до 92 м², спальня — с 9,6 до 11,2. Растёт не она.
+  assert.ok(Math.max(...large) - Math.max(...small) < 2);
+  // Зато появилось то, чего не было: второй санузел, постирочная, гардеробные.
+  assert.equal(sf.CATALOG.bathrooms, 2);
+  assert.equal(f1.CATALOG.bathrooms, 1);
+  assert.ok(sf.ROOMS.some((r) => r.name === "Постирочная"));
+  assert.ok(sf.ROOMS.filter((r) => r.name.startsWith("Гардероб")).length === 2);
+  assert.ok(!f2.ROOMS.some((r) => r.name.startsWith("Гардероб")));
+});
+
+test("сумма помещений Super Family укладывается в производственный допуск", () => {
+  const sum = sf.ROOMS.reduce((s, r) => s + r.areaM2, 0);
+  assert.ok(
+    Math.abs(sum - sf.CATALOG.houseAreaM2) <= sf.CATALOG.houseAreaM2 * AREA_TOLERANCE.relative,
+    `сумма ${sum.toFixed(1)}, в карточке ${sf.CATALOG.houseAreaM2}`,
+  );
+  assert.ok(AREA_TOLERANCE.reason.includes("стык") || AREA_TOLERANCE.reason.includes("отлив"));
+});
+
+test("жилая площадь — тёплый контур в большую сторону, террасы отдельно", () => {
+  assert.equal(AREA_POLICY.livingAreaDefinition, "warm-contour");
+  assert.equal(AREA_POLICY.outdoorSeparate, true);
+  // Weekend One: жилая 43,8 — тёплый контур, а не сумма помещений 34,17.
+  const rooms = AREA_DEFINITIONS.find((a) => a.id === "rooms")!;
+  assert.equal(livingAreaM2(wo.MODULES.length), 43.8);
+  assert.ok(livingAreaM2(wo.MODULES.length) > rooms.valueM2);
+  // Округление именно вверх: 32,832 → 32,9, а не 32,8.
+  assert.equal(livingAreaM2(3), 32.9);
+  // Терраса и крыльцо в жилую не входят ни при каком счёте.
+  assert.ok(livingAreaM2(4) < 43.8 + OUTDOOR_AREAS.terraceM2);
 });

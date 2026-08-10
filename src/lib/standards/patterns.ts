@@ -3,6 +3,7 @@ import * as wo from "./weekend-one.ts";
 import * as wm from "./weekend-mini.ts";
 import * as f1 from "./family-one.ts";
 import * as f2 from "./family-two.ts";
+import * as sf from "./super-family.ts";
 
 /**
  * Паттерны проектирования EcoCub, выведенные из построенных проектов.
@@ -115,9 +116,10 @@ export const PATTERNS: DesignPattern[] = [
   {
     id: "partition-thinner-than-wall",
     group: "openings",
-    rule: "Внутренняя перегородка тоньше наружной стены модуля: 190 против 210 мм.",
-    en: "Interior partitions are thinner than the module walls: 190 mm against 210 mm. Draw them visibly thinner.",
-    evidence: "Family One и Family Two: 190 проставлено на обоих размерных планах.",
+    rule: "Перегородок две толщины: 190 мм между помещениями и 125 мм вокруг санузлов и гардеробных. Обе тоньше наружной стены модуля в 210 мм.",
+    en: "Partitions come in two thicknesses: 190 mm between rooms and 125 mm around bathrooms and closets. Both are thinner than the 210 mm module wall — draw them visibly thinner.",
+    evidence:
+      "Family One, Family Two и Super Family: 190 и 125 проставлены на всех трёх размерных планах.",
   },
   {
     id: "door-widths-are-discrete",
@@ -139,6 +141,45 @@ export const PATTERNS: DesignPattern[] = [
     rule: "Террас обычно две: главная у общей комнаты и вспомогательная у спален. Обе накрыты вылетом кровли.",
     en: "There are usually two terraces: a main one at the common room and a smaller one by the bedrooms. Both are covered by the roof overhang rather than by a separate canopy.",
     evidence: "Family One: 21,7 и 6,8. Family Two: 13,9 и 6,1, обе подписаны «терраса с навесом».",
+  },
+  {
+    id: "dining-splits-at-90",
+    group: "layout",
+    rule: "Около 90 м² общая зона делится на кухню-гостиную и столовую — две зоны одного объёма без двери между ними.",
+    en: "Around 90 m2 the common zone splits into a kitchen-living area and a separate dining area: two zones of one continuous volume, with no door between them.",
+    evidence:
+      "Super Family: кухня-гостиная 22,4 и столовая 11,4 при единой общей зоне 33,8. У Family Two те же 35 м² были одной комнатой.",
+  },
+  {
+    id: "second-bathroom-at-90",
+    group: "layout",
+    rule: "Второй санузел и постирочная появляются около 90 м². До того — один санузел на дом.",
+    en: "A second bathroom and a laundry room appear around 90 m2. Below that there is exactly one bathroom in the house.",
+    evidence:
+      "Weekend Mini, Weekend One, Family One, Family Two — по одному С/У. Super Family: 3,8 и 3,7 плюс постирочная 2,3.",
+  },
+  {
+    id: "walk-in-closets-at-90",
+    group: "layout",
+    rule: "Гардеробные ставятся вплотную к спальням и появляются на крупных домах: у родителей и у детской.",
+    en: "Walk-in closets are placed directly against the bedrooms they serve and appear only in larger houses: one for the main bedroom, one for the children.",
+    evidence:
+      "Super Family: гардероб 3,6 при спальне и 2,7 при детской. На домах до 74 м² гардеробных нет.",
+  },
+  {
+    id: "wings-separate-generations",
+    group: "layout",
+    rule: "На крупном доме спальня родителей и детские разносятся по разным крыльям, общая зона между ними.",
+    en: "In a larger house the main bedroom and the children rooms go into different wings, with the common zone between them.",
+    evidence:
+      "Super Family: спальня с гардеробом и своим С/У в одном крыле, две детские — в других, кухня-гостиная посередине.",
+  },
+  {
+    id: "two-notches",
+    group: "terrace",
+    rule: "П-образный дом даёт два выреза: в одном терраса, во втором зелёный двор между крыльями.",
+    en: "A U-shaped house creates two notches: one holds the terrace, the other a small green courtyard between the wings.",
+    evidence: "Super Family: терраса 20,8 в одном вырезе, озеленённый двор во втором.",
   },
 
   // ── Проёмы и остекление ───────────────────────────────────────────────
@@ -340,5 +381,13 @@ export const REFERENCE_PROJECTS = [
     modules: 8,
     shape: "прямоугольная, 4 × 2 пролёта",
     evidence: "размерный план и карточка каталога",
+  },
+  {
+    id: "super-family",
+    name: "Super Family",
+    areaM2: sf.CATALOG.houseAreaM2,
+    modules: 11,
+    shape: "П-образная, два выреза",
+    evidence: "размерный план",
   },
 ];
