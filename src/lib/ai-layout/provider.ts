@@ -91,10 +91,11 @@ export class ManualLayoutProvider implements LayoutImageProvider {
  * исходник передаётся массивом medias, тариф — объектом params, а в ответе
  * приходят request_id и готовая ссылка status_url.
  *
- * Тело собрано ровно по присланному примеру cURL. Отдельно отмечу расхождение:
- * в первом ответе модель предлагалось дублировать полем job_type в теле, но в
- * примере запроса его нет. Выбран пример — он конкретнее, а лишнее поле в теле
- * скорее вызовет отказ, чем поможет.
+ * Тело собрано ровно по присланному примеру cURL, и это оказалось важно: API
+ * строго проверяет состав полей. Первый живой запрос со своим idempotency_key
+ * получил 400. Поэтому ничего сверх примера сюда не добавляем — в том числе
+ * поле job_type, которое ассистент предлагал дублировать в теле, хотя модель
+ * задаётся путём запроса.
  */
 export class HiggsfieldProvider implements LayoutImageProvider {
   readonly kind = "higgsfield";
@@ -116,6 +117,10 @@ export class HiggsfieldProvider implements LayoutImageProvider {
   }
 
   async start(request: LayoutRequest): Promise<LayoutResult> {
+    // Ровно те поля, что в примере платформы. Лишнее поле — это 400: проверено
+    // на живом запросе. Защита от двойного списания от провайдера и не
+    // зависела: сервер сам находит уже существующее задание по ключу прежде,
+    // чем идти к провайдеру, и второй раз не платит.
     const body = {
       prompt: request.prompt,
       // Квадрат: исходник рисуется квадратным, и менять пропорции нельзя —
@@ -125,9 +130,6 @@ export class HiggsfieldProvider implements LayoutImageProvider {
       // загрузка не нужна: отдаём адрес своего же маршрута с контуром.
       medias: [{ role: "image", value: request.footprintUrl }],
       params: { resolution: this.config.resolution, quality: this.config.quality },
-      // Если платформа знает про идемпотентность, повтор не станет второй
-      // оплаченной генерацией. Если не знает — лишнее поле её не сломает.
-      idempotency_key: request.key,
     };
 
     try {
@@ -137,7 +139,7 @@ export class HiggsfieldProvider implements LayoutImageProvider {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(30_000),
       });
-      if (!res.ok) return { status: "failed", reason: `http_${res.status}` };
+      if (!res.ok) return { status: "failed", reason: await describeError(res) };
 
       const json = (await res.json()) as {
         id?: string;
@@ -170,7 +172,7 @@ export class HiggsfieldProvider implements LayoutImageProvider {
         headers: this.headers(),
         signal: AbortSignal.timeout(15_000),
       });
-      if (!res.ok) return { status: "failed", reason: `http_${res.status}` };
+      if (!res.ok) return { status: "failed", reason: await describeError(res) };
 
       const json = (await res.json()) as {
         status?: string;
@@ -202,6 +204,23 @@ export class HiggsfieldProvider implements LayoutImageProvider {
       return { status: "failed", reason: errorReason(e) };
     }
   }
+}
+
+/**
+ * Код ошибки для интерфейса и — отдельно — текст платформы в лог сервера.
+ * Наружу отдаётся только код: тело ответа чужого сервиса посетителю не место.
+ * А без записи в лог любая ошибка выглядит как «http_400» и требует ещё одного
+ * круга «включите — попробуйте — скажите, что было».
+ */
+async function describeError(res: Response): Promise<string> {
+  let body = "";
+  try {
+    body = (await res.text()).slice(0, 300);
+  } catch {
+    body = "(тело ответа прочитать не удалось)";
+  }
+  console.error(`AI-планировка: провайдер ответил ${res.status}: ${body}`);
+  return `http_${res.status}`;
 }
 
 function errorReason(e: unknown): string {
