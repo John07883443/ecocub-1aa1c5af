@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrainingRouteImport } from './routes/training'
 import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
@@ -21,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as ApiPlannerTrainingRouteImport } from './routes/api.planner-training'
 import { Route as ApiLeadRouteImport } from './routes/api.lead'
 import { Route as ApiAiLayoutRouteImport } from './routes/api.ai-layout'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
@@ -28,6 +30,11 @@ import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category
 import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.result'
 import { Route as ApiAiLayoutFootprintRouteImport } from './routes/api.ai-layout.footprint'
 
+const TrainingRoute = TrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologyRoute = TechnologyRouteImport.update({
   id: '/technology',
   path: '/technology',
@@ -88,6 +95,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlannerTrainingRoute = ApiPlannerTrainingRouteImport.update({
+  id: '/api/planner-training',
+  path: '/api/planner-training',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLeadRoute = ApiLeadRouteImport.update({
   id: '/api/lead',
   path: '/api/lead',
@@ -129,8 +141,10 @@ export interface FileRoutesByFullPath {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
+  '/training': typeof TrainingRoute
   '/api/ai-layout': typeof ApiAiLayoutRouteWithChildren
   '/api/lead': typeof ApiLeadRoute
+  '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -149,8 +163,10 @@ export interface FileRoutesByTo {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
+  '/training': typeof TrainingRoute
   '/api/ai-layout': typeof ApiAiLayoutRouteWithChildren
   '/api/lead': typeof ApiLeadRoute
+  '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
@@ -170,8 +186,10 @@ export interface FileRoutesById {
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
+  '/training': typeof TrainingRoute
   '/api/ai-layout': typeof ApiAiLayoutRouteWithChildren
   '/api/lead': typeof ApiLeadRoute
+  '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -192,8 +210,10 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
+    | '/training'
     | '/api/ai-layout'
     | '/api/lead'
+    | '/api/planner-training'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -212,8 +232,10 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
+    | '/training'
     | '/api/ai-layout'
     | '/api/lead'
+    | '/api/planner-training'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog'
@@ -232,8 +254,10 @@ export interface FileRouteTypes {
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
+    | '/training'
     | '/api/ai-layout'
     | '/api/lead'
+    | '/api/planner-training'
     | '/blog/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -253,8 +277,10 @@ export interface RootRouteChildren {
   RssDotxmlRoute: typeof RssDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TechnologyRoute: typeof TechnologyRoute
+  TrainingRoute: typeof TrainingRoute
   ApiAiLayoutRoute: typeof ApiAiLayoutRouteWithChildren
   ApiLeadRoute: typeof ApiLeadRoute
+  ApiPlannerTrainingRoute: typeof ApiPlannerTrainingRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -264,6 +290,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/training': {
+      id: '/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof TrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology': {
       id: '/technology'
       path: '/technology'
@@ -348,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/planner-training': {
+      id: '/api/planner-training'
+      path: '/api/planner-training'
+      fullPath: '/api/planner-training'
+      preLoaderRoute: typeof ApiPlannerTrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/lead': {
       id: '/api/lead'
       path: '/api/lead'
@@ -417,8 +457,10 @@ const rootRouteChildren: RootRouteChildren = {
   RssDotxmlRoute: RssDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TechnologyRoute: TechnologyRoute,
+  TrainingRoute: TrainingRoute,
   ApiAiLayoutRoute: ApiAiLayoutRouteWithChildren,
   ApiLeadRoute: ApiLeadRoute,
+  ApiPlannerTrainingRoute: ApiPlannerTrainingRoute,
   BlogSlugRoute: BlogSlugRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
   BlogIndexRoute: BlogIndexRoute,

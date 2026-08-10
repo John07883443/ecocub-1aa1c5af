@@ -145,6 +145,18 @@ export function Footer() {
           <span>Современные дома в Подмосковье</span>
         </div>
       </Container>
+      {/* Служебный вход в разметку планировок. Мелкой строкой и без пароля —
+          так решил владелец: страница ничего не меняет в боевом сайте, а
+          разметка нужна под рукой. */}
+      <div className="border-t border-white/10 py-3 text-center">
+        <a
+          href="/training"
+          rel="nofollow"
+          className="text-[11px] text-primary-foreground/30 transition-colors hover:text-primary-foreground/70"
+        >
+          обучение
+        </a>
+      </div>
     </footer>
   );
 }
