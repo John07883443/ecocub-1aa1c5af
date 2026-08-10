@@ -1,8 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { HouseBuilderApi } from "@/lib/constructor/useHouseBuilder";
-import { CELL_M, MODULE_SIDE_M, ROLES, STEP_M } from "@/lib/constructor/constants";
 import {
+  CELL_M,
+  MODULE_SIDE_M,
+  ROLES,
+  SETBACK_M,
+  snapToStep,
+  STEP_M,
+} from "@/lib/constructor/constants";
+import {
+  buildableSide,
   maxAnchor,
+  minAnchor,
   pickSnapAnchor,
   snapAnchors,
   validMoveAnchors,
@@ -12,10 +21,15 @@ import type { Cell, ModuleItem } from "@/lib/constructor/types";
 // Все размеры внутри SVG — в метрах участка: viewBox совпадает с реальными
 // метрами, модуль 3×3 рисуется прямоугольником 3×3.
 
-/** Радиус (в шагах по 1 м), в котором вокруг курсора показываем точки-подсказки. */
-const HINT_RADIUS = 4;
-/** Порог в пикселях экрана, после которого тап превращается в перетаскивание. */
-const DRAG_THRESHOLD_PX = 6;
+/** Радиус в метрах, в котором вокруг курсора показываем точки-подсказки. */
+const HINT_RADIUS_M = 3;
+/**
+ * Порог, после которого нажатие превращается в перетаскивание.
+ * У пальца он больше: касание всегда слегка «плывёт», и при мышином пороге
+ * обычный тап по модулю превращался бы в перенос.
+ */
+const DRAG_THRESHOLD_MOUSE_PX = 6;
+const DRAG_THRESHOLD_TOUCH_PX = 10;
 
 interface DragState {
   id: string;
@@ -29,6 +43,8 @@ interface DragState {
   startClientY: number;
   /** true после превышения порога — тап стал перетаскиванием. */
   active: boolean;
+  /** Порог для этого указателя: у пальца больше, чем у мыши. */
+  thresholdPx: number;
   /** Все допустимые позиции для этого модуля (ключ «x,z»), считается один раз. */
   valid: Set<string> | null;
   /** Позиции впритык к соседям — к ним модуль магнитится в первую очередь. */
@@ -64,6 +80,7 @@ export function PlanEditor({
   const pad = 1;
   const vb = side + pad * 2;
   const max = maxAnchor(gridN);
+  const min = minAnchor();
 
   const [drag, setDragState] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -82,14 +99,18 @@ export function PlanEditor({
    */
   const outline = useMemo(() => buildOutline(current), [current]);
 
-  // Линии сетки: каждый метр — тонкая, каждые 3 м — заметнее.
+  // Линии сетки: полушаг — едва заметно, метр — тонко, 3 м (сторона
+  // кубика) — заметнее. Шаг установки 0,5 м виден, но не рябит.
   const gridLines = useMemo(() => {
+    const half: number[] = [];
     const minor: number[] = [];
     const major: number[] = [];
     for (let v = STEP_M; v < side; v += STEP_M) {
-      (v % CELL_M === 0 ? major : minor).push(v);
+      if (v % CELL_M === 0) major.push(v);
+      else if (Number.isInteger(v)) minor.push(v);
+      else half.push(v);
     }
-    return { minor, major };
+    return { half, minor, major };
   }, [side]);
 
   /** Перевод точки экрана в метры участка (с учётом рамки pad). */
@@ -111,8 +132,39 @@ export function PlanEditor({
     return r.width ? vb / r.width : 0.05;
   };
 
-  const handlePlace = (e: React.PointerEvent<SVGRectElement>) => {
-    e.preventDefault();
+  /**
+   * Пока палец ведёт модуль, страница не должна прокручиваться.
+   * touch-action на SVG-фигурах не работает, а React вешает обработчики
+   * пассивно, поэтому touchmove слушаем сами с { passive: false }.
+   */
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (dragRef.current) e.preventDefault();
+    };
+    svg.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => svg.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
+  /**
+   * Установка модуля происходит на отпускании, а не на касании: иначе
+   * прокрутка страницы пальцем по плану ставила бы кубики. Если палец
+   * заметно сместился — это был скролл, и модуль не появляется.
+   */
+  const placeStart = useRef<{ x: number; y: number } | null>(null);
+
+  const handlePlaceStart = (e: React.PointerEvent<SVGRectElement>) => {
+    placeStart.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePlaceEnd = (e: React.PointerEvent<SVGRectElement>) => {
+    const start = placeStart.current;
+    placeStart.current = null;
+    if (!start) return;
+    const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+    if (moved > DRAG_THRESHOLD_TOUCH_PX) return;
+
     if (suppressPlace) {
       // Меню открыто: этот тап только закрывает его.
       onModuleTap?.("", e.clientX, e.clientY);
@@ -131,15 +183,15 @@ export function PlanEditor({
     const magnetic = pickSnapAnchor(d.anchors, d.rawX, d.rawZ, d.snap, threshold);
     if (magnetic) return magnetic;
     if (!d.valid) return null;
-    const bx = Math.round(d.rawX);
-    const bz = Math.round(d.rawZ);
+    const bx = snapToStep(d.rawX);
+    const bz = snapToStep(d.rawZ);
     let best: Cell | null = null;
     let bestDist = Infinity;
-    for (let dx = -2; dx <= 2; dx += 1) {
-      for (let dz = -2; dz <= 2; dz += 1) {
-        const x = bx + dx;
-        const z = bz + dz;
-        if (x < 0 || z < 0 || x > max || z > max) continue;
+    for (let dx = -1.5; dx <= 1.5; dx += STEP_M) {
+      for (let dz = -1.5; dz <= 1.5; dz += STEP_M) {
+        const x = snapToStep(bx + dx);
+        const z = snapToStep(bz + dz);
+        if (x < min || z < min || x > max || z > max) continue;
         if (!d.valid.has(`${x},${z}`)) continue;
         const dist = (x - d.rawX) ** 2 + (z - d.rawZ) ** 2;
         if (dist < bestDist) {
@@ -156,6 +208,9 @@ export function PlanEditor({
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = toMetres(e.clientX, e.clientY);
+    // Подсвечиваем модуль сразу при нажатии: человек видит, что «взял» его,
+    // ещё до того, как начал двигать.
+    selectModule(m.id);
     setDrag({
       id: m.id,
       grabDX: p.x - m.x,
@@ -165,6 +220,7 @@ export function PlanEditor({
       startClientX: e.clientX,
       startClientY: e.clientY,
       active: false,
+      thresholdPx: e.pointerType === "mouse" ? DRAG_THRESHOLD_MOUSE_PX : DRAG_THRESHOLD_TOUCH_PX,
       valid: null,
       anchors: [],
       snap: null,
@@ -177,7 +233,7 @@ export function PlanEditor({
     let next = d;
     if (!d.active) {
       const dist = Math.hypot(e.clientX - d.startClientX, e.clientY - d.startClientY);
-      if (dist < DRAG_THRESHOLD_PX) return;
+      if (dist < d.thresholdPx) return;
       next = {
         ...next,
         active: true,
@@ -186,7 +242,7 @@ export function PlanEditor({
       };
     }
     const p = toMetres(e.clientX, e.clientY);
-    const clamp = (v: number) => Math.max(-0.6, Math.min(max + 0.6, v));
+    const clamp = (v: number) => Math.max(min - 0.6, Math.min(max + 0.6, v));
     const moved = { ...next, rawX: clamp(p.x - d.grabDX), rawZ: clamp(p.z - d.grabDZ) };
     setDrag({ ...moved, snap: snapFor(moved) });
   };
@@ -214,19 +270,19 @@ export function PlanEditor({
   // Точки-подсказки вокруг курсора: как ходы в шахматах — куда модуль можно поставить.
   const hintDots = useMemo(() => {
     if (!drag?.active || !drag.valid) return [];
-    const bx = Math.round(drag.rawX);
-    const bz = Math.round(drag.rawZ);
+    const bx = snapToStep(drag.rawX);
+    const bz = snapToStep(drag.rawZ);
     const dots: Cell[] = [];
-    for (let dx = -HINT_RADIUS; dx <= HINT_RADIUS; dx += 1) {
-      for (let dz = -HINT_RADIUS; dz <= HINT_RADIUS; dz += 1) {
-        const x = bx + dx;
-        const z = bz + dz;
-        if (x < 0 || z < 0 || x > max || z > max) continue;
+    for (let dx = -HINT_RADIUS_M; dx <= HINT_RADIUS_M; dx += STEP_M) {
+      for (let dz = -HINT_RADIUS_M; dz <= HINT_RADIUS_M; dz += STEP_M) {
+        const x = snapToStep(bx + dx);
+        const z = snapToStep(bz + dz);
+        if (x < min || z < min || x > max || z > max) continue;
         if (drag.valid.has(`${x},${z}`)) dots.push({ x, z });
       }
     }
     return dots;
-  }, [drag, max]);
+  }, [drag, min, max]);
 
   const fillFor = (m: ModuleItem) => (showRoles ? ROLES[m.role].plan : "#ffffff");
 
@@ -235,15 +291,22 @@ export function PlanEditor({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${vb} ${vb}`}
-        className="w-full touch-manipulation select-none rounded-sm border border-border bg-[#eef1ea]"
+        className="w-full select-none rounded-sm border border-border bg-[#eef1ea]"
+        style={{ touchAction: "pan-y" }}
         role="img"
-        aria-label="План дома — сетка участка с шагом 1 м"
+        aria-label="План дома — сетка участка с шагом 0,5 м"
       >
         <g transform={`translate(${pad} ${pad})`}>
           {/* Участок */}
           <rect x={0} y={0} width={side} height={side} fill="#e5eadd" />
 
           {/* Сетка: 1 м — тонко, 3 м — заметнее */}
+          {gridLines.half.map((v) => (
+            <g key={`hf-${v}`} stroke="rgba(0,0,0,0.03)" strokeWidth={0.03}>
+              <line x1={v} y1={0} x2={v} y2={side} />
+              <line x1={0} y1={v} x2={side} y2={v} />
+            </g>
+          ))}
           {gridLines.minor.map((v) => (
             <g key={`mn-${v}`} stroke="rgba(0,0,0,0.05)" strokeWidth={0.04}>
               <line x1={v} y1={0} x2={v} y2={side} />
@@ -257,6 +320,19 @@ export function PlanEditor({
             </g>
           ))}
 
+          {/* Зона застройки: ближе 3 м к забору модуль не поставить */}
+          <rect
+            x={SETBACK_M}
+            y={SETBACK_M}
+            width={buildableSide(gridN)}
+            height={buildableSide(gridN)}
+            fill="none"
+            stroke="rgba(180,69,60,0.45)"
+            strokeWidth={0.08}
+            strokeDasharray="0.7 0.5"
+            style={{ pointerEvents: "none" }}
+          />
+
           {/* Слой установки: тап по свободному месту ставит модуль */}
           <rect
             x={0}
@@ -264,7 +340,11 @@ export function PlanEditor({
             width={side}
             height={side}
             fill="transparent"
-            onPointerDown={handlePlace}
+            onPointerDown={handlePlaceStart}
+            onPointerUp={handlePlaceEnd}
+            onPointerCancel={() => {
+              placeStart.current = null;
+            }}
             style={{ cursor: "copy" }}
           />
 
@@ -329,7 +409,7 @@ export function PlanEditor({
 
           {/* Зоны захвата: тап — меню модуля, перетаскивание — перенос */}
           {current.map((m) => {
-            const selected = m.id === selectedId;
+            const selected = m.id === selectedId || drag?.id === m.id;
             return (
               <g
                 key={m.id}
@@ -337,8 +417,15 @@ export function PlanEditor({
                 onPointerMove={updateDrag}
                 onPointerUp={(e) => endDrag(true, e)}
                 onPointerCancel={() => endDrag(false)}
-                style={{ cursor: "grab", touchAction: "none" }}
+                style={{ cursor: "grab" }}
               >
+                {/*
+                  touch-action здесь бесполезен: у SVG-подэлементов нет
+                  собственного CSS-бокса, и браузер это свойство игнорирует.
+                  Прокрутку во время перетаскивания глушит non-passive
+                  обработчик touchmove ниже — иначе Chrome считает движение
+                  пальцем скроллом страницы и шлёт pointercancel.
+                */}
                 <rect
                   x={m.x}
                   y={m.z}

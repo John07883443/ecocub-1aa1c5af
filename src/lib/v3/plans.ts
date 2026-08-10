@@ -19,7 +19,7 @@
  */
 
 import { MODULE_AREA, ROLES, TEMPLATES } from "../constructor/constants.ts";
-import { canPlace, supportArea } from "../constructor/geometry.ts";
+import { canPlace, minAnchor, supportArea } from "../constructor/geometry.ts";
 import { MIN_SUPPORT_AREA } from "../constructor/constants.ts";
 import type { ModuleItem, Role } from "../constructor/types.ts";
 import type { EcoCubPlan, PlanCell, PlanRoom } from "./types.ts";
@@ -423,13 +423,21 @@ export function validatePlanLibrary(plans: EcoCubPlan[] = PLAN_LIBRARY): string[
     }
 
     // Геометрия: собираем план по одной ячейке через боевой canPlace.
-    // Участок берём заведомо больший, чем габарит плана.
+    // Координаты плана заданы от нуля, а на участке дом обязан отступить от
+    // границ — поэтому проверяем план уже сдвинутым в зону застройки.
+    const offset = minAnchor();
     const span = Math.max(...plan.cells.map((c) => Math.max(c.x, c.z))) + 6;
-    const n = Math.ceil(span / 3) + 2;
+    const n = Math.ceil((span + offset * 2) / 3) + 2;
     const placed: ModuleItem[] = [];
     const byFloor = [...plan.cells].sort((a, b) => a.floor - b.floor);
     for (const c of byFloor) {
-      const candidate = { id: c.id, x: c.x, z: c.z, floor: c.floor, role: c.role };
+      const candidate = {
+        id: c.id,
+        x: c.x + offset,
+        z: c.z + offset,
+        floor: c.floor,
+        role: c.role,
+      };
       if (!canPlace(placed, candidate, n)) {
         errors.push(`${plan.id}: ячейка ${c.id} нарушает правила размещения`);
       }

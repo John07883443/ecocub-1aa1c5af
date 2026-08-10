@@ -9,6 +9,8 @@ import {
   MODULE_AREA,
   MODULE_SIDE_M,
   ROLES,
+  SETBACK_M,
+  snapToStep,
   STEP_M,
   TERRACE_PRICE_FACTOR,
 } from "./constants.ts";
@@ -20,9 +22,22 @@ export function gridSizeForSotki(sotki: number): number {
   return Math.max(6, Math.min(20, cells));
 }
 
-/** Максимально допустимый якорь модуля (левый-верхний угол) на участке из n ячеек. */
+/**
+ * Границы зоны застройки, м: дом обязан отступить от забора на SETBACK_M
+ * с каждой стороны. minAnchor — самый левый-верхний допустимый якорь,
+ * maxAnchor — самый правый-нижний.
+ */
+export function minAnchor(): number {
+  return SETBACK_M;
+}
+
 export function maxAnchor(n: number): number {
-  return n * CELL_M - MODULE_SIDE_M;
+  return n * CELL_M - MODULE_SIDE_M - SETBACK_M;
+}
+
+/** Сторона зоны застройки (участок минус отступы), м. */
+export function buildableSide(n: number): number {
+  return Math.max(0, n * CELL_M - SETBACK_M * 2);
 }
 
 /** Пересечение двух модулей в плане, м² (модули 3×3, координаты в метрах). */
@@ -49,8 +64,9 @@ export function supportArea(
 }
 
 function inBounds(c: Cell, n: number): boolean {
+  const min = minAnchor();
   const max = maxAnchor(n);
-  return c.x >= 0 && c.z >= 0 && c.x <= max && c.z <= max;
+  return c.x >= min && c.z >= min && c.x <= max && c.z <= max;
 }
 
 /**
@@ -83,7 +99,7 @@ export const SNAP_HYSTERESIS_M = 0.35;
 
 /**
  * Позиции, в которых модуль встаёт вплотную гранью к уже стоящему: между
- * кубиками не остаётся зазора. Смещение вдоль грани кратно шагу 1 м, но
+ * кубиками не остаётся зазора. Смещение вдоль грани кратно шагу установки, но
  * перекрытие не меньше MIN_JOINT_LENGTH_M — «уголком» пристыковаться нельзя.
  */
 export function snapAnchors(
@@ -164,7 +180,7 @@ export function pickSnapAnchor(
 /**
  * Подобрать якорь под точку тапа. Сначала пробуем встать вплотную к соседнему
  * модулю (кубики магнитятся друг к другу), и только если рядом никого нет —
- * ставим по сетке с шагом 1 м.
+ * ставим по сетке с шагом установки.
  */
 export function anchorForPoint(
   modules: ModuleItem[],
@@ -174,7 +190,8 @@ export function anchorForPoint(
   n: number,
 ): Cell | null {
   const max = maxAnchor(n);
-  const clamp = (v: number) => Math.max(0, Math.min(max, Math.round(v)));
+  const min = minAnchor();
+  const clamp = (v: number) => Math.max(min, Math.min(max, snapToStep(v)));
   const ax = clamp(px - MODULE_SIDE_M / 2);
   const az = clamp(pz - MODULE_SIDE_M / 2);
 
@@ -232,13 +249,29 @@ export function isValidMove(
   return dropUnsupported(next).length === next.length;
 }
 
-/** Все допустимые позиции (шаг 1 м) для перемещения модуля id по участку. */
+/**
+ * Все допустимые позиции (шаг STEP_M) для перемещения модуля id по участку.
+ *
+ * С шагом 0,5 м позиций вчетверо больше, чем при метровой сетке, поэтому
+ * дорогую проверку «не лишим ли опоры соседей» делаем только когда над
+ * этажом модуля вообще что-то стоит. В типовом случае (одноэтажный дом или
+ * модуль верхнего этажа) хватает быстрой canPlace.
+ */
 export function validMoveAnchors(modules: ModuleItem[], id: string, n: number): Set<string> {
   const valid = new Set<string>();
   const max = maxAnchor(n);
-  for (let x = 0; x <= max; x += STEP_M) {
-    for (let z = 0; z <= max; z += STEP_M) {
-      if (isValidMove(modules, id, x, z, n)) valid.add(`${x},${z}`);
+  const target = modules.find((m) => m.id === id);
+  if (!target) return valid;
+
+  const rest = modules.filter((m) => m.id !== id);
+  const hasFloorsAbove = rest.some((m) => m.floor > target.floor);
+
+  for (let x = minAnchor(); x <= max; x += STEP_M) {
+    for (let z = minAnchor(); z <= max; z += STEP_M) {
+      const ok = hasFloorsAbove
+        ? isValidMove(modules, id, x, z, n)
+        : canPlace(rest, { x, z, floor: target.floor }, n);
+      if (ok) valid.add(`${x},${z}`);
     }
   }
   return valid;

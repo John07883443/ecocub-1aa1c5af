@@ -7,6 +7,7 @@ import {
   dropUnsupported,
   gridSizeForSotki,
   maxAnchor,
+  minAnchor,
   orphansAfterRemoval,
 } from "./geometry";
 import {
@@ -38,9 +39,11 @@ function seedsToModules(templateId: string, n: number): ModuleItem[] {
   const maxX = Math.max(...tpl.seeds.map((s) => s.x));
   const minZ = Math.min(...tpl.seeds.map((s) => s.z));
   const maxZ = Math.max(...tpl.seeds.map((s) => s.z));
+  // Центрируем внутри зоны застройки: дом не должен упереться в отступ.
+  const min = minAnchor();
   const max = maxAnchor(n);
-  const offX = Math.max(0, Math.round((max - (maxX - minX)) / 2)) - minX;
-  const offZ = Math.max(0, Math.round((max - (maxZ - minZ)) / 2)) - minZ;
+  const offX = min + Math.max(0, Math.round((max - min - (maxX - minX)) / 2)) - minX;
+  const offZ = min + Math.max(0, Math.round((max - min - (maxZ - minZ)) / 2)) - minZ;
   // Роли из шаблонов не переносим: кубики одинаковые, отличается только форма.
   return tpl.seeds.map((s) => ({
     id: newId(),
@@ -80,8 +83,11 @@ export function useHouseBuilder(basePricePerM2: number) {
   const setSotki = useCallback((next: number) => {
     const clamped = Math.max(MIN_SOTKI, Math.min(MAX_SOTKI, Math.round(next)));
     const max = maxAnchor(gridSizeForSotki(clamped));
-    // Убираем модули, вышедшие за уменьшенный участок, и осиротевшие верхние.
-    setModules((prev) => dropUnsupported(prev.filter((m) => m.x <= max && m.z <= max)));
+    const min = minAnchor();
+    // Убираем модули, вышедшие за зону застройки, и осиротевшие верхние.
+    setModules((prev) =>
+      dropUnsupported(prev.filter((m) => m.x >= min && m.z >= min && m.x <= max && m.z <= max)),
+    );
     setSotkiState(clamped);
   }, []);
 
@@ -104,7 +110,7 @@ export function useHouseBuilder(basePricePerM2: number) {
     [floor, role, gridN],
   );
 
-  /** Передвинуть модуль в новую позицию (координаты в метрах, шаг 1 м). */
+  /** Передвинуть модуль в новую позицию (координаты в метрах, шаг 0,5 м). */
   const moveModule = useCallback(
     (id: string, x: number, z: number) => {
       lastError.current = null;

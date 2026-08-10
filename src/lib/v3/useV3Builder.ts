@@ -17,6 +17,7 @@ import {
   dropUnsupported,
   gridSizeForSotki,
   maxAnchor,
+  minAnchor,
   orphansAfterRemoval,
 } from "../constructor/geometry";
 import { DESIGN_PRESETS, MAX_FLOORS, MAX_SOTKI, MIN_SOTKI } from "../constructor/constants";
@@ -61,9 +62,11 @@ function centerModules(modules: ModuleItem[], n: number): ModuleItem[] {
   const maxX = Math.max(...modules.map((m) => m.x));
   const minZ = Math.min(...modules.map((m) => m.z));
   const maxZ = Math.max(...modules.map((m) => m.z));
+  // Центрируем внутри зоны застройки: дом отступает от границ участка.
+  const min = minAnchor();
   const max = maxAnchor(n);
-  const offX = Math.max(0, Math.round((max - (maxX - minX)) / 2)) - minX;
-  const offZ = Math.max(0, Math.round((max - (maxZ - minZ)) / 2)) - minZ;
+  const offX = min + Math.max(0, Math.round((max - min - (maxX - minX)) / 2)) - minX;
+  const offZ = min + Math.max(0, Math.round((max - min - (maxZ - minZ)) / 2)) - minZ;
   return modules.map((m) => ({ ...m, x: m.x + offX, z: m.z + offZ }));
 }
 
