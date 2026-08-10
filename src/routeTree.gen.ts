@@ -15,6 +15,8 @@ import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as ContactsRouteImport } from './routes/contacts'
+import { Route as ConstructorLabRouteImport } from './routes/constructor-lab'
+import { Route as ConstructorAiV3RouteImport } from './routes/constructor-ai-v3'
 import { Route as ConstructorRouteImport } from './routes/constructor'
 import { Route as ConcreteRouteImport } from './routes/concrete'
 import { Route as IndexRouteImport } from './routes/index'
@@ -53,6 +55,16 @@ const PortfolioRoute = PortfolioRouteImport.update({
 const ContactsRoute = ContactsRouteImport.update({
   id: '/contacts',
   path: '/contacts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConstructorLabRoute = ConstructorLabRouteImport.update({
+  id: '/constructor-lab',
+  path: '/constructor-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConstructorAiV3Route = ConstructorAiV3RouteImport.update({
+  id: '/constructor-ai-v3',
+  path: '/constructor-ai-v3',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConstructorRoute = ConstructorRouteImport.update({
@@ -105,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
+  '/constructor-ai-v3': typeof ConstructorAiV3Route
+  '/constructor-lab': typeof ConstructorLabRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
@@ -122,6 +136,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
+  '/constructor-ai-v3': typeof ConstructorAiV3Route
+  '/constructor-lab': typeof ConstructorLabRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
@@ -140,6 +156,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
+  '/constructor-ai-v3': typeof ConstructorAiV3Route
+  '/constructor-lab': typeof ConstructorLabRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
@@ -159,6 +177,8 @@ export interface FileRouteTypes {
     | '/'
     | '/concrete'
     | '/constructor'
+    | '/constructor-ai-v3'
+    | '/constructor-lab'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
@@ -176,6 +196,8 @@ export interface FileRouteTypes {
     | '/'
     | '/concrete'
     | '/constructor'
+    | '/constructor-ai-v3'
+    | '/constructor-lab'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
@@ -193,6 +215,8 @@ export interface FileRouteTypes {
     | '/'
     | '/concrete'
     | '/constructor'
+    | '/constructor-ai-v3'
+    | '/constructor-lab'
     | '/contacts'
     | '/portfolio'
     | '/presentation'
@@ -211,6 +235,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConcreteRoute: typeof ConcreteRoute
   ConstructorRoute: typeof ConstructorRoute
+  ConstructorAiV3Route: typeof ConstructorAiV3Route
+  ConstructorLabRoute: typeof ConstructorLabRoute
   ContactsRoute: typeof ContactsRoute
   PortfolioRoute: typeof PortfolioRoute
   PresentationRoute: typeof PresentationRoute
@@ -267,6 +293,20 @@ declare module '@tanstack/react-router' {
       path: '/contacts'
       fullPath: '/contacts'
       preLoaderRoute: typeof ContactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/constructor-lab': {
+      id: '/constructor-lab'
+      path: '/constructor-lab'
+      fullPath: '/constructor-lab'
+      preLoaderRoute: typeof ConstructorLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/constructor-ai-v3': {
+      id: '/constructor-ai-v3'
+      path: '/constructor-ai-v3'
+      fullPath: '/constructor-ai-v3'
+      preLoaderRoute: typeof ConstructorAiV3RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/constructor': {
@@ -339,6 +379,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConcreteRoute: ConcreteRoute,
   ConstructorRoute: ConstructorRoute,
+  ConstructorAiV3Route: ConstructorAiV3Route,
+  ConstructorLabRoute: ConstructorLabRoute,
   ContactsRoute: ContactsRoute,
   PortfolioRoute: PortfolioRoute,
   PresentationRoute: PresentationRoute,
