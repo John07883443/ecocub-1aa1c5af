@@ -204,3 +204,22 @@ export const analyticsV31 = {
   telegramClicked: (projectId: string) => track("V31_TELEGRAM_CLICKED", { projectId }),
   projectRestored: (projectId: string) => track("V31_PROJECT_RESTORED", { projectId }),
 };
+
+/**
+ * События AI-планировки (блок под конструктором). Отдельный префикс: функция
+ * платная, и её воронку надо считать отдельно от остального конструктора.
+ *
+ * В параметрах нет ни телефона, ни адреса, ни ключа задания, ни абсолютных
+ * координат дома — только обезличенные размеры конфигурации и причина отказа.
+ * Причина приходит из закрытого списка сервера, свободного текста в ней быть
+ * не может.
+ */
+export const analyticsAiLayout = {
+  shown: () => track("AI_LAYOUT_SHOWN"),
+  requested: (modules: number, bedrooms: number, bathrooms: number) =>
+    track("AI_LAYOUT_REQUESTED", { modules, bedrooms, bathrooms }),
+  succeeded: (seconds: number) => track("AI_LAYOUT_SUCCEEDED", { seconds }),
+  failed: (reason: string) => track("AI_LAYOUT_FAILED", { reason }),
+  limitReached: (kind: "visitor" | "daily") => track("AI_LAYOUT_LIMIT", { kind }),
+  leadClicked: () => track("AI_LAYOUT_LEAD_CLICKED"),
+};

@@ -8,11 +8,9 @@
  */
 
 import { createCanvas, drawLine, encodePng, fillRect, type Canvas, type RGB } from "./png.ts";
-import { entrancePoint, type EntranceSide, type Footprint } from "./footprint.ts";
+import { entrancePoint, projectFootprint, type EntranceSide, type Footprint } from "./footprint.ts";
 
 export const FOOTPRINT_IMAGE_SIZE = 1024;
-/** Поля вокруг дома, доля от стороны изображения. */
-const PADDING_RATIO = 0.08;
 
 const WHITE: RGB = [255, 255, 255];
 const INK: RGB = [17, 17, 17];
@@ -46,14 +44,9 @@ export async function renderFootprintPng(
   size = FOOTPRINT_IMAGE_SIZE,
 ): Promise<FootprintImage> {
   const canvas = createCanvas(size, size, OUTSIDE);
-  const pad = size * PADDING_RATIO;
-  const usable = size - pad * 2;
-  const span = Math.max(footprint.widthM, footprint.depthM, 1);
-  const scale = usable / span;
-
-  // Центрируем: одинаковые поля слева/справа и сверху/снизу.
-  const offsetX = (size - footprint.widthM * scale) / 2;
-  const offsetZ = (size - footprint.depthM * scale) / 2;
+  // Масштаб и поля считает общая функция — та же, что накладывает контур
+  // поверх результата в интерфейсе.
+  const { scale, offsetX, offsetZ } = projectFootprint(footprint, size);
   const px = (mx: number) => offsetX + mx * scale;
   const pz = (mz: number) => offsetZ + mz * scale;
 

@@ -5,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { PlanEditor } from "./PlanEditor";
 import { StatsPanel } from "./StatsPanel";
+import { AiLayoutBlock } from "./AiLayoutBlock";
 import { useHouseBuilder } from "@/lib/constructor/useHouseBuilder";
 import {
   CELL_M,
@@ -97,224 +98,230 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      {/* ВЬЮПОРТ */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-sm border border-border p-1">
-            <TabBtn active={view === "plan"} onClick={() => setView("plan")}>
-              <Box className="size-4" /> План
-            </TabBtn>
-            <TabBtn active={view === "3d"} onClick={() => setView("3d")}>
-              <Layers3 className="size-4" /> 3D
-            </TabBtn>
+    <div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        {/* ВЬЮПОРТ */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-sm border border-border p-1">
+              <TabBtn active={view === "plan"} onClick={() => setView("plan")}>
+                <Box className="size-4" /> План
+              </TabBtn>
+              <TabBtn active={view === "3d"} onClick={() => setView("3d")}>
+                <Layers3 className="size-4" /> 3D
+              </TabBtn>
+            </div>
+
+            {view === "3d" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAutoRotate((v) => !v)}
+                className="gap-1.5"
+              >
+                <RefreshCw className={cn("size-3.5", autoRotate && "animate-spin-slow")} />
+                {autoRotate ? "Остановить" : "Вращать"}
+              </Button>
+            )}
+
+            {view === "plan" && (
+              <div className="inline-flex rounded-sm border border-border p-1">
+                {floorButtons.map((f) => (
+                  <TabBtn key={f} active={api.floor === f} onClick={() => api.setFloor(f)}>
+                    {f + 1} эт.
+                  </TabBtn>
+                ))}
+              </div>
+            )}
+
+            {/* Быстрая очистка плана — на виду, а не в глубине панели */}
+            {view === "plan" && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!api.modules.length}
+                onClick={() => setConfirmClear(true)}
+                className="ml-auto gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
+              >
+                <Eraser className="size-3.5" /> Очистить план
+              </Button>
+            )}
           </div>
 
-          {view === "3d" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAutoRotate((v) => !v)}
-              className="gap-1.5"
-            >
-              <RefreshCw className={cn("size-3.5", autoRotate && "animate-spin-slow")} />
-              {autoRotate ? "Остановить" : "Вращать"}
-            </Button>
-          )}
-
-          {view === "plan" && (
-            <div className="inline-flex rounded-sm border border-border p-1">
-              {floorButtons.map((f) => (
-                <TabBtn key={f} active={api.floor === f} onClick={() => api.setFloor(f)}>
-                  {f + 1} эт.
-                </TabBtn>
-              ))}
-            </div>
-          )}
-
-          {/* Быстрая очистка плана — на виду, а не в глубине панели */}
-          {view === "plan" && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!api.modules.length}
-              onClick={() => setConfirmClear(true)}
-              className="ml-auto gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
-            >
-              <Eraser className="size-3.5" /> Очистить план
-            </Button>
-          )}
-        </div>
-
-        {/*
+          {/*
           На телефоне поле квадратное и во всю ширину: кубики крупнее
           относительно пальца, поэтому в них проще попадать и видно, куда
           ведёшь модуль. На широких экранах пропорции прежние.
         */}
-        <div className="relative aspect-square w-full overflow-hidden rounded-sm bg-gradient-to-b from-sky-100 to-secondary sm:aspect-[4/3] md:aspect-[16/10]">
-          {/* PLAN */}
-          <div
-            className={cn("absolute inset-0 p-1.5 sm:p-3", view === "plan" ? "block" : "hidden")}
-          >
-            <div className="mx-auto flex h-full w-full max-w-[560px] items-center justify-center">
-              <PlanEditor api={api} onModuleTap={handleModuleTap} suppressPlace={!!menu} />
+          <div className="relative aspect-square w-full overflow-hidden rounded-sm bg-gradient-to-b from-sky-100 to-secondary sm:aspect-[4/3] md:aspect-[16/10]">
+            {/* PLAN */}
+            <div
+              className={cn("absolute inset-0 p-1.5 sm:p-3", view === "plan" ? "block" : "hidden")}
+            >
+              <div className="mx-auto flex h-full w-full max-w-[560px] items-center justify-center">
+                <PlanEditor api={api} onModuleTap={handleModuleTap} suppressPlace={!!menu} />
+              </div>
+            </div>
+
+            {/* 3D */}
+            <div className={cn("absolute inset-0", view === "3d" ? "block" : "hidden")}>
+              {mounted && opened3d ? (
+                <Suspense
+                  fallback={
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      Загрузка 3D-сцены…
+                    </div>
+                  }
+                >
+                  <Scene3D
+                    modules={api.modules}
+                    design={api.design}
+                    gridN={api.gridN}
+                    autoRotate={autoRotate}
+                  />
+                </Suspense>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Подготовка сцены…
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 3D */}
-          <div className={cn("absolute inset-0", view === "3d" ? "block" : "hidden")}>
-            {mounted && opened3d ? (
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    Загрузка 3D-сцены…
-                  </div>
-                }
-              >
-                <Scene3D
-                  modules={api.modules}
-                  design={api.design}
-                  gridN={api.gridN}
-                  autoRotate={autoRotate}
-                />
-              </Suspense>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Подготовка сцены…
-              </div>
-            )}
-          </div>
+          {view === "plan" && (
+            <p className="text-xs text-muted-foreground">
+              Тапните по свободному месту, чтобы поставить кубик {CELL_M}×{CELL_M} м, или потяните
+              готовый модуль пальцем либо мышкой — он примагнитится вплотную к соседнему, без
+              зазора. Тап по модулю открывает меню с удалением. Участок {plotSideM}×{plotSideM} м.
+            </p>
+          )}
         </div>
 
-        {view === "plan" && (
-          <p className="text-xs text-muted-foreground">
-            Тапните по свободному месту, чтобы поставить кубик {CELL_M}×{CELL_M} м, или потяните
-            готовый модуль пальцем либо мышкой — он примагнитится вплотную к соседнему, без зазора.
-            Тап по модулю открывает меню с удалением. Участок {plotSideM}×{plotSideM} м.
-          </p>
+        {/* ПАНЕЛЬ УПРАВЛЕНИЯ */}
+        <div className="flex flex-col gap-4">
+          <StatsPanel stats={api.stats} />
+
+          {/* Участок */}
+          <div className="rounded-sm border border-border bg-card p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Участок</span>
+              <span className="text-sm font-semibold text-foreground">
+                {api.sotki} соток · {plotSideM}×{plotSideM} м
+              </span>
+            </div>
+            <Slider
+              value={[api.sotki]}
+              min={MIN_SOTKI}
+              max={MAX_SOTKI}
+              step={1}
+              onValueChange={(v) => api.setSotki(v[0])}
+              className="mt-3"
+            />
+          </div>
+
+          {/* Шаблоны */}
+          <div className="rounded-sm border border-border bg-card p-4">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Готовые планировки
+            </span>
+            <div className="mt-2 grid grid-cols-1 gap-1.5">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => api.loadTemplate(t.id)}
+                  className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:border-accent"
+                >
+                  <span className="font-medium">{t.name}</span>
+                  <span className="text-xs text-muted-foreground">{t.shape}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Дизайн */}
+          <div className="rounded-sm border border-border bg-card p-4">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Дизайн фасада
+            </span>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {DESIGN_PRESETS.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => api.setDesignId(d.id)}
+                  className={cn(
+                    "rounded-sm border px-2.5 py-2 text-left text-xs transition-colors",
+                    api.designId === d.id
+                      ? "border-accent ring-1 ring-accent"
+                      : "border-border hover:border-accent/60",
+                  )}
+                >
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span
+                      className="size-3 rounded-full border border-black/10"
+                      style={{ backgroundColor: d.wall }}
+                    />
+                    {d.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {api.design.image && !imgError[api.design.id] && (
+              <figure className="mt-3">
+                <div className="relative overflow-hidden rounded-sm">
+                  <img
+                    src={api.design.image}
+                    alt={`AI-визуализация фасада «${api.design.name}»`}
+                    loading="lazy"
+                    onError={() => setImgError((s) => ({ ...s, [api.design.id]: true }))}
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                  <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-sm bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+                    <Sparkles className="size-3" /> AI-визуализация
+                  </span>
+                </div>
+              </figure>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">{api.design.description}</p>
+          </div>
+
+          <Button size="lg" className="w-full gap-2" onClick={handleQuote}>
+            <Sparkles className="size-4" /> Получить расчёт по этой сборке
+            <ArrowRight className="size-4" />
+          </Button>
+        </div>
+
+        {menu && (
+          <ModuleMenu
+            floor={api.modules.find((m) => m.id === menu.id)?.floor ?? 0}
+            anchor={{ x: menu.x, y: menu.y }}
+            onDelete={() => {
+              api.removeModule(menu.id);
+              setMenu(null);
+            }}
+            onClose={() => {
+              setMenu(null);
+              api.selectModule(null);
+            }}
+          />
+        )}
+
+        {confirmClear && (
+          <ClearDialog
+            onCancel={() => setConfirmClear(false)}
+            onConfirm={() => {
+              api.clearAll();
+              setMenu(null);
+              setConfirmClear(false);
+            }}
+          />
         )}
       </div>
 
-      {/* ПАНЕЛЬ УПРАВЛЕНИЯ */}
-      <div className="flex flex-col gap-4">
-        <StatsPanel stats={api.stats} />
-
-        {/* Участок */}
-        <div className="rounded-sm border border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Участок</span>
-            <span className="text-sm font-semibold text-foreground">
-              {api.sotki} соток · {plotSideM}×{plotSideM} м
-            </span>
-          </div>
-          <Slider
-            value={[api.sotki]}
-            min={MIN_SOTKI}
-            max={MAX_SOTKI}
-            step={1}
-            onValueChange={(v) => api.setSotki(v[0])}
-            className="mt-3"
-          />
-        </div>
-
-        {/* Шаблоны */}
-        <div className="rounded-sm border border-border bg-card p-4">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Готовые планировки
-          </span>
-          <div className="mt-2 grid grid-cols-1 gap-1.5">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => api.loadTemplate(t.id)}
-                className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:border-accent"
-              >
-                <span className="font-medium">{t.name}</span>
-                <span className="text-xs text-muted-foreground">{t.shape}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Дизайн */}
-        <div className="rounded-sm border border-border bg-card p-4">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Дизайн фасада
-          </span>
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {DESIGN_PRESETS.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => api.setDesignId(d.id)}
-                className={cn(
-                  "rounded-sm border px-2.5 py-2 text-left text-xs transition-colors",
-                  api.designId === d.id
-                    ? "border-accent ring-1 ring-accent"
-                    : "border-border hover:border-accent/60",
-                )}
-              >
-                <span className="flex items-center gap-1.5 font-medium">
-                  <span
-                    className="size-3 rounded-full border border-black/10"
-                    style={{ backgroundColor: d.wall }}
-                  />
-                  {d.name}
-                </span>
-              </button>
-            ))}
-          </div>
-          {api.design.image && !imgError[api.design.id] && (
-            <figure className="mt-3">
-              <div className="relative overflow-hidden rounded-sm">
-                <img
-                  src={api.design.image}
-                  alt={`AI-визуализация фасада «${api.design.name}»`}
-                  loading="lazy"
-                  onError={() => setImgError((s) => ({ ...s, [api.design.id]: true }))}
-                  className="aspect-[16/9] w-full object-cover"
-                />
-                <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-sm bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
-                  <Sparkles className="size-3" /> AI-визуализация
-                </span>
-              </div>
-            </figure>
-          )}
-          <p className="mt-2 text-xs text-muted-foreground">{api.design.description}</p>
-        </div>
-
-        <Button size="lg" className="w-full gap-2" onClick={handleQuote}>
-          <Sparkles className="size-4" /> Получить расчёт по этой сборке
-          <ArrowRight className="size-4" />
-        </Button>
-      </div>
-
-      {menu && (
-        <ModuleMenu
-          floor={api.modules.find((m) => m.id === menu.id)?.floor ?? 0}
-          anchor={{ x: menu.x, y: menu.y }}
-          onDelete={() => {
-            api.removeModule(menu.id);
-            setMenu(null);
-          }}
-          onClose={() => {
-            setMenu(null);
-            api.selectModule(null);
-          }}
-        />
-      )}
-
-      {confirmClear && (
-        <ClearDialog
-          onCancel={() => setConfirmClear(false)}
-          onConfirm={() => {
-            api.clearAll();
-            setMenu(null);
-            setConfirmClear(false);
-          }}
-        />
-      )}
+      {/* AI-планировка. Блок сам себя скрывает, пока функция выключена
+          на сервере, поэтому здесь никаких условий не нужно. */}
+      <AiLayoutBlock modules={api.modules} onRequestQuote={onRequestQuote} />
     </div>
   );
 }

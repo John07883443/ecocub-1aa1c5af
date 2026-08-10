@@ -243,3 +243,46 @@ export function entrancePoint(
 function segLength(s: Segment): number {
   return Math.hypot(s.x2 - s.x1, s.z2 - s.z1);
 }
+
+/* ------------------------------------------------------------------ */
+/* Проекция контура в кадр                                             */
+/* ------------------------------------------------------------------ */
+
+/** Поля вокруг дома, доля от стороны изображения. */
+export const PADDING_RATIO = 0.08;
+
+/**
+ * Сторона квадратного кадра. Живёт здесь, а не в модуле отрисовки: то же
+ * значение нужно интерфейсу для наложения контура, а тянуть в браузер
+ * серверный рендерер с zlib ради одной константы незачем.
+ */
+export const FOOTPRINT_IMAGE_SIZE = 1024;
+
+export interface FootprintProjection {
+  /** Пикселей на метр. */
+  scale: number;
+  offsetX: number;
+  offsetZ: number;
+  size: number;
+}
+
+/**
+ * Как контур ложится в квадратный кадр: масштаб по большей стороне, поля
+ * одинаковые со всех сторон, пропорции сохранены.
+ *
+ * Функция общая для серверного рендера исходника и для наложения контура
+ * поверх результата в интерфейсе. Держать её в одном месте обязательно: если
+ * две реализации разойдутся хоть на пиксель, наложенный контур перестанет
+ * совпадать с домом на картинке, и вся затея потеряет смысл.
+ */
+export function projectFootprint(footprint: Footprint, size: number): FootprintProjection {
+  const usable = size - size * PADDING_RATIO * 2;
+  const span = Math.max(footprint.widthM, footprint.depthM, 1);
+  const scale = usable / span;
+  return {
+    scale,
+    offsetX: (size - footprint.widthM * scale) / 2,
+    offsetZ: (size - footprint.depthM * scale) / 2,
+    size,
+  };
+}
