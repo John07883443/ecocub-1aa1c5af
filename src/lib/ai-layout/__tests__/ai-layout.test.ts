@@ -146,7 +146,56 @@ test("промпт содержит проверяемые габариты и �
   assert.match(prompt, /home office/);
   assert.match(prompt, /bottom \(south\) side/);
   assert.match(prompt, /Do not change, crop, bend, expand, shrink or simplify/);
-  assert.equal(PROMPT_VERSION, "v2-contrast");
+  assert.equal(PROMPT_VERSION, "v4-reference");
+});
+
+test("в промпт попадают паттерны построенных проектов", () => {
+  // До v3 модель держала контур, но внутри рисовала абстрактную квартиру:
+  // мокрые зоны разъезжались по дому, остекление было случайным. Разбор
+  // Weekend One и Weekend Mini уходит в промпт целиком.
+  const prompt = buildLayoutPrompt(buildFootprint(lShaped()), {
+    bedrooms: 2,
+    bathrooms: 1,
+    extraRooms: [],
+    entrance: null,
+  });
+  assert.match(prompt, /ECOCUB DESIGN PATTERNS/);
+  assert.match(prompt, /single riser/);
+  assert.match(prompt, /Allowed opening heights: 2100, 2500, 2800, 3150 mm/);
+  assert.match(prompt, /floor-to-ceiling glazing/);
+  assert.match(prompt, /blank facade is a valid/);
+  // Терраса не должна выползти за контур — иначе паттерны сломают то
+  // единственное, что раньше работало.
+  assert.match(prompt, /must stay strictly inside the given footprint/);
+  // Габарит модуля в тексте обязан совпадать с тем, что нарисовано на PNG.
+  assert.match(prompt, /Module: external 3000 x 3000 mm/);
+});
+
+test("к собранному дому подбирается ближайший построенный проект", () => {
+  // Дом на шесть кубиков и 54 м² ближе всего к Family One: столько же
+  // объёмов и сопоставимая площадь.
+  const prompt = buildLayoutPrompt(buildFootprint(lShaped()), {
+    bedrooms: 2,
+    bathrooms: 1,
+    extraRooms: [],
+    entrance: null,
+  });
+  assert.match(prompt, /CLOSEST BUILT PROJECT/);
+  assert.match(prompt, /Family One/);
+  // Образец не должен перебивать контур — это единственное жёсткое правило.
+  assert.match(prompt, /Do NOT copy its outline/);
+
+  // Дом на один кубик не похож ни на что из библиотеки: образца быть не должно.
+  const tiny = buildLayoutPrompt(
+    buildFootprint([{ id: "a", x: 0, z: 0, floor: 0, role: "living" }]),
+    {
+      bedrooms: 1,
+      bathrooms: 1,
+      extraRooms: [],
+      entrance: null,
+    },
+  );
+  assert.ok(!tiny.includes("CLOSEST BUILT PROJECT"));
 });
 
 test("нормализация отбивает мусор и подделанную геометрию", () => {

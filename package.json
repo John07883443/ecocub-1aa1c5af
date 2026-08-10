@@ -14,7 +14,8 @@
     "test:v3": "node --experimental-strip-types --test \"src/lib/v3/__tests__/*.test.ts\"",
     "test:v31": "node --experimental-strip-types --test \"src/lib/v31/__tests__/*.test.ts\"",
     "test:header": "node scripts/header-stability.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:standards": "node --experimental-strip-types --test \"src/lib/standards/__tests__/*.test.ts\""
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

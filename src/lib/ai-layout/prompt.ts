@@ -8,8 +8,24 @@
  */
 
 import { ENTRANCE_LABELS, type EntranceSide, type Footprint } from "./footprint.ts";
+import { MODULE_HEIGHT_M, MODULE_SIDE_M } from "../constructor/constants.ts";
+import { MODULE } from "../standards/ecocub.ts";
+import { patternBriefing } from "../standards/patterns.ts";
+import { matchReference, referenceBriefing } from "../standards/library.ts";
 
-export const PROMPT_VERSION = "v2-contrast";
+/**
+ * Версия v3 добавила в промпт разбор построенных проектов: где оказывается
+ * мокрая зона, какое остекление у общей комнаты, чем терраса отличается от
+ * пристройки. Контур модель держала и раньше, а внутри рисовала абстрактную
+ * квартиру.
+ *
+ * Версия v4 добавила подбор: к собранному дому подбирается ближайший по
+ * площади и форме реальный проект, и его решение уходит в промпт целиком.
+ * Модель больше не изобретает планировку с нуля — она пересаживает готовую
+ * на новый контур. Когда похожего проекта нет, блок не добавляется вовсе:
+ * образец не того масштаба хуже, чем никакого.
+ */
+export const PROMPT_VERSION = "v4-reference";
 
 /** Программа помещений — то немногое, что задаёт человек. */
 export interface LayoutProgram {
@@ -87,7 +103,29 @@ export function buildLayoutPrompt(footprint: Footprint, program: LayoutProgram):
     ? `Main entrance is on the ${ENTRANCE_EN[program.entrance]}, exactly where the reference image shows the gap in the outer wall.`
     : "Place the main entrance on the longest exterior wall.";
 
-  const moduleText = `The house is assembled from ${footprint.modules.length} concrete modules of 3 x 3 m each; overall footprint is ${footprint.widthM} x ${footprint.depthM} m, total ${footprint.areaM2} m2, ceiling height 3.15 m.`;
+  // Габарит модуля берётся из констант конструктора, а не пишется числом:
+  // на исходном контуре нарисованы именно они, и текст обязан совпадать с
+  // картинкой. Толщина стены и высота — из стандарта, они от раскладки не
+  // зависят.
+  const moduleText = `The house is assembled from ${footprint.modules.length} concrete modules of ${MODULE_SIDE_M} x ${MODULE_SIDE_M} m each; overall footprint is ${footprint.widthM} x ${footprint.depthM} m, total ${footprint.areaM2} m2, ceiling height ${MODULE_HEIGHT_M} m.`;
+
+  // Ближайший построенный проект. Может не найтись — тогда остаются одни
+  // паттерны, и это нормальный режим, а не деградация.
+  const match = matchReference({
+    footprintM2: footprint.areaM2,
+    moduleCount: footprint.moduleCount,
+    widthM: footprint.widthM,
+    depthM: footprint.depthM,
+    bedrooms: program.bedrooms,
+  });
+  const reference = match ? `\n${referenceBriefing(match)}\n` : "";
+
+  const patterns = patternBriefing({
+    externalWidthMm: MODULE_SIDE_M * 1000,
+    externalDepthMm: MODULE_SIDE_M * 1000,
+    wallThicknessMm: MODULE.wallThicknessMm,
+    clearHeightMm: MODULE_HEIGHT_M * 1000,
+  });
 
   return `Use the uploaded image as an immutable building footprint and exact top-down reference.
 
@@ -110,6 +148,8 @@ Required program: ${programText}.
 ${entranceText}
 ${moduleText}
 
+${patterns}
+${reference}
 LAYOUT REQUIREMENTS:
 - Add rational interior partitions, interior doors with opening arcs, windows, kitchen equipment, bathroom fixtures and furniture at believable architectural scale.
 - Group kitchen, bathrooms and technical plumbing zones rationally.

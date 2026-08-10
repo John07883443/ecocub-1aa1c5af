@@ -66,6 +66,14 @@ export interface Template {
   name: string;
   shape: string;
   seeds: TemplateSeed[];
+  /**
+   * Идентификатор реального проекта из `src/lib/standards`, если шаблон
+   * повторяет его раскладку. Отличает «настоящий дом, который можно взять за
+   * основу» от абстрактной фигуры вроде «Куб».
+   */
+  reference?: string;
+  /** Чем шаблон отличается от соседних — одной строкой для карточки. */
+  note?: string;
 }
 
 export interface HouseStats {

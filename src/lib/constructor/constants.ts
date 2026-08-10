@@ -104,7 +104,89 @@ export const DESIGN_PRESETS: DesignPreset[] = [
 
 // Стартовые планировки. Координаты — в метрах от нуля (кратны шагу, модуль 3×3);
 // при загрузке центрируются на участке.
+/**
+ * Готовые раскладки.
+ *
+ * Первые четыре повторяют построенные проекты — их разбор лежит в
+ * `src/lib/standards`. Смысл в том, чтобы человек не собирал дом с нуля, а
+ * брал заведомо рабочую планировку и достраивал под себя: добавил кубик под
+ * кабинет, отодвинул спальню, убрал террасу. Раскладка приблизительная —
+ * конструктор пока считает модуль квадратом 3 × 3 м, а на чертеже он
+ * 3,2 × 3,42 (см. docs/STANDARDS.md), — поэтому это опорная форма и состав
+ * помещений, а не копия чертежа.
+ *
+ * Дальше идут абстрактные фигуры: они остались как быстрый старт для тех,
+ * кому ни один готовый проект не подходит.
+ */
 export const TEMPLATES: Template[] = [
+  {
+    id: "weekend-mini",
+    name: "Weekend Mini",
+    shape: "3 модуля · Г-образный · спальня и общая комната",
+    reference: "weekend-mini",
+    note: "Компактный дом выходного дня: терраса в вырезе буквы Г",
+    seeds: [
+      { x: 0, z: 0, floor: 0, role: "bedroom" },
+      { x: 3, z: 0, floor: 0, role: "bathroom" },
+      { x: 3, z: 3, floor: 0, role: "living" },
+      { x: 0, z: 3, floor: 0, role: "terrace" },
+    ],
+  },
+  {
+    id: "weekend-one",
+    name: "Weekend One",
+    shape: "4 модуля в линию · смещение на полмодуля",
+    reference: "weekend-one",
+    note: "Кухня-гостиная из двух модулей, спальня целым модулем, террасы в уступах",
+    seeds: [
+      { x: 0, z: 1.5, floor: 0, role: "bathroom" },
+      { x: 3, z: 3, floor: 0, role: "kitchen" },
+      { x: 6, z: 3, floor: 0, role: "living" },
+      { x: 9, z: 1.5, floor: 0, role: "bedroom" },
+      { x: 0, z: 4.5, floor: 0, role: "terrace" },
+      { x: 3, z: 0, floor: 0, role: "terrace" },
+      { x: 6, z: 0, floor: 0, role: "terrace" },
+      { x: 9, z: 4.5, floor: 0, role: "terrace" },
+    ],
+  },
+  {
+    id: "family-one",
+    name: "Family One",
+    shape: "6 модулей · 3 × 2 · две спальни",
+    reference: "family-one",
+    note: "Кухня и гостиная одним объёмом, спальни по углам, мокрый блок у входа",
+    seeds: [
+      { x: 0, z: 6, floor: 0, role: "kitchen" },
+      { x: 3, z: 6, floor: 0, role: "living" },
+      { x: 6, z: 6, floor: 0, role: "bedroom" },
+      { x: 0, z: 3, floor: 0, role: "bedroom" },
+      { x: 3, z: 3, floor: 0, role: "living" },
+      { x: 6, z: 3, floor: 0, role: "bathroom" },
+      { x: 0, z: 9, floor: 0, role: "terrace" },
+      { x: 3, z: 9, floor: 0, role: "terrace" },
+      { x: 6, z: 0, floor: 0, role: "terrace" },
+    ],
+  },
+  {
+    id: "family-two",
+    name: "Family Two",
+    shape: "8 модулей · 4 × 2 · три спальни",
+    reference: "family-two",
+    note: "Общая комната ядром на всю глубину, три спальни открываются прямо в неё",
+    seeds: [
+      { x: 0, z: 6, floor: 0, role: "bedroom" },
+      { x: 3, z: 6, floor: 0, role: "living" },
+      { x: 6, z: 6, floor: 0, role: "kitchen" },
+      { x: 9, z: 6, floor: 0, role: "bedroom" },
+      { x: 0, z: 3, floor: 0, role: "bedroom" },
+      { x: 3, z: 3, floor: 0, role: "living" },
+      { x: 6, z: 3, floor: 0, role: "living" },
+      { x: 9, z: 3, floor: 0, role: "bathroom" },
+      { x: 0, z: 9, floor: 0, role: "terrace" },
+      { x: 3, z: 0, floor: 0, role: "terrace" },
+      { x: 6, z: 0, floor: 0, role: "terrace" },
+    ],
+  },
   {
     id: "studio",
     name: "Студия",
