@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-modular-01",
+  "name": "Демонстрационная запись формата (шаблон «Куб»)",
+  "source": "EcoCub",
+  "status": "concept",
+  "verified": false,
+  "region": "Московская область",
+  "metrics": {
+    "moduleSideM": 3,
+    "ceilingHeightM": 3.15,
+    "floors": 1,
+    "moduleCount": 4,
+    "totalAreaM2": 36,
+    "livingAreaM2": 27,
+    "terraceAreaM2": 0,
+    "bedrooms": 1,
+    "bathrooms": 1
+  },
+  "floors": [
+    {
+      "floor": 0,
+      "modules": [
+        { "id": "m1", "x": 0, "z": 0, "roomId": "r-living" },
+        { "id": "m2", "x": 3, "z": 0, "roomId": "r-kitchen" },
+        { "id": "m3", "x": 0, "z": 3, "roomId": "r-bedroom" },
+        { "id": "m4", "x": 3, "z": 3, "roomId": "r-bath" }
+      ],
+      "rooms": [
+        { "id": "r-living", "type": "living", "name": "Гостиная", "areaM2": 9 },
+        { "id": "r-kitchen", "type": "kitchen", "name": "Кухня-гостиная", "areaM2": 9 },
+        { "id": "r-bedroom", "type": "bedroom", "name": "Спальня", "areaM2": 9 },
+        { "id": "r-bath", "type": "bathroom", "name": "Санузел", "areaM2": 9 }
+      ]
+    }
+  ],
+  "constraints": [
+    "Раскладка взята из стартового шаблона конструктора, а не из заводского чертежа",
+    "Мокрые зоны, стояки и несущая схема не подтверждены производством"
+  ],
+  "notes": [
+    "Это пример формата записи, а не реализованный объект: status=concept, verified=false.",
+    "Первая настоящая запись появится после передачи заводских планов (см. DATA_REQUIRED_FROM_ECOCUB.md)."
+  ]
+}

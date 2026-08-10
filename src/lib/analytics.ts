@@ -151,3 +151,56 @@ export const analyticsV3 = {
   error: (stage: string, message: string) =>
     track("V3_ERROR", { stage, message: message.slice(0, 120) }),
 };
+
+/**
+ * События конструктора v3.1 (/constructor-ai-v3-1). Отдельный префикс —
+ * чтобы сравнивать версии между собой. Персональных данных, свободного
+ * текста и абсолютных координат проекта в параметрах нет; события шлются
+ * по завершённому действию, а не на каждый кадр перетаскивания.
+ */
+export const analyticsV31 = {
+  opened: () => track("V31_OPENED"),
+  pathSelected: (path: "guided" | "manual" | "resume") => track("V31_PATH_SELECTED", { path }),
+  quizStarted: () => track("V31_QUIZ_STARTED"),
+  quizCompleted: () => track("V31_QUIZ_COMPLETED"),
+  lifestyleCompleted: (questionsShown: number) =>
+    track("V31_LIFESTYLE_COMPLETED", { questionsShown }),
+  recommendationsShown: (count: number, topPlanId?: string) =>
+    track("V31_RECOMMENDATIONS_SHOWN", { count, topPlanId }),
+  planSelected: (planId: string, kind: string) => track("V31_PLAN_SELECTED", { planId, kind }),
+
+  viewModeChanged: (mode: "together" | "plan" | "3d") => track("V31_VIEW_MODE", { mode }),
+  toolContextChanged: (context: "house" | "site") => track("V31_TOOL_CONTEXT", { context }),
+  roomAdded: (type: string, floor: number) => track("V31_ROOM_ADDED", { type, floor }),
+  entrywayAdded: () => track("V31_ENTRYWAY_ADDED"),
+  moduleSelected: (type: string, floor: number) => track("V31_MODULE_SELECTED", { type, floor }),
+  moduleMenuOpened: (input: "mouse" | "touch" | "keyboard") =>
+    track("V31_MODULE_MENU_OPENED", { input }),
+  moduleSnapped: (side: string, result: "snapped" | "free") =>
+    track("V31_MODULE_SNAPPED", { side, result }),
+  moduleDeleteRequested: () => track("V31_MODULE_DELETE_REQUESTED"),
+  moduleDeleteBlocked: (reason: "connectivity" | "support") =>
+    track("V31_MODULE_DELETE_BLOCKED", { reason }),
+  moduleDeleted: () => track("V31_MODULE_DELETED"),
+  connectivityWarningShown: () => track("V31_CONNECTIVITY_WARNING"),
+  furnitureVariantRequested: (roomType: string) =>
+    track("V31_FURNITURE_VARIANT_REQUESTED", { roomType }),
+  furnitureFallbackShown: (roomType: string) => track("V31_FURNITURE_FALLBACK", { roomType }),
+  clearRequested: () => track("V31_CLEAR_REQUESTED"),
+  cleared: () => track("V31_CLEARED"),
+  basePlanRestored: () => track("V31_BASE_PLAN_RESTORED"),
+  expanded3d: () => track("V31_3D_EXPANDED"),
+  webglFallbackShown: () => track("V31_WEBGL_FALLBACK"),
+
+  siteDimensionsChanged: () => track("V31_SITE_DIMENSIONS_CHANGED"),
+  siteAccessSideChanged: (side: string) => track("V31_SITE_ACCESS_SIDE", { side }),
+  sitePlacementPreset: (preset: "west" | "center" | "east") =>
+    track("V31_SITE_PLACEMENT_PRESET", { preset }),
+  housePlacementChanged: () => track("V31_HOUSE_PLACEMENT_CHANGED"),
+
+  facadeStyleSelected: (styleId: string) => track("V31_FACADE_STYLE_SELECTED", { styleId }),
+  leadSubmitted: (projectId: string, planId?: string) =>
+    track("V31_LEAD_SUBMITTED", { projectId, planId }),
+  telegramClicked: (projectId: string) => track("V31_TELEGRAM_CLICKED", { projectId }),
+  projectRestored: (projectId: string) => track("V31_PROJECT_RESTORED", { projectId }),
+};

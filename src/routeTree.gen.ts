@@ -16,6 +16,7 @@ import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as ContactsRouteImport } from './routes/contacts'
 import { Route as ConstructorLabRouteImport } from './routes/constructor-lab'
+import { Route as ConstructorAiV31RouteImport } from './routes/constructor-ai-v3-1'
 import { Route as ConstructorAiV3RouteImport } from './routes/constructor-ai-v3'
 import { Route as ConstructorRouteImport } from './routes/constructor'
 import { Route as ConcreteRouteImport } from './routes/concrete'
@@ -60,6 +61,11 @@ const ContactsRoute = ContactsRouteImport.update({
 const ConstructorLabRoute = ConstructorLabRouteImport.update({
   id: '/constructor-lab',
   path: '/constructor-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConstructorAiV31Route = ConstructorAiV31RouteImport.update({
+  id: '/constructor-ai-v3-1',
+  path: '/constructor-ai-v3-1',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConstructorAiV3Route = ConstructorAiV3RouteImport.update({
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
   '/constructor-ai-v3': typeof ConstructorAiV3Route
+  '/constructor-ai-v3-1': typeof ConstructorAiV31Route
   '/constructor-lab': typeof ConstructorLabRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
   '/constructor-ai-v3': typeof ConstructorAiV3Route
+  '/constructor-ai-v3-1': typeof ConstructorAiV31Route
   '/constructor-lab': typeof ConstructorLabRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
   '/constructor-ai-v3': typeof ConstructorAiV3Route
+  '/constructor-ai-v3-1': typeof ConstructorAiV31Route
   '/constructor-lab': typeof ConstructorLabRoute
   '/contacts': typeof ContactsRoute
   '/portfolio': typeof PortfolioRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/concrete'
     | '/constructor'
     | '/constructor-ai-v3'
+    | '/constructor-ai-v3-1'
     | '/constructor-lab'
     | '/contacts'
     | '/portfolio'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/concrete'
     | '/constructor'
     | '/constructor-ai-v3'
+    | '/constructor-ai-v3-1'
     | '/constructor-lab'
     | '/contacts'
     | '/portfolio'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/concrete'
     | '/constructor'
     | '/constructor-ai-v3'
+    | '/constructor-ai-v3-1'
     | '/constructor-lab'
     | '/contacts'
     | '/portfolio'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   ConcreteRoute: typeof ConcreteRoute
   ConstructorRoute: typeof ConstructorRoute
   ConstructorAiV3Route: typeof ConstructorAiV3Route
+  ConstructorAiV31Route: typeof ConstructorAiV31Route
   ConstructorLabRoute: typeof ConstructorLabRoute
   ContactsRoute: typeof ContactsRoute
   PortfolioRoute: typeof PortfolioRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/constructor-lab'
       fullPath: '/constructor-lab'
       preLoaderRoute: typeof ConstructorLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/constructor-ai-v3-1': {
+      id: '/constructor-ai-v3-1'
+      path: '/constructor-ai-v3-1'
+      fullPath: '/constructor-ai-v3-1'
+      preLoaderRoute: typeof ConstructorAiV31RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/constructor-ai-v3': {
@@ -380,6 +400,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConcreteRoute: ConcreteRoute,
   ConstructorRoute: ConstructorRoute,
   ConstructorAiV3Route: ConstructorAiV3Route,
+  ConstructorAiV31Route: ConstructorAiV31Route,
   ConstructorLabRoute: ConstructorLabRoute,
   ContactsRoute: ContactsRoute,
   PortfolioRoute: PortfolioRoute,

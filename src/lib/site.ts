@@ -39,10 +39,15 @@ export type SubNavItem = { label: string; to: string; hint?: string; badge?: str
  */
 export const constructorNav: SubNavItem[] = [
   {
-    label: "AI-подбор под семью",
+    label: "AI-конструктор 3.1",
+    to: "/constructor-ai-v3-1",
+    hint: "дом из секций, мебель на плане, участок рядом",
+    badge: "новое",
+  },
+  {
+    label: "AI-подбор под семью (3.0)",
     to: "/constructor-ai-v3",
     hint: "вопросы → до трёх домов → участок и фасад",
-    badge: "новое",
   },
   {
     label: "3D-конструктор",

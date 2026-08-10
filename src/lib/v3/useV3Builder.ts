@@ -242,10 +242,15 @@ export function useV3Builder(
     [modules, commit],
   );
 
-  const setDesignId = useCallback(
-    (id: string) => {
-      setDesignIdState(id);
-      onChange?.(modules, id, "design");
+  // Сигнатура совпадает с useState-сеттером боевого конструктора
+  // (HouseBuilderApi), поэтому принимаем и значение, и функцию-обновление.
+  const setDesignId = useCallback<React.Dispatch<React.SetStateAction<string>>>(
+    (next) => {
+      setDesignIdState((prev) => {
+        const id = typeof next === "function" ? next(prev) : next;
+        onChange?.(modules, id, "design");
+        return id;
+      });
     },
     [modules, onChange],
   );
