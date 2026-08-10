@@ -20,6 +20,47 @@
    - Через него достаются любые исходники/ассеты, которых нет в репозитории
      (например фавикон и картинки из выгрузки Тильды).
 
+## Архитектура и интеграции — карта (единый источник правды)
+
+Любой архитектурный факт держим ЗДЕСЬ и в зеркальной шапке
+`ecocub-data/CLAUDE.md`, а не в чате и не в разовых отчётах. `HANDOFF.md`,
+`REPORT.md` и т.п. устаревают — при расхождении верить этому файлу.
+
+**Два репозитория:**
+
+- **`John07883443/ecocub-1aa1c5af`** (этот, публичный) — сам сайт.
+  TanStack Start / React 19. **Деплой: GitHub Actions**
+  (`.github/workflows/deploy.yml`): `npm ci` + `npm run build`
+  (`NITRO_PRESET=node-server`) → `rsync` `.output/` на **VPS** → `deploy.sh`
+  перезапускает **Node через pm2 на 127.0.0.1:3000**, фронт — **nginx**.
+  Это **НЕ Cloudflare и не Lovable**: `wrangler.jsonc` и
+  `@cloudflare/vite-plugin` — мёртвое наследие шаблона Lovable, в деплое не
+  участвуют.
+- **`John07883443/ecocub-data`** (приватный) — контур данных и **BI-панель**.
+  PowerShell-скрипты тянут Яндекс → `api_data/*.json`; панель
+  (`scripts/panel-template.html` + `panel-publish.ps1`) публикуется на VPS в
+  `/var/www/panel/`, nginx отдаёт как `/panel/`. Облачный агент может
+  подключить его read-only: `list_repos` → `add_repo John07883443/ecocub-data`.
+
+**Данные и интеграции:**
+
+- **Supabase — ОСТАЁТСЯ, это основа платформы** (переподключена/настроена
+  09.08.2026, не Lovable-легаси). **Проекты**: основной источник — Supabase
+  (`src/lib/projects.server.ts`, fetch к PostgREST, `SUPABASE_URL` +
+  `SUPABASE_ANON_KEY`), **резерв** — `content/projects/*.json`, вшитые в
+  сборку. **Заявки**: локальный **SQLite на VPS** `/var/lib/ecocub/leads.db`
+  (`src/lib/leads.server.ts`, встроенный `node:sqlite`), плюс Telegram-
+  уведомление через `/api/notify`.
+- **Яндекс (Метрика / Директ / Вебмастер)** тянется **только локально**
+  PowerShell-скриптами в `ecocub-data`; токен в
+  `C:\Users\superagent\.yandex\token`, **на сервер не уезжает** (на VPS едет
+  готовый JSON). Вебмастер: `scripts/webmaster.ps1` →
+  `api_data/webmaster_search_queries.json` (запросы, показы, клики, CTR,
+  средние позиции показа/клика).
+- **Egress облачной песочницы режет `*.yandex.*`, `eco-cub.ru`, `supabase.co`
+  (403).** Поэтому живые данные и провижининг с этих хостов из контейнера
+  недоступны — их добывает локальный агент и передаёт через git-мост.
+
 ## Как агенты обмениваются файлами
 
 Прямого канала между агентами нет (`ListAgents` → «No reachable agents»).
