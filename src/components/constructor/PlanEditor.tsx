@@ -21,6 +21,15 @@ import type { Cell, ModuleItem } from "@/lib/constructor/types";
 // Все размеры внутри SVG — в метрах участка: viewBox совпадает с реальными
 // метрами, модуль 3×3 рисуется прямоугольником 3×3.
 
+/** Короткая вибрация при защёлкивании магнита. Где не поддерживается — тихо. */
+function buzz() {
+  try {
+    navigator.vibrate?.(8);
+  } catch {
+    /* отклик не обязателен */
+  }
+}
+
 /** Радиус в метрах, в котором вокруг курсора показываем точки-подсказки. */
 const HINT_RADIUS_M = 3;
 /**
@@ -30,6 +39,13 @@ const HINT_RADIUS_M = 3;
  */
 const DRAG_THRESHOLD_MOUSE_PX = 6;
 const DRAG_THRESHOLD_TOUCH_PX = 10;
+/**
+ * На сколько модуль поднимается над пальцем во время перетаскивания, px.
+ * Палец закрывает примерно круг диаметром 40–50 px, поэтому кубик и грань
+ * стыковки уводим выше точки касания — человек ведёт модуль «снизу» и видит,
+ * куда он встаёт. У мыши подъёма нет: курсор ничего не перекрывает.
+ */
+const TOUCH_LIFT_PX = 64;
 
 interface DragState {
   id: string;
@@ -51,6 +67,11 @@ interface DragState {
   anchors: Cell[];
   /** Магнитная позиция прошлого кадра — нужна для гистерезиса. */
   snap: Cell | null;
+  /** Подъём модуля над точкой касания, м (0 для мыши). */
+  liftM: number;
+  /** Точка касания в метрах плана — рисуем маркер и связь с модулем. */
+  pointerX: number;
+  pointerZ: number;
 }
 
 export interface PlanEditorProps {
@@ -208,6 +229,7 @@ export function PlanEditor({
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = toMetres(e.clientX, e.clientY);
+    const isMouse = e.pointerType === "mouse";
     // Подсвечиваем модуль сразу при нажатии: человек видит, что «взял» его,
     // ещё до того, как начал двигать.
     selectModule(m.id);
@@ -220,10 +242,13 @@ export function PlanEditor({
       startClientX: e.clientX,
       startClientY: e.clientY,
       active: false,
-      thresholdPx: e.pointerType === "mouse" ? DRAG_THRESHOLD_MOUSE_PX : DRAG_THRESHOLD_TOUCH_PX,
+      thresholdPx: isMouse ? DRAG_THRESHOLD_MOUSE_PX : DRAG_THRESHOLD_TOUCH_PX,
       valid: null,
       anchors: [],
       snap: null,
+      liftM: isMouse ? 0 : TOUCH_LIFT_PX * metresPerPixel(),
+      pointerX: p.x,
+      pointerZ: p.z,
     });
   };
 
@@ -243,8 +268,18 @@ export function PlanEditor({
     }
     const p = toMetres(e.clientX, e.clientY);
     const clamp = (v: number) => Math.max(min - 0.6, Math.min(max + 0.6, v));
-    const moved = { ...next, rawX: clamp(p.x - d.grabDX), rawZ: clamp(p.z - d.grabDZ) };
-    setDrag({ ...moved, snap: snapFor(moved) });
+    const moved = {
+      ...next,
+      rawX: clamp(p.x - d.grabDX),
+      // Модуль идёт выше пальца на liftM — и показывается, и встаёт именно там.
+      rawZ: clamp(p.z - d.grabDZ - next.liftM),
+      pointerX: p.x,
+      pointerZ: p.z,
+    };
+    const snap = snapFor(moved);
+    // Короткий отклик, когда магнит поймал новую позицию: понятно без взгляда.
+    if (snap && (!d.snap || d.snap.x !== snap.x || d.snap.z !== snap.z)) buzz();
+    setDrag({ ...moved, snap });
   };
 
   const endDrag = (commit: boolean, e?: React.PointerEvent) => {
@@ -465,28 +500,77 @@ export function PlanEditor({
                 );
               })}
 
+              {/* Цель ярче всего: сюда модуль встанет после отпускания */}
               {dragSnap && (
-                <rect
-                  x={dragSnap.x}
-                  y={dragSnap.z}
-                  width={MODULE_SIDE_M}
-                  height={MODULE_SIDE_M}
-                  fill="rgba(21,128,61,0.14)"
-                  stroke="#15803d"
-                  strokeWidth={0.12}
-                />
+                <>
+                  <rect
+                    x={dragSnap.x}
+                    y={dragSnap.z}
+                    width={MODULE_SIDE_M}
+                    height={MODULE_SIDE_M}
+                    fill="rgba(21,128,61,0.22)"
+                    stroke="#15803d"
+                    strokeWidth={0.22}
+                  />
+                  {/* Уголки — читаются даже когда рамка частично перекрыта */}
+                  {[
+                    [0, 0, 1, 1],
+                    [1, 0, -1, 1],
+                    [0, 1, 1, -1],
+                    [1, 1, -1, -1],
+                  ].map(([cx, cz, dx, dz], i) => (
+                    <polyline
+                      key={`corner-${i}`}
+                      points={[
+                        `${dragSnap.x + cx * MODULE_SIDE_M + dx * 0.8},${dragSnap.z + cz * MODULE_SIDE_M}`,
+                        `${dragSnap.x + cx * MODULE_SIDE_M},${dragSnap.z + cz * MODULE_SIDE_M}`,
+                        `${dragSnap.x + cx * MODULE_SIDE_M},${dragSnap.z + cz * MODULE_SIDE_M + dz * 0.8}`,
+                      ].join(" ")}
+                      fill="none"
+                      stroke="#15803d"
+                      strokeWidth={0.26}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                </>
               )}
 
+              {/* Сам модуль — полупрозрачный контур: сквозь него видно соседей */}
               <rect
                 x={drag.rawX}
                 y={drag.rawZ}
                 width={MODULE_SIDE_M}
                 height={MODULE_SIDE_M}
                 fill={fillFor(dragModule)}
-                fillOpacity={0.9}
+                fillOpacity={0.45}
                 stroke={dragSnap ? "#3f423e" : "#dc2626"}
-                strokeWidth={0.12}
+                strokeWidth={0.14}
+                strokeDasharray={dragSnap ? undefined : "0.5 0.35"}
               />
+
+              {/* Связь пальца и модуля: видно, что именно вы держите */}
+              {drag.liftM > 0 && (
+                <>
+                  <line
+                    x1={drag.pointerX}
+                    y1={drag.pointerZ}
+                    x2={drag.rawX + MODULE_SIDE_M / 2}
+                    y2={drag.rawZ + MODULE_SIDE_M}
+                    stroke="#3f423e"
+                    strokeWidth={0.07}
+                    strokeDasharray="0.35 0.3"
+                    opacity={0.7}
+                  />
+                  <circle
+                    cx={drag.pointerX}
+                    cy={drag.pointerZ}
+                    r={0.42}
+                    fill="rgba(63,66,62,0.16)"
+                    stroke="#3f423e"
+                    strokeWidth={0.07}
+                  />
+                </>
+              )}
             </g>
           )}
         </g>

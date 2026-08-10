@@ -146,10 +146,17 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
           )}
         </div>
 
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm bg-gradient-to-b from-sky-100 to-secondary md:aspect-[16/10]">
+        {/*
+          На телефоне поле квадратное и во всю ширину: кубики крупнее
+          относительно пальца, поэтому в них проще попадать и видно, куда
+          ведёшь модуль. На широких экранах пропорции прежние.
+        */}
+        <div className="relative aspect-square w-full overflow-hidden rounded-sm bg-gradient-to-b from-sky-100 to-secondary sm:aspect-[4/3] md:aspect-[16/10]">
           {/* PLAN */}
-          <div className={cn("absolute inset-0 p-3", view === "plan" ? "block" : "hidden")}>
-            <div className="mx-auto flex h-full max-w-[560px] items-center justify-center">
+          <div
+            className={cn("absolute inset-0 p-1.5 sm:p-3", view === "plan" ? "block" : "hidden")}
+          >
+            <div className="mx-auto flex h-full w-full max-w-[560px] items-center justify-center">
               <PlanEditor api={api} onModuleTap={handleModuleTap} suppressPlace={!!menu} />
             </div>
           </div>
