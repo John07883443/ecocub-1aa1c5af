@@ -23,8 +23,10 @@ export interface AiLayoutConfig {
   submitPath: string;
   /** Идентификатор модели у выбранного провайдера. Входит в ключ запроса. */
   model: string;
-  /** Тариф генерации. Выбран по замерам этапа 0: 1k + low = 0.5 кредита. */
+  /** Разрешение. Нужно только Higgsfield: у OpenRouter его нет в запросе. */
   resolution: string;
+  /** Тариф качества. Выбран по замерам этапа 0: на плане линии, а не фактура,
+   *  и повышение тарифа стоит денег, не добавляя читаемости. */
   quality: string;
   apiBase: string;
   apiKey: string | null;
@@ -55,6 +57,9 @@ const DEFAULTS = {
   model: "openai/gpt-image-2",
   resolution: "1k",
   quality: "low",
+  // Замер «0.5 кредита» из этапа 0 относился к тарифам Higgsfield и на
+  // OpenRouter не переносится: там счёт в долларах, и настоящая цена приходит
+  // полем usage.cost с каждым ответом. По ней и выставляется дневной лимит.
   freePerVisitor: 1,
   dailyLimit: 50,
   // На двадцать секунд меньше, чем лимит функции Supabase на бесплатном
