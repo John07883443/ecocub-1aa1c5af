@@ -13,7 +13,8 @@
     "test:ai-layout": "node --experimental-strip-types --test \"src/lib/ai-layout/__tests__/*.test.ts\"",
     "test:header": "node scripts/header-stability.mjs",
     "format": "prettier --write .",
-    "test:standards": "node --experimental-strip-types --test \"src/lib/standards/__tests__/*.test.ts\""
+    "test:standards": "node --experimental-strip-types --test \"src/lib/standards/__tests__/*.test.ts\"",
+    "test:planner": "node --experimental-strip-types --test \"src/lib/planner/__tests__/*.test.ts\""
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
