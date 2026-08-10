@@ -1,7 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import type { HouseBuilderApi } from "@/lib/constructor/useHouseBuilder";
 import { CELL_M, MODULE_SIDE_M, ROLES, STEP_M } from "@/lib/constructor/constants";
-import { maxAnchor, validMoveAnchors } from "@/lib/constructor/geometry";
+import {
+  maxAnchor,
+  pickSnapAnchor,
+  snapAnchors,
+  validMoveAnchors,
+} from "@/lib/constructor/geometry";
 import type { Cell, ModuleItem } from "@/lib/constructor/types";
 
 // Все размеры внутри SVG — в метрах участка: viewBox совпадает с реальными
@@ -26,9 +31,32 @@ interface DragState {
   active: boolean;
   /** Все допустимые позиции для этого модуля (ключ «x,z»), считается один раз. */
   valid: Set<string> | null;
+  /** Позиции впритык к соседям — к ним модуль магнитится в первую очередь. */
+  anchors: Cell[];
+  /** Магнитная позиция прошлого кадра — нужна для гистерезиса. */
+  snap: Cell | null;
 }
 
-export function PlanEditor({ api }: { api: HouseBuilderApi }) {
+export interface PlanEditorProps {
+  api: HouseBuilderApi;
+  /**
+   * Показывать назначение модуля цветом и буквой. По умолчанию выключено:
+   * модули EcoCub универсальные, план монохромный. Экспериментальные версии
+   * включают режим явно, чтобы их прежний вид не изменился.
+   */
+  showRoles?: boolean;
+  /** Тап/клик по модулю без перетаскивания — открыть меню рядом с ним. */
+  onModuleTap?: (id: string, clientX: number, clientY: number) => void;
+  /** Пока меню открыто, тап по свободному месту закрывает его, а не ставит модуль. */
+  suppressPlace?: boolean;
+}
+
+export function PlanEditor({
+  api,
+  showRoles = false,
+  onModuleTap,
+  suppressPlace,
+}: PlanEditorProps) {
   const { modules, floor, gridN, selectedId, placeAtPoint, moveModule, selectModule } = api;
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -46,6 +74,13 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
 
   const current = useMemo(() => modules.filter((m) => m.floor === floor), [modules, floor]);
   const others = useMemo(() => modules.filter((m) => m.floor !== floor), [modules, floor]);
+
+  /**
+   * Наружные стены и внутренние швы этажа: общая грань двух кубиков не
+   * рисуется дважды, поэтому состыкованные модули читаются одним контуром,
+   * а не набором отдельных карточек с воздухом между ними.
+   */
+  const outline = useMemo(() => buildOutline(current), [current]);
 
   // Линии сетки: каждый метр — тонкая, каждые 3 м — заметнее.
   const gridLines = useMemo(() => {
@@ -68,14 +103,33 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
     };
   };
 
+  /** Метры на пиксель экрана: порог магнита не должен зависеть от масштаба. */
+  const metresPerPixel = () => {
+    const svg = svgRef.current;
+    if (!svg) return 0.05;
+    const r = svg.getBoundingClientRect();
+    return r.width ? vb / r.width : 0.05;
+  };
+
   const handlePlace = (e: React.PointerEvent<SVGRectElement>) => {
     e.preventDefault();
+    if (suppressPlace) {
+      // Меню открыто: этот тап только закрывает его.
+      onModuleTap?.("", e.clientX, e.clientY);
+      return;
+    }
     const p = toMetres(e.clientX, e.clientY);
     placeAtPoint(p.x, p.z);
   };
 
-  /** Ближайшая к «сырой» позиции допустимая точка — туда модуль примагнитится. */
+  /**
+   * Куда встанет модуль при отпускании: сначала магнитные позиции впритык к
+   * соседям, и только если рядом никого нет — ближайшая свободная точка сетки.
+   */
   const snapFor = (d: DragState): Cell | null => {
+    const threshold = Math.max(0.7, metresPerPixel() * 28);
+    const magnetic = pickSnapAnchor(d.anchors, d.rawX, d.rawZ, d.snap, threshold);
+    if (magnetic) return magnetic;
     if (!d.valid) return null;
     const bx = Math.round(d.rawX);
     const bz = Math.round(d.rawZ);
@@ -112,6 +166,8 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
       startClientY: e.clientY,
       active: false,
       valid: null,
+      anchors: [],
+      snap: null,
     });
   };
 
@@ -122,19 +178,29 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
     if (!d.active) {
       const dist = Math.hypot(e.clientX - d.startClientX, e.clientY - d.startClientY);
       if (dist < DRAG_THRESHOLD_PX) return;
-      next = { ...next, active: true, valid: validMoveAnchors(modules, d.id, gridN) };
+      next = {
+        ...next,
+        active: true,
+        valid: validMoveAnchors(modules, d.id, gridN),
+        anchors: snapAnchors(modules, floor, gridN, d.id),
+      };
     }
     const p = toMetres(e.clientX, e.clientY);
     const clamp = (v: number) => Math.max(-0.6, Math.min(max + 0.6, v));
-    setDrag({ ...next, rawX: clamp(p.x - d.grabDX), rawZ: clamp(p.z - d.grabDZ) });
+    const moved = { ...next, rawX: clamp(p.x - d.grabDX), rawZ: clamp(p.z - d.grabDZ) };
+    setDrag({ ...moved, snap: snapFor(moved) });
   };
 
-  const endDrag = (commit: boolean) => {
+  const endDrag = (commit: boolean, e?: React.PointerEvent) => {
     const d = dragRef.current;
     setDrag(null);
     if (!d) return;
     if (!d.active) {
-      if (commit) selectModule(d.id);
+      // Короткое нажатие без сдвига — выбор модуля и меню действий.
+      if (commit) {
+        selectModule(d.id);
+        if (e) onModuleTap?.(d.id, e.clientX, e.clientY);
+      }
       return;
     }
     if (!commit) return;
@@ -143,7 +209,7 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
   };
 
   const dragModule = drag?.active ? (modules.find((m) => m.id === drag.id) ?? null) : null;
-  const dragSnap = drag?.active && drag.valid ? snapFor(drag) : null;
+  const dragSnap = drag?.active ? drag.snap : null;
 
   // Точки-подсказки вокруг курсора: как ходы в шахматах — куда модуль можно поставить.
   const hintDots = useMemo(() => {
@@ -161,6 +227,8 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
     }
     return dots;
   }, [drag, max]);
+
+  const fillFor = (m: ModuleItem) => (showRoles ? ROLES[m.role].plan : "#ffffff");
 
   return (
     <div className="w-full">
@@ -204,55 +272,92 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
           {others.map((m) => (
             <rect
               key={`o-${m.id}`}
-              x={m.x + 0.15}
-              y={m.z + 0.15}
-              width={MODULE_SIDE_M - 0.3}
-              height={MODULE_SIDE_M - 0.3}
+              x={m.x}
+              y={m.z}
+              width={MODULE_SIDE_M}
+              height={MODULE_SIDE_M}
               fill="none"
-              stroke="rgba(0,0,0,0.28)"
-              strokeWidth={0.09}
+              stroke="rgba(0,0,0,0.25)"
+              strokeWidth={0.07}
               strokeDasharray="0.55 0.35"
-              rx={0.18}
               style={{ pointerEvents: "none" }}
             />
           ))}
 
-          {/* Модули текущего этажа: тап — выбрать, потянуть — передвинуть */}
+          {/* Поверхность дома: кубики стоят встык — без зазоров и скруглений */}
+          {current.map((m) => (
+            <rect
+              key={`s-${m.id}`}
+              x={m.x}
+              y={m.z}
+              width={MODULE_SIDE_M}
+              height={MODULE_SIDE_M}
+              fill={fillFor(m)}
+              fillOpacity={drag?.active && drag.id === m.id ? 0.25 : 1}
+              style={{ pointerEvents: "none" }}
+            />
+          ))}
+
+          {/* Технологический шов между соседними кубиками */}
+          {outline.seams.map((s, i) => (
+            <line
+              key={`seam-${i}`}
+              x1={s.x1}
+              y1={s.z1}
+              x2={s.x2}
+              y2={s.z2}
+              stroke="rgba(0,0,0,0.16)"
+              strokeWidth={0.05}
+              style={{ pointerEvents: "none" }}
+            />
+          ))}
+
+          {/* Единый внешний контур дома */}
+          {outline.walls.map((w, i) => (
+            <line
+              key={`wall-${i}`}
+              x1={w.x1}
+              y1={w.z1}
+              x2={w.x2}
+              y2={w.z2}
+              stroke="#3f423e"
+              strokeWidth={0.14}
+              strokeLinecap="square"
+              style={{ pointerEvents: "none" }}
+            />
+          ))}
+
+          {/* Зоны захвата: тап — меню модуля, перетаскивание — перенос */}
           {current.map((m) => {
-            const meta = ROLES[m.role];
             const selected = m.id === selectedId;
-            const isDragged = drag?.active && drag.id === m.id;
             return (
               <g
                 key={m.id}
                 onPointerDown={(e) => startDrag(e, m)}
                 onPointerMove={updateDrag}
-                onPointerUp={() => endDrag(true)}
+                onPointerUp={(e) => endDrag(true, e)}
                 onPointerCancel={() => endDrag(false)}
-                style={{ cursor: "grab", touchAction: "none", opacity: isDragged ? 0.25 : 1 }}
+                style={{ cursor: "grab", touchAction: "none" }}
               >
                 <rect
-                  x={m.x + 0.15}
-                  y={m.z + 0.15}
-                  width={MODULE_SIDE_M - 0.3}
-                  height={MODULE_SIDE_M - 0.3}
-                  fill={meta.plan}
-                  stroke={selected ? "#1a1a1a" : "rgba(0,0,0,0.25)"}
-                  strokeWidth={selected ? 0.24 : 0.09}
-                  rx={0.24}
+                  x={m.x}
+                  y={m.z}
+                  width={MODULE_SIDE_M}
+                  height={MODULE_SIDE_M}
+                  fill="transparent"
                 />
-                <text
-                  x={m.x + MODULE_SIDE_M / 2}
-                  y={m.z + MODULE_SIDE_M / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={0.9}
-                  fontWeight={700}
-                  fill="#ffffff"
-                  style={{ pointerEvents: "none" }}
-                >
-                  {meta.label.slice(0, 1)}
-                </text>
+                {selected && (
+                  <rect
+                    x={m.x + 0.08}
+                    y={m.z + 0.08}
+                    width={MODULE_SIDE_M - 0.16}
+                    height={MODULE_SIDE_M - 0.16}
+                    fill="rgba(198,161,90,0.14)"
+                    stroke="#c6a15a"
+                    strokeWidth={0.12}
+                    style={{ pointerEvents: "none" }}
+                  />
+                )}
               </g>
             );
           })}
@@ -275,28 +380,25 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
 
               {dragSnap && (
                 <rect
-                  x={dragSnap.x + 0.1}
-                  y={dragSnap.z + 0.1}
-                  width={MODULE_SIDE_M - 0.2}
-                  height={MODULE_SIDE_M - 0.2}
-                  fill="rgba(21,128,61,0.12)"
+                  x={dragSnap.x}
+                  y={dragSnap.z}
+                  width={MODULE_SIDE_M}
+                  height={MODULE_SIDE_M}
+                  fill="rgba(21,128,61,0.14)"
                   stroke="#15803d"
                   strokeWidth={0.12}
-                  strokeDasharray="0.45 0.28"
-                  rx={0.24}
                 />
               )}
 
               <rect
-                x={drag.rawX + 0.15}
-                y={drag.rawZ + 0.15}
-                width={MODULE_SIDE_M - 0.3}
-                height={MODULE_SIDE_M - 0.3}
-                fill={ROLES[dragModule.role].plan}
-                fillOpacity={0.85}
-                stroke={dragSnap ? "#1a1a1a" : "#dc2626"}
-                strokeWidth={0.14}
-                rx={0.24}
+                x={drag.rawX}
+                y={drag.rawZ}
+                width={MODULE_SIDE_M}
+                height={MODULE_SIDE_M}
+                fill={fillFor(dragModule)}
+                fillOpacity={0.9}
+                stroke={dragSnap ? "#3f423e" : "#dc2626"}
+                strokeWidth={0.12}
               />
             </g>
           )}
@@ -304,4 +406,82 @@ export function PlanEditor({ api }: { api: HouseBuilderApi }) {
       </svg>
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Контур этажа                                                        */
+/* ------------------------------------------------------------------ */
+
+type Seg = { x1: number; z1: number; x2: number; z2: number };
+type Interval = { from: number; to: number };
+
+function subtract(base: Interval, cuts: Interval[]): Interval[] {
+  let parts: Interval[] = [base];
+  for (const cut of cuts) {
+    const next: Interval[] = [];
+    for (const p of parts) {
+      if (cut.to <= p.from + 1e-9 || cut.from >= p.to - 1e-9) {
+        next.push(p);
+        continue;
+      }
+      if (cut.from > p.from + 1e-9) next.push({ from: p.from, to: cut.from });
+      if (cut.to < p.to - 1e-9) next.push({ from: cut.to, to: p.to });
+    }
+    parts = next.filter((p) => p.to - p.from > 1e-9);
+  }
+  return parts;
+}
+
+/** Наружные стены (свободные грани) и внутренние швы (общие грани) этажа. */
+function buildOutline(modules: ModuleItem[]): { walls: Seg[]; seams: Seg[] } {
+  const walls: Seg[] = [];
+  const seams: Seg[] = [];
+  const S = MODULE_SIDE_M;
+
+  for (const m of modules) {
+    const rest = modules.filter((o) => o.id !== m.id);
+
+    for (const [atX, isLeft] of [
+      [m.x, true],
+      [m.x + S, false],
+    ] as const) {
+      const cuts: Interval[] = [];
+      for (const o of rest) {
+        const touches = isLeft ? Math.abs(o.x + S - m.x) < 1e-9 : Math.abs(o.x - (m.x + S)) < 1e-9;
+        if (!touches) continue;
+        const from = Math.max(m.z, o.z);
+        const to = Math.min(m.z + S, o.z + S);
+        if (to > from) cuts.push({ from, to });
+      }
+      for (const part of subtract({ from: m.z, to: m.z + S }, cuts)) {
+        walls.push({ x1: atX, z1: part.from, x2: atX, z2: part.to });
+      }
+      // Шов рисуем один раз — только со стороны правой грани.
+      if (!isLeft) {
+        for (const c of cuts) seams.push({ x1: atX, z1: c.from, x2: atX, z2: c.to });
+      }
+    }
+
+    for (const [atZ, isTop] of [
+      [m.z, true],
+      [m.z + S, false],
+    ] as const) {
+      const cuts: Interval[] = [];
+      for (const o of rest) {
+        const touches = isTop ? Math.abs(o.z + S - m.z) < 1e-9 : Math.abs(o.z - (m.z + S)) < 1e-9;
+        if (!touches) continue;
+        const from = Math.max(m.x, o.x);
+        const to = Math.min(m.x + S, o.x + S);
+        if (to > from) cuts.push({ from, to });
+      }
+      for (const part of subtract({ from: m.x, to: m.x + S }, cuts)) {
+        walls.push({ x1: part.from, z1: atZ, x2: part.to, z2: atZ });
+      }
+      if (!isTop) {
+        for (const c of cuts) seams.push({ x1: c.from, z1: atZ, x2: c.to, z2: atZ });
+      }
+    }
+  }
+
+  return { walls, seams };
 }

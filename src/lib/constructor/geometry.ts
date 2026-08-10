@@ -70,9 +70,101 @@ export function canPlace(
   return true;
 }
 
+/* ------------------------------------------------------------------ */
+/* Магнитная стыковка                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Минимальная длина общей грани, при которой модули считаются состыкованными. */
+export const MIN_JOINT_LENGTH_M = 1;
+/** Порог магнита по умолчанию, м (в UI пересчитывается из пикселей экрана). */
+export const SNAP_THRESHOLD_M = 1.2;
+/** Насколько ближе должен быть новый кандидат, чтобы сменить прежний. */
+export const SNAP_HYSTERESIS_M = 0.35;
+
 /**
- * Подобрать якорь под точку тапа: модуль центрируется на точке и прилипает к
- * шагу 1 м; если место занято, пробуем соседние позиции в радиусе одного шага.
+ * Позиции, в которых модуль встаёт вплотную гранью к уже стоящему: между
+ * кубиками не остаётся зазора. Смещение вдоль грани кратно шагу 1 м, но
+ * перекрытие не меньше MIN_JOINT_LENGTH_M — «уголком» пристыковаться нельзя.
+ */
+export function snapAnchors(
+  modules: ModuleItem[],
+  floor: number,
+  n: number,
+  ignoreId?: string,
+): Cell[] {
+  const others = modules.filter((m) => m.id !== ignoreId);
+  const anchorsOnFloor = others.filter((m) => m.floor === floor);
+  const out: Cell[] = [];
+  const seen = new Set<string>();
+
+  const offsets: number[] = [];
+  for (
+    let o = -(MODULE_SIDE_M - MIN_JOINT_LENGTH_M);
+    o <= MODULE_SIDE_M - MIN_JOINT_LENGTH_M;
+    o += STEP_M
+  ) {
+    offsets.push(o);
+  }
+
+  const push = (x: number, z: number) => {
+    const key = `${x},${z}`;
+    if (seen.has(key)) return;
+    if (!canPlace(others, { x, z, floor }, n)) return;
+    seen.add(key);
+    out.push({ x, z });
+  };
+
+  for (const m of anchorsOnFloor) {
+    for (const o of offsets) {
+      push(m.x + MODULE_SIDE_M, m.z + o);
+      push(m.x - MODULE_SIDE_M, m.z + o);
+      push(m.x + o, m.z + MODULE_SIDE_M);
+      push(m.x + o, m.z - MODULE_SIDE_M);
+    }
+  }
+  return out;
+}
+
+/**
+ * Ближайшая магнитная позиция к «сырой» точке.
+ *
+ * previous — позиция, выбранная на прошлом кадре: чтобы её сменить, новая
+ * должна быть ближе на SNAP_HYSTERESIS_M. Без этого модуль дрожит между двумя
+ * равноудалёнными вариантами от микродвижения пальца.
+ */
+export function pickSnapAnchor(
+  anchors: Cell[],
+  rawX: number,
+  rawZ: number,
+  previous?: Cell | null,
+  thresholdM: number = SNAP_THRESHOLD_M,
+): Cell | null {
+  let best: Cell | null = null;
+  let bestDist = Infinity;
+  for (const c of anchors) {
+    const dist = Math.hypot(c.x - rawX, c.z - rawZ);
+    if (dist > thresholdM) continue;
+    // Ничья разрешается детерминированно — по меньшим координатам.
+    if (
+      dist < bestDist - 1e-9 ||
+      (Math.abs(dist - bestDist) < 1e-9 && best && (c.x - best.x || c.z - best.z) < 0)
+    ) {
+      bestDist = dist;
+      best = c;
+    }
+  }
+  if (!best) return null;
+  if (previous && anchors.some((a) => a.x === previous.x && a.z === previous.z)) {
+    const prevDist = Math.hypot(previous.x - rawX, previous.z - rawZ);
+    if (prevDist <= thresholdM && bestDist > prevDist - SNAP_HYSTERESIS_M) return previous;
+  }
+  return best;
+}
+
+/**
+ * Подобрать якорь под точку тапа. Сначала пробуем встать вплотную к соседнему
+ * модулю (кубики магнитятся друг к другу), и только если рядом никого нет —
+ * ставим по сетке с шагом 1 м.
  */
 export function anchorForPoint(
   modules: ModuleItem[],
@@ -85,6 +177,10 @@ export function anchorForPoint(
   const clamp = (v: number) => Math.max(0, Math.min(max, Math.round(v)));
   const ax = clamp(px - MODULE_SIDE_M / 2);
   const az = clamp(pz - MODULE_SIDE_M / 2);
+
+  // Магнит: ближайшая позиция впритык к существующему дому.
+  const snapped = pickSnapAnchor(snapAnchors(modules, floor, n), ax, az, null, MODULE_SIDE_M);
+  if (snapped) return snapped;
 
   const candidates: Cell[] = [{ x: ax, z: az }];
   for (const dx of [-STEP_M, 0, STEP_M]) {

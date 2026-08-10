@@ -300,7 +300,7 @@ function ReadonlyPlan({ api }: { api: V3BuilderApi }) {
   return (
     <div className="relative">
       <div className="pointer-events-none">
-        <PlanEditor api={api} />
+        <PlanEditor api={api} showRoles />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
         Модули двигаются в режиме «Точная настройка» — так случайный тап на телефоне не изменит дом.
@@ -351,7 +351,7 @@ function FineTunePanel({ api }: { api: V3BuilderApi }) {
           ))}
         </div>
       </div>
-      <PlanEditor api={api} />
+      <PlanEditor api={api} showRoles />
       <p className="mt-2 text-xs text-muted-foreground">
         Тап по свободному месту — поставить «{ROLES[api.role].label}», перетаскивание — передвинуть
         (зелёные точки подскажут куда), тап по модулю — выбрать. Участок: {api.sotki} соток.

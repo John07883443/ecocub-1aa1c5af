@@ -1,17 +1,22 @@
-import { BedDouble, CookingPot, Bath, Layers, Maximize2 } from "lucide-react";
+import { Blocks, Layers, Maximize2, Ruler } from "lucide-react";
+import { MODULE_HEIGHT_M } from "@/lib/constructor/constants";
 import type { HouseStats } from "@/lib/constructor/types";
 
 const fmt = (n: number) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 
+/**
+ * Сводка сборки. Состава комнат здесь нет намеренно: модули универсальные,
+ * назначение помещений прорабатывается инженером после заявки.
+ */
 export function StatsPanel({ stats }: { stats: HouseStats }) {
   const priceMln = (stats.price / 1_000_000).toFixed(1);
   return (
     <div className="rounded-sm border border-border bg-card p-5">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Жилая площадь</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Площадь дома</p>
           <p className="text-3xl font-bold text-foreground">
-            {fmt(stats.heatedArea)} <span className="text-base font-normal">м²</span>
+            {fmt(stats.totalArea)} <span className="text-base font-normal">м²</span>
           </p>
         </div>
         <div className="text-right">
@@ -32,32 +37,18 @@ export function StatsPanel({ stats }: { stats: HouseStats }) {
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <Metric
-          icon={<BedDouble className="size-4 text-accent" />}
-          label="Спальни"
-          value={stats.bedrooms}
-        />
-        <Metric
-          icon={<CookingPot className="size-4 text-accent" />}
-          label="Кухни"
-          value={stats.kitchens}
-        />
-        <Metric
-          icon={<Bath className="size-4 text-accent" />}
-          label="Санузлы"
-          value={stats.bathrooms}
-        />
-        <Metric
           icon={<Layers className="size-4 text-accent" />}
           label="Этажей"
           value={stats.floors}
         />
+        <Metric icon={<Blocks className="size-4 text-accent" />} label="Модуль, м²" value={9} />
       </div>
 
-      {stats.terraceArea > 0 && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          + терраса {fmt(stats.terraceArea)} м² (по льготной ставке)
-        </p>
-      )}
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Ruler className="size-3.5 text-accent" />
+        Кубик 3 × 3 м, высота потолков {MODULE_HEIGHT_M.toFixed(2).replace(".", ",")} м. Назначение
+        помещений внутри объёма прорабатывает инженер.
+      </p>
 
       <div className="mt-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground">

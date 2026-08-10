@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { Box, Layers3, Trash2, Sparkles, Eraser, RefreshCw, ArrowRight } from "lucide-react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Box, Layers3, Trash2, Sparkles, Eraser, RefreshCw, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -10,30 +10,26 @@ import {
   CELL_M,
   DESIGN_PRESETS,
   MAX_FLOORS,
-  ROLE_ORDER,
-  ROLES,
+  MODULE_HEIGHT_M,
   TEMPLATES,
   MIN_SOTKI,
   MAX_SOTKI,
 } from "@/lib/constructor/constants";
-import type { HouseStats, ModuleItem, Role } from "@/lib/constructor/types";
+import type { HouseStats } from "@/lib/constructor/types";
 
 const Scene3D = lazy(() => import("./Scene3D"));
 
 const fmt = (n: number) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 
-function buildSummary(stats: HouseStats, modules: ModuleItem[], sotki: number, designName: string) {
-  const roleCounts = ROLE_ORDER.map((r) => {
-    const count = modules.filter((m) => m.role === r).length;
-    return count ? `${ROLES[r].label}: ${count}` : null;
-  })
-    .filter(Boolean)
-    .join(", ");
+/**
+ * Сводка для заявки. Состав комнат не перечисляем: модули универсальные,
+ * назначение помещений менеджер и инженер уточняют после обращения.
+ */
+function buildSummary(stats: HouseStats, sotki: number, designName: string) {
   return [
     "Моя конфигурация в конструкторе EcoCub:",
-    `• Модулей: ${stats.moduleCount} (${fmt(stats.heatedArea)} м² жилой${stats.terraceArea ? ` + ${fmt(stats.terraceArea)} м² террас` : ""})`,
+    `• Модулей: ${stats.moduleCount} (${fmt(stats.totalArea)} м²)`,
     `• Этажей: ${stats.floors}`,
-    `• Состав: ${roleCounts || "—"}`,
     `• Участок: ${sotki} соток`,
     `• Дизайн: ${designName}`,
     `• Ориентировочная стоимость: ${fmt(stats.price)} ₽`,
@@ -53,15 +49,39 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
   const [autoRotate, setAutoRotate] = useState(true);
   const [imgError, setImgError] = useState<Record<string, boolean>>({});
 
+  /** Контекстное меню модуля: открывается тапом/кликом прямо на плане. */
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+
   useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (view === "3d") setOpened3d(true);
   }, [view]);
 
-  const selected = useMemo(
-    () => api.modules.find((m) => m.id === api.selectedId) ?? null,
-    [api.modules, api.selectedId],
-  );
+  // Меню закрывается по Esc и при уходе со вкладки плана.
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
+
+  useEffect(() => {
+    if (view !== "plan") setMenu(null);
+  }, [view]);
+
+  const handleModuleTap = (id: string, clientX: number, clientY: number) => {
+    // Пустой id приходит от тапа по свободному месту при открытом меню —
+    // такой тап только закрывает панель и ничего не ставит.
+    if (!id) {
+      setMenu(null);
+      api.selectModule(null);
+      return;
+    }
+    setMenu({ id, x: clientX, y: clientY });
+  };
 
   const existingTopFloor = api.modules.reduce((mx, m) => Math.max(mx, m.floor), -1);
   const floorButtons = Array.from(
@@ -72,7 +92,7 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
   const plotSideM = Math.round(Math.sqrt(api.sotki * 100));
 
   const handleQuote = () => {
-    const summary = buildSummary(api.stats, api.modules, api.sotki, api.design.name);
+    const summary = buildSummary(api.stats, api.sotki, api.design.name);
     onRequestQuote?.(summary);
   };
 
@@ -111,13 +131,26 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
               ))}
             </div>
           )}
+
+          {/* Быстрая очистка плана — на виду, а не в глубине панели */}
+          {view === "plan" && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!api.modules.length}
+              onClick={() => setConfirmClear(true)}
+              className="ml-auto gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
+            >
+              <Eraser className="size-3.5" /> Очистить план
+            </Button>
+          )}
         </div>
 
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm bg-gradient-to-b from-sky-100 to-secondary md:aspect-[16/10]">
           {/* PLAN */}
           <div className={cn("absolute inset-0 p-3", view === "plan" ? "block" : "hidden")}>
             <div className="mx-auto flex h-full max-w-[560px] items-center justify-center">
-              <PlanEditor api={api} />
+              <PlanEditor api={api} onModuleTap={handleModuleTap} suppressPlace={!!menu} />
             </div>
           </div>
 
@@ -148,75 +181,10 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
 
         {view === "plan" && (
           <p className="text-xs text-muted-foreground">
-            Тапните по свободному месту, чтобы поставить модуль {CELL_M}×{CELL_M} м, или потяните
-            готовый модуль пальцем/мышкой — зелёные точки подскажут, куда его можно передвинуть, и
-            он сам примагнитится к сетке с шагом 1 м (треть кубика). Тап по модулю — изменить
-            назначение или удалить. Участок {plotSideM}×{plotSideM} м.
+            Тапните по свободному месту, чтобы поставить кубик {CELL_M}×{CELL_M} м, или потяните
+            готовый модуль пальцем либо мышкой — он примагнитится вплотную к соседнему, без зазора.
+            Тап по модулю открывает меню с удалением. Участок {plotSideM}×{plotSideM} м.
           </p>
-        )}
-
-        {/* Роли для новых модулей */}
-        {view === "plan" && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Тип модуля:
-            </span>
-            {ROLE_ORDER.map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => api.setRole(r)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors",
-                  api.role === r
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:border-foreground/40",
-                )}
-              >
-                <span
-                  className="size-2.5 rounded-full"
-                  style={{ backgroundColor: ROLES[r].plan }}
-                />
-                {ROLES[r].label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Выбранный модуль */}
-        {selected && (
-          <div className="rounded-sm border border-border bg-secondary p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                Модуль ({ROLES[selected.role].label}, {selected.floor + 1} эт.):
-              </span>
-              {ROLE_ORDER.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => api.setModuleRole(selected.id, r as Role)}
-                  className={cn(
-                    "rounded-sm border px-2 py-0.5 text-xs transition-colors",
-                    selected.role === r
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background hover:border-foreground/40",
-                  )}
-                >
-                  {ROLES[r].label}
-                </button>
-              ))}
-              <div className="ml-auto flex gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 text-destructive hover:text-destructive"
-                  onClick={() => api.removeModule(selected.id)}
-                >
-                  <Trash2 className="size-3.5" /> Удалить
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
       </div>
 
@@ -260,13 +228,6 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={api.clearAll}
-            className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive"
-          >
-            <Eraser className="size-3.5" /> Очистить участок
-          </button>
         </div>
 
         {/* Дизайн */}
@@ -320,6 +281,127 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
           <Sparkles className="size-4" /> Получить расчёт по этой сборке
           <ArrowRight className="size-4" />
         </Button>
+      </div>
+
+      {menu && (
+        <ModuleMenu
+          floor={api.modules.find((m) => m.id === menu.id)?.floor ?? 0}
+          anchor={{ x: menu.x, y: menu.y }}
+          onDelete={() => {
+            api.removeModule(menu.id);
+            setMenu(null);
+          }}
+          onClose={() => {
+            setMenu(null);
+            api.selectModule(null);
+          }}
+        />
+      )}
+
+      {confirmClear && (
+        <ClearDialog
+          onCancel={() => setConfirmClear(false)}
+          onConfirm={() => {
+            api.clearAll();
+            setMenu(null);
+            setConfirmClear(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Меню модуля. Открывается обычным кликом мышью и обычным тапом пальцем —
+ * long press не требуется. Кнопки крупные, чтобы попадать пальцем.
+ */
+function ModuleMenu({
+  floor,
+  anchor,
+  onDelete,
+  onClose,
+}: {
+  floor: number;
+  anchor: { x: number; y: number };
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Слушаем со следующего кадра: тап, открывший меню, не должен его закрыть.
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const t = window.setTimeout(() => window.addEventListener("pointerdown", onDown), 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [onClose]);
+
+  // Панель держится в пределах экрана и не перекрывает сам модуль.
+  const width = 208;
+  const left = Math.min(
+    Math.max(12, anchor.x - width / 2),
+    (typeof window !== "undefined" ? window.innerWidth : 360) - width - 12,
+  );
+  const top = Math.min(
+    anchor.y + 14,
+    (typeof window !== "undefined" ? window.innerHeight : 640) - 130,
+  );
+
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label="Действия с модулем"
+      className="fixed z-50 rounded-sm border border-border bg-background p-2 shadow-[0_14px_36px_-12px_rgba(0,0,0,0.4)]"
+      style={{ left, top, width }}
+    >
+      <div className="flex items-center justify-between px-1.5 py-1">
+        <span className="text-xs text-muted-foreground">Модуль 3 × 3 м · {floor + 1} эт.</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Закрыть"
+          className="rounded p-1 text-muted-foreground hover:bg-secondary"
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="flex min-h-11 w-full items-center gap-2 rounded-sm px-2.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/5"
+      >
+        <Trash2 className="size-4" /> Удалить модуль
+      </button>
+      <p className="px-2.5 pb-1 pt-0.5 text-[11px] leading-snug text-muted-foreground">
+        Чтобы передвинуть — просто потяните модуль.
+      </p>
+    </div>
+  );
+}
+
+function ClearDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-sm border border-border bg-background p-5">
+        <p className="text-base font-semibold">Очистить план?</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          С участка уберутся все модули на всех этажах. Участок, дизайн фасада и настройки
+          сохранятся — собрать заново можно с готовой планировки.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            Отмена
+          </Button>
+          <Button className="bg-destructive text-white hover:bg-destructive/90" onClick={onConfirm}>
+            Очистить план
+          </Button>
+        </div>
       </div>
     </div>
   );

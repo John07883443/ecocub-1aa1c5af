@@ -21,6 +21,15 @@ import {
 let idCounter = 0;
 const newId = () => `m${++idCounter}`;
 
+/**
+ * Модули EcoCub универсальные: назначение кубика (спальня, кухня, санузел)
+ * на этапе сборки не задаётся — планировку внутри объёма прорабатывает
+ * инженер. Роль в модели данных осталась, потому что на ней держатся
+ * экспериментальные версии конструктора, но боевая сборка использует
+ * единственное значение.
+ */
+const UNIVERSAL_ROLE: Role = "living";
+
 /** Центрирует стартовую планировку на текущей сетке (координаты в метрах). */
 function seedsToModules(templateId: string, n: number): ModuleItem[] {
   const tpl = TEMPLATES.find((t) => t.id === templateId);
@@ -32,12 +41,13 @@ function seedsToModules(templateId: string, n: number): ModuleItem[] {
   const max = maxAnchor(n);
   const offX = Math.max(0, Math.round((max - (maxX - minX)) / 2)) - minX;
   const offZ = Math.max(0, Math.round((max - (maxZ - minZ)) / 2)) - minZ;
+  // Роли из шаблонов не переносим: кубики одинаковые, отличается только форма.
   return tpl.seeds.map((s) => ({
     id: newId(),
     x: s.x + offX,
     z: s.z + offZ,
     floor: s.floor,
-    role: s.role,
+    role: UNIVERSAL_ROLE,
   }));
 }
 
@@ -49,7 +59,9 @@ export function useHouseBuilder(basePricePerM2: number) {
     seedsToModules("l-family", gridSizeForSotki(DEFAULT_SOTKI)),
   );
   const [floor, setFloor] = useState(0);
-  const [role, setRole] = useState<Role>("living");
+  // Роль остаётся в API ради совместимости с экспериментальными версиями,
+  // но боевой конструктор ставит только универсальные модули.
+  const [role, setRole] = useState<Role>(UNIVERSAL_ROLE);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [designId, setDesignId] = useState(DESIGN_PRESETS[0].id);
 
