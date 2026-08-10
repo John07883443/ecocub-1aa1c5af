@@ -18,7 +18,7 @@ import {
   MAX_FLOORS,
   MAX_SOTKI,
   MIN_SOTKI,
-  ALL_TEMPLATES,
+  TEMPLATES,
 } from "./constants";
 
 let idCounter = 0;
@@ -44,7 +44,7 @@ const DEFAULT_TEMPLATE_ID = "family-one";
 
 /** Центрирует стартовую планировку на текущей сетке (координаты в метрах). */
 function seedsToModules(templateId: string, n: number): ModuleItem[] {
-  const tpl = ALL_TEMPLATES.find((t) => t.id === templateId);
+  const tpl = TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) return [];
   const minX = Math.min(...tpl.seeds.map((s) => s.x));
   const maxX = Math.max(...tpl.seeds.map((s) => s.x));
