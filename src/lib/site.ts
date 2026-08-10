@@ -29,3 +29,39 @@ export const mainNav: NavItem[] = [
   { label: "Блог", to: "/blog" },
   { label: "Контакты", to: "/contacts" },
 ];
+
+export type SubNavItem = { label: string; to: string; hint?: string; badge?: string };
+
+/**
+ * Выпадающее меню пункта «Конструктор»: быстрый доступ ко всем версиям.
+ * Добавлено по решению владельца (10.08.2026) — до этого эксперименты
+ * были доступны только по прямым ссылкам.
+ */
+export const constructorNav: SubNavItem[] = [
+  {
+    label: "AI-подбор под семью",
+    to: "/constructor-ai-v3",
+    hint: "вопросы → до трёх домов → участок и фасад",
+    badge: "новое",
+  },
+  {
+    label: "3D-конструктор",
+    to: "/constructor",
+    hint: "свободная сборка из модулей 3×3 м",
+  },
+  {
+    label: "Квиз подбора проекта",
+    to: "/#quiz",
+    hint: "минута — и ориентир по площади и цене",
+  },
+  {
+    label: "Дом мечты",
+    to: "/#dream",
+    hint: "карта потребностей с живым превью",
+  },
+  {
+    label: "Все версии · лаборатория",
+    to: "/constructor-lab",
+    hint: "сравнить все варианты конструктора",
+  },
+];
