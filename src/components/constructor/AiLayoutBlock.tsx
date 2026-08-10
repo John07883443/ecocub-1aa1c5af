@@ -209,9 +209,11 @@ export function AiLayoutBlock({ modules, onRequestQuote }: AiLayoutBlockProps) {
           Планировка вашего дома
         </h3>
         <span className="text-xs text-muted-foreground">
-          {config.freePerVisitor === 1
-            ? "одна генерация бесплатно"
-            : `бесплатных генераций: ${config.freePerVisitor}`}
+          {config.freePerVisitor === 0
+            ? "бесплатно"
+            : config.freePerVisitor === 1
+              ? "одна генерация бесплатно"
+              : `бесплатных генераций: ${config.freePerVisitor}`}
         </span>
       </div>
 

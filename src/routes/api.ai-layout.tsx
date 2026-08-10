@@ -131,10 +131,13 @@ export const Route = createFileRoute("/api/ai-layout")({
           return Response.json({ ...present(existing), notice: describeNudges(relaxed.nudges) });
         }
 
-        if ((await visitorSpent(visitor)) >= config.freePerVisitor) {
+        // Ноль означает «без ограничения»: проверка тогда не выполняется вовсе,
+        // а не сравнивается с нулём — иначе снятие лимита превратилось бы в
+        // запрет всего.
+        if (config.freePerVisitor > 0 && (await visitorSpent(visitor)) >= config.freePerVisitor) {
           return Response.json({ ok: false, reason: "limit_visitor" }, { status: 429 });
         }
-        if ((await spentToday()) >= config.dailyLimit) {
+        if (config.dailyLimit > 0 && (await spentToday()) >= config.dailyLimit) {
           return Response.json({ ok: false, reason: "limit_daily" }, { status: 429 });
         }
 

@@ -190,3 +190,35 @@ test("ручной режим ничего не рисует, а ставит з
   const result = await provider.start({ footprintUrl: "u", prompt: "x", key: "abc" });
   assert.equal(result.status, "queued_manual");
 });
+
+test("ноль означает «без ограничения», а не «запрещено всем»", () => {
+  // Умолчание после решения владельца: лимитов нет. Ноль здесь легко принять
+  // за запрет, поэтому смысл закреплён тестом — иначе снятие лимита однажды
+  // превратится в отказ всем подряд.
+  const config = readConfig(base);
+  assert.equal(config.freePerVisitor, 0);
+  assert.equal(config.dailyLimit, 0);
+  // Снятие лимитов ничего не открывает само по себе: боевой провайдер
+  // по-прежнему не стартует без ключей.
+  assert.equal(
+    availability(readConfig({ ...base, AI_LAYOUT_PROVIDER: "openrouter" })).reason,
+    "no_credentials",
+  );
+
+  // Лимиты возвращаются переменными окружения, без правки кода.
+  const capped = readConfig({
+    ...base,
+    AI_LAYOUT_FREE_PER_VISITOR: "1",
+    AI_LAYOUT_DAILY_LIMIT: "50",
+  });
+  assert.equal(capped.freePerVisitor, 1);
+  assert.equal(capped.dailyLimit, 50);
+});
+
+test("аварийный выключатель остаётся единственным тормозом", () => {
+  // Без дневного потолка это и есть защита кошелька: она сильнее включённого
+  // флага и гасит функцию целиком.
+  const config = readConfig({ ...base, AI_LAYOUT_KILL_SWITCH: "1" });
+  assert.equal(availability(config).reason, "kill_switch");
+  assert.equal(publicConfig(config).available, false);
+});

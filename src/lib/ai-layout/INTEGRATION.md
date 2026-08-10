@@ -88,19 +88,38 @@ supabase secrets set RELAY_SECRET="$(openssl rand -hex 32)"
 
 ## Переменные окружения
 
-| Переменная                                                             | Назначение                                     | По умолчанию         |
-| ---------------------------------------------------------------------- | ---------------------------------------------- | -------------------- |
-| `AI_LAYOUT_ENABLED`                                                    | главный выключатель функции                    | выключено            |
-| `AI_LAYOUT_KILL_SWITCH`                                                | аварийный стоп, сильнее предыдущего            | выключено            |
-| `AI_LAYOUT_PROVIDER`                                                   | `mock`, `manual`, `openrouter`, `higgsfield`   | `mock`               |
-| `AI_LAYOUT_VISITOR_SECRET`                                             | соль для HMAC поверх IP, обязательна           | нет                  |
-| `OPENROUTER_API_KEY`                                                   | ключ OpenRouter                                | нет                  |
-| `AI_LAYOUT_MODEL`                                                      | идентификатор модели                           | `openai/gpt-image-2` |
-| `AI_LAYOUT_QUALITY`                                                    | тариф качества                                 | `low`                |
-| `AI_LAYOUT_FREE_PER_VISITOR`                                           | бесплатных генераций на посетителя             | `1`                  |
-| `AI_LAYOUT_DAILY_LIMIT`                                                | потолок генераций в сутки                      | `50`                 |
-| `AI_LAYOUT_PUBLIC_BASE`                                                | адрес сайта: по нему провайдер забирает контур | `https://eco-cub.ru` |
-| `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET`, `AI_LAYOUT_SUBMIT_PATH` | только для провайдера `higgsfield`             | нет                  |
+| Переменная                                                             | Назначение                                         | По умолчанию         |
+| ---------------------------------------------------------------------- | -------------------------------------------------- | -------------------- |
+| `AI_LAYOUT_ENABLED`                                                    | главный выключатель функции                        | выключено            |
+| `AI_LAYOUT_KILL_SWITCH`                                                | аварийный стоп, сильнее предыдущего                | выключено            |
+| `AI_LAYOUT_PROVIDER`                                                   | `mock`, `manual`, `openrouter`, `higgsfield`       | `mock`               |
+| `AI_LAYOUT_VISITOR_SECRET`                                             | соль для HMAC поверх IP, обязательна               | нет                  |
+| `OPENROUTER_API_KEY`                                                   | ключ OpenRouter                                    | нет                  |
+| `AI_LAYOUT_MODEL`                                                      | идентификатор модели                               | `openai/gpt-image-2` |
+| `AI_LAYOUT_QUALITY`                                                    | тариф качества                                     | `low`                |
+| `AI_LAYOUT_FREE_PER_VISITOR`                                           | бесплатных генераций на посетителя, 0 — без счёта  | `0` (без счёта)      |
+| `AI_LAYOUT_DAILY_LIMIT`                                                | потолок генераций в сутки на всех, 0 — без потолка | `0` (без потолка)    |
+| `AI_LAYOUT_PUBLIC_BASE`                                                | адрес сайта: по нему провайдер забирает контур     | `https://eco-cub.ru` |
+| `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET`, `AI_LAYOUT_SUBMIT_PATH` | только для провайдера `higgsfield`                 | нет                  |
+
+### Лимиты сняты
+
+Оба счётчика по умолчанию равны нулю, а ноль означает «без ограничения» —
+проверка тогда не выполняется вовсе. Это прямое решение владельца от
+10.08.2026; до него было по одной генерации на посетителя и 50 в сутки.
+
+Что это значит по деньгам: каждая генерация оплачивается с кошелька
+OpenRouter, настоящая цена приходит полем `usage.cost` и пишется в лог
+сервера. Верхней границы расхода больше нет — единственный тормоз ручной:
+
+```bash
+# погасить функцию немедленно
+sudo sed -i 's/^AI_LAYOUT_KILL_SWITCH=.*/AI_LAYOUT_KILL_SWITCH=1/' /home/deploy/ecocub.env
+sudo -u deploy pm2 reload /home/deploy/ecosystem.config.cjs --update-env
+```
+
+Вернуть прежние лимиты можно, не трогая код: `AI_LAYOUT_FREE_PER_VISITOR=1` и
+`AI_LAYOUT_DAILY_LIMIT=50` в `ecocub.env` плюс тот же `pm2 reload`.
 
 Ключи живут только в `/home/deploy/ecocub.env` (права 600, вне git). В браузер
 уходит четыре поля — доступна ли функция, заглушка ли это, ручной ли режим и
