@@ -137,7 +137,9 @@ export const TEMPLATES: Template[] = [
       { x: 3, z: 3, floor: 0, role: "bathroom" },
       { x: 0, z: 6, floor: 0, role: "bedroom" },
       { x: 0, z: 9, floor: 0, role: "bedroom" },
-      { x: 4, z: 9, floor: 0, role: "terrace" },
+      // Раньше здесь стояла отдельная терраса с зазором в метр. Террас пока
+      // нет, а дом обязан быть одним зданием — модуль пристыкован вплотную.
+      { x: 3, z: 9, floor: 0, role: "living" },
     ],
   },
   {

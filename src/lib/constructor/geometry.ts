@@ -207,9 +207,84 @@ export function anchorForPoint(
     }
   }
   for (const c of candidates) {
-    if (canPlace(modules, { ...c, floor }, n)) return c;
+    if (canAdd(modules, { ...c, floor }, n)) return c;
   }
   return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Связность дома                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Стыкуются ли два модуля одного этажа гранью. Касание углом не считается:
+ * общая грань должна быть не короче MIN_JOINT_LENGTH_M — тот же порог, что и
+ * у магнита, иначе «дом» можно было бы собрать из кубиков, соприкасающихся
+ * одной точкой.
+ */
+export function areAdjacent(a: ModuleItem, b: ModuleItem): boolean {
+  if (a.floor !== b.floor) return false;
+  const S = MODULE_SIDE_M;
+  const gapX = Math.max(a.x, b.x) - Math.min(a.x + S, b.x + S);
+  const gapZ = Math.max(a.z, b.z) - Math.min(a.z + S, b.z + S);
+  const overlapX = Math.min(a.x + S, b.x + S) - Math.max(a.x, b.x);
+  const overlapZ = Math.min(a.z + S, b.z + S) - Math.max(a.z, b.z);
+  // Впритык по одной оси и достаточное перекрытие по другой.
+  if (Math.abs(gapX) < 1e-9 && overlapZ >= MIN_JOINT_LENGTH_M - 1e-9) return true;
+  if (Math.abs(gapZ) < 1e-9 && overlapX >= MIN_JOINT_LENGTH_M - 1e-9) return true;
+  return false;
+}
+
+/**
+ * Все ли модули образуют одно здание.
+ *
+ * Связь бывает двух видов: гранью в гранью на одном этаже и опорой между
+ * этажами — модуль второго этажа держится на модуле первого, и это делает их
+ * одним домом. Пустой набор считается связным: дом ещё не начали собирать.
+ */
+export function isConnected(modules: ModuleItem[]): boolean {
+  if (modules.length < 2) return true;
+
+  const linked = (a: ModuleItem, b: ModuleItem) =>
+    areAdjacent(a, b) || (Math.abs(a.floor - b.floor) === 1 && overlapArea(a, b) > 0);
+
+  const seen = new Set<string>([modules[0].id]);
+  const queue: ModuleItem[] = [modules[0]];
+  while (queue.length) {
+    const current = queue.pop()!;
+    for (const m of modules) {
+      if (seen.has(m.id) || !linked(current, m)) continue;
+      seen.add(m.id);
+      queue.push(m);
+    }
+  }
+  return seen.size === modules.length;
+}
+
+/**
+ * Можно ли добавить модуль: геометрия позволяет И дом остаётся одним целым.
+ * Первый модуль ставится где угодно — присоединяться ещё не к чему.
+ */
+export function canAdd(
+  modules: ModuleItem[],
+  candidate: Pick<ModuleItem, "x" | "z" | "floor">,
+  n: number,
+): boolean {
+  if (!canPlace(modules, candidate, n)) return false;
+  if (!modules.length) return true;
+  return isConnected([
+    ...modules,
+    { ...candidate, id: "__candidate", role: "living" } as ModuleItem,
+  ]);
+}
+
+/**
+ * Можно ли удалить модуль, не разорвав дом на части. Модули верхних этажей,
+ * оставшиеся без опоры, уезжают следом — их отсутствие разрывом не считается.
+ */
+export function canRemove(modules: ModuleItem[], id: string): boolean {
+  const remaining = dropUnsupported(modules.filter((m) => m.id !== id));
+  return isConnected(remaining);
 }
 
 /** Модули на floor>0, оставшиеся без достаточной опоры после удаления removedId. */
@@ -246,33 +321,50 @@ export function isValidMove(
   const moved = { ...target, x, z };
   if (!canPlace(rest, moved, n)) return false;
   const next = [...rest, moved];
-  return dropUnsupported(next).length === next.length;
+  if (dropUnsupported(next).length !== next.length) return false;
+  return isConnected(next);
 }
 
 /**
- * Все допустимые позиции (шаг STEP_M) для перемещения модуля id по участку.
+ * Все допустимые позиции для перемещения модуля id.
  *
- * С шагом 0,5 м позиций вчетверо больше, чем при метровой сетке, поэтому
- * дорогую проверку «не лишим ли опоры соседей» делаем только когда над
- * этажом модуля вообще что-то стоит. В типовом случае (одноэтажный дом или
- * модуль верхнего этажа) хватает быстрой canPlace.
+ * Дом обязан оставаться одним зданием, поэтому перебирать весь участок обычно
+ * незачем: модуль на земле может встать только вплотную к соседу, а таких
+ * позиций считаные десятки — их и так уже считает магнит. Полный перебор
+ * сетки остаётся для двух случаев: когда модуль в доме единственный (ему
+ * присоединяться не к чему) и когда над этажом что-то стоит — там связь может
+ * идти и через опору сверху, а заодно нужна дорогая проверка «не лишим ли
+ * опоры соседей».
  */
 export function validMoveAnchors(modules: ModuleItem[], id: string, n: number): Set<string> {
   const valid = new Set<string>();
-  const max = maxAnchor(n);
   const target = modules.find((m) => m.id === id);
   if (!target) return valid;
 
   const rest = modules.filter((m) => m.id !== id);
-  const hasFloorsAbove = rest.some((m) => m.floor > target.floor);
+  const max = maxAnchor(n);
 
-  for (let x = minAnchor(); x <= max; x += STEP_M) {
-    for (let z = minAnchor(); z <= max; z += STEP_M) {
-      const ok = hasFloorsAbove
-        ? isValidMove(modules, id, x, z, n)
-        : canPlace(rest, { x, z, floor: target.floor }, n);
-      if (ok) valid.add(`${x},${z}`);
+  if (!rest.length) {
+    for (let x = minAnchor(); x <= max; x += STEP_M) {
+      for (let z = minAnchor(); z <= max; z += STEP_M) {
+        if (canPlace(rest, { x, z, floor: target.floor }, n)) valid.add(`${x},${z}`);
+      }
     }
+    return valid;
+  }
+
+  const hasFloorsAbove = rest.some((m) => m.floor > target.floor);
+  if (target.floor > 0 || hasFloorsAbove) {
+    for (let x = minAnchor(); x <= max; x += STEP_M) {
+      for (let z = minAnchor(); z <= max; z += STEP_M) {
+        if (isValidMove(modules, id, x, z, n)) valid.add(`${x},${z}`);
+      }
+    }
+    return valid;
+  }
+
+  for (const c of snapAnchors(modules, target.floor, n, id)) {
+    if (isValidMove(modules, id, c.x, c.z, n)) valid.add(`${c.x},${c.z}`);
   }
   return valid;
 }

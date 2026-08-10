@@ -7,6 +7,7 @@ import { PlanEditor } from "./PlanEditor";
 import { StatsPanel } from "./StatsPanel";
 import { AiLayoutBlock } from "./AiLayoutBlock";
 import { useHouseBuilder } from "@/lib/constructor/useHouseBuilder";
+import { canRemove } from "@/lib/constructor/geometry";
 import {
   CELL_M,
   DESIGN_PRESETS,
@@ -296,6 +297,7 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
           <ModuleMenu
             floor={api.modules.find((m) => m.id === menu.id)?.floor ?? 0}
             anchor={{ x: menu.x, y: menu.y }}
+            canDelete={canRemove(api.modules, menu.id)}
             onDelete={() => {
               api.removeModule(menu.id);
               setMenu(null);
@@ -333,11 +335,14 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderPro
 function ModuleMenu({
   floor,
   anchor,
+  canDelete,
   onDelete,
   onClose,
 }: {
   floor: number;
   anchor: { x: number; y: number };
+  /** Крайний ли это модуль. Удаление внутреннего разорвало бы дом надвое. */
+  canDelete: boolean;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -388,12 +393,20 @@ function ModuleMenu({
       <button
         type="button"
         onClick={onDelete}
-        className="flex min-h-11 w-full items-center gap-2 rounded-sm px-2.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/5"
+        disabled={!canDelete}
+        className={cn(
+          "flex min-h-11 w-full items-center gap-2 rounded-sm px-2.5 text-left text-sm transition-colors",
+          canDelete
+            ? "text-destructive hover:bg-destructive/5"
+            : "cursor-not-allowed text-muted-foreground",
+        )}
       >
         <Trash2 className="size-4" /> Удалить модуль
       </button>
       <p className="px-2.5 pb-1 pt-0.5 text-[11px] leading-snug text-muted-foreground">
-        Чтобы передвинуть — просто потяните модуль.
+        {canDelete
+          ? "Чтобы передвинуть — просто потяните модуль."
+          : "Этот модуль держит дом вместе. Удалять можно крайние."}
       </p>
     </div>
   );

@@ -2,9 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   anchorForPoint,
+  areAdjacent,
   buildableSide,
+  canAdd,
   canPlace,
+  canRemove,
   computeStats,
+  isConnected,
   isValidMove,
   maxAnchor,
   minAnchor,
@@ -12,7 +16,7 @@ import {
   snapAnchors,
   validMoveAnchors,
 } from "../geometry.ts";
-import { MODULE_SIDE_M, SETBACK_M, snapToStep, STEP_M } from "../constants.ts";
+import { MODULE_SIDE_M, SETBACK_M, STEP_M, TEMPLATES, snapToStep } from "../constants.ts";
 import type { ModuleItem } from "../types.ts";
 
 const N = 8; // участок 24 × 24 м
@@ -125,4 +129,91 @@ test("площадь и цена считаются по модулям, а не
   assert.equal(stats.moduleCount, 2);
   assert.equal(stats.totalArea, 18);
   assert.equal(stats.price, 18 * 105000);
+});
+
+/* ------------------------------------------------------------------ */
+/* Связность: дом всегда один                                          */
+/* ------------------------------------------------------------------ */
+
+test("касание углом домом не считается", () => {
+  const a = mod("a", 3, 3);
+  const b = mod("b", 3 + MODULE_SIDE_M, 3 + MODULE_SIDE_M);
+  assert.equal(areAdjacent(a, b), false);
+  assert.equal(isConnected([a, b]), false);
+});
+
+test("общая грань короче метра не связывает", () => {
+  const a = mod("a", 3, 3);
+  // Сдвиг на 2.5 м оставляет общую грань 0.5 м — меньше порога стыковки.
+  const b = mod("b", 3 + MODULE_SIDE_M, 3 + 2.5);
+  assert.equal(areAdjacent(a, b), false);
+  const c = mod("c", 3 + MODULE_SIDE_M, 3 + 2);
+  assert.equal(areAdjacent(a, c), true);
+});
+
+test("второй этаж связан с первым через опору, а не через грань", () => {
+  const ground = mod("g", 3, 3);
+  const upper = { ...mod("u", 3, 3), floor: 1 };
+  assert.equal(areAdjacent(ground, upper), false);
+  assert.equal(isConnected([ground, upper]), true);
+});
+
+test("модуль на земле ставится только вплотную к дому", () => {
+  const house = [mod("a", 6, 6)];
+  // Впритык справа — можно.
+  assert.equal(canAdd(house, { x: 6 + MODULE_SIDE_M, z: 6, floor: 0 }, 12), true);
+  // На отшибе — нельзя, получилось бы два здания.
+  assert.equal(canAdd(house, { x: 6 + MODULE_SIDE_M * 2, z: 6, floor: 0 }, 12), false);
+  // Первый модуль в пустом доме встаёт где угодно.
+  assert.equal(canAdd([], { x: 15, z: 15, floor: 0 }, 12), true);
+});
+
+test("тап мимо дома не создаёт отдельно стоящий кубик", () => {
+  const house = [mod("a", 6, 6)];
+  const far = anchorForPoint(house, 20, 20, 0, 12);
+  if (far) {
+    // Если позиция нашлась, она обязана быть состыкованной.
+    assert.equal(canAdd(house, { ...far, floor: 0 }, 12), true);
+    assert.equal(isConnected([...house, { ...mod("new", far.x, far.z) }]), true);
+  }
+});
+
+test("разрывающее перемещение запрещено", () => {
+  const line = [mod("a", 6, 6), mod("b", 6 + MODULE_SIDE_M, 6), mod("c", 6 + MODULE_SIDE_M * 2, 6)];
+  // Крайний модуль можно двигать вдоль дома.
+  assert.equal(isValidMove(line, "c", 6, 6 + MODULE_SIDE_M, 12), true);
+  // Средний утащить в сторону нельзя — дом распадётся надвое.
+  assert.equal(isValidMove(line, "b", 6, 6 + MODULE_SIDE_M * 2, 12), false);
+});
+
+test("удалить можно крайний модуль, но не тот, что держит дом вместе", () => {
+  const line = [mod("a", 6, 6), mod("b", 6 + MODULE_SIDE_M, 6), mod("c", 6 + MODULE_SIDE_M * 2, 6)];
+  assert.equal(canRemove(line, "a"), true);
+  assert.equal(canRemove(line, "c"), true);
+  assert.equal(canRemove(line, "b"), false);
+  // Последний оставшийся модуль удаляется свободно: пустой дом связен.
+  assert.equal(canRemove([mod("a", 6, 6)], "a"), true);
+});
+
+test("подсказки перемещения не предлагают позиций в отрыве от дома", () => {
+  const house = [mod("a", 6, 6), mod("b", 6 + MODULE_SIDE_M, 6)];
+  const spots = validMoveAnchors(house, "b", 12);
+  assert.ok(spots.size > 0);
+  for (const key of spots) {
+    const [x, z] = key.split(",").map(Number);
+    assert.equal(isValidMove(house, "b", x, z, 12), true, `позиция ${key} должна быть связной`);
+  }
+});
+
+test("все готовые шаблоны собираются в одно здание", () => {
+  for (const template of TEMPLATES) {
+    const mods = template.seeds.map((c, i) => ({
+      id: `${template.id}-${i}`,
+      x: c.x,
+      z: c.z,
+      floor: c.floor,
+      role: c.role,
+    }));
+    assert.equal(isConnected(mods), true, `шаблон «${template.name}» разорван`);
+  }
 });

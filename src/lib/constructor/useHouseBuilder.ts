@@ -3,6 +3,8 @@ import type { ModuleItem, Role } from "./types";
 import {
   anchorForPoint,
   canPlace,
+  canRemove,
+  isConnected,
   computeStats,
   dropUnsupported,
   gridSizeForSotki,
@@ -101,7 +103,9 @@ export function useHouseBuilder(basePricePerM2: number) {
           lastError.current =
             floor > 0
               ? "Верхнему этажу нужна опора минимум на треть площади модуля"
-              : "Здесь модуль не помещается";
+              : prev.length
+                ? "Модуль ставится только вплотную к дому — дом должен быть один"
+                : "Здесь модуль не помещается";
           return prev;
         }
         return [...prev, { id: newId(), x: anchor.x, z: anchor.z, floor, role }];
@@ -131,6 +135,10 @@ export function useHouseBuilder(basePricePerM2: number) {
           lastError.current = "Так модули выше останутся без опоры";
           return prev;
         }
+        if (!isConnected(next)) {
+          lastError.current = "Так дом разорвётся на части — модули должны стыковаться";
+          return prev;
+        }
         return next;
       });
     },
@@ -138,7 +146,13 @@ export function useHouseBuilder(basePricePerM2: number) {
   );
 
   const removeModule = useCallback((id: string) => {
+    lastError.current = null;
     setModules((prev) => {
+      // Удаление изнутри дома разорвало бы его на два здания. Дом всегда один.
+      if (!canRemove(prev, id)) {
+        lastError.current = "Этот модуль держит дом вместе — удалите крайний";
+        return prev;
+      }
       const orphans = orphansAfterRemoval(prev, id);
       const drop = new Set<string>([id, ...orphans.map((o) => o.id)]);
       return prev.filter((m) => !drop.has(m.id));
