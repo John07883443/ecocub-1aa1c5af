@@ -145,12 +145,14 @@ export function Footer() {
           <span>Современные дома в Подмосковье</span>
         </div>
       </Container>
-      {/* Служебные входы. Мелкой строкой: посетителю сайта они не нужны.
-          «Обучение» ничего не меняет в боевом сайте и потому открыто.
-          «Проектирование» открывает редактор проектов — сама страница
-          доступна всем, но любое изменение требует входа с секретом из
-          окружения сервера (см. lib/design-auth.server.ts). */}
-      <div className="flex items-center justify-center gap-4 border-t border-white/10 py-3">
+      {/* Служебный вход в разметку планировок. Мелкой строкой и без пароля —
+          так решил владелец: страница ничего не меняет в боевом сайте, а
+          разметка нужна под рукой.
+
+          «Проектирования» здесь нет намеренно: оно переехало в общее меню, а
+          список «Разделы» выше перечисляет то же меню — вторая ссылка на тот
+          же адрес в одном футере только сбивает с толку. */}
+      <div className="border-t border-white/10 py-3 text-center">
         <a
           href="/training"
           rel="nofollow"
@@ -158,13 +160,6 @@ export function Footer() {
         >
           обучение
         </a>
-        <Link
-          to="/design"
-          rel="nofollow"
-          className="text-[11px] text-primary-foreground/30 transition-colors hover:text-primary-foreground/70"
-        >
-          проектирование
-        </Link>
       </div>
     </footer>
   );

@@ -50,7 +50,7 @@
 шапку. Отдельные страницы: `/technology`, `/concrete`, `/portfolio`,
 `/presentation`, `/contacts`, `/blog`, `/constructor` (3D-конструктор дома),
 `/houses` (каталог домов EcoCub), `/houses/<slug>` (страница проекта),
-`/design` (CAD Light, ссылка в футере).
+`/design` (CAD Light, пункт основного меню).
 Экспериментальные версии конструктора (`/constructor-ai-v3`,
 `/constructor-ai-v3-1`, `/constructor-lab`) удалены 10.08.2026 по решению
 владельца: в продукте остался один конструктор.
