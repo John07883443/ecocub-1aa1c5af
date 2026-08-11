@@ -44,6 +44,24 @@ import { ValidationPanel } from "./ValidationPanel";
 const HouseView3D = lazy(() => import("./HouseView3D"));
 
 /**
+ * Список ракурсов дублируется здесь, а не импортируется из HouseView3D.
+ *
+ * Сцена грузится лениво отдельным чанком; импорт из неё ради шести подписей
+ * притащил бы three.js в основной бандл — то есть ровно то, от чего ленивая
+ * загрузка избавляет.
+ */
+const CAMERA_VIEWS = [
+  { id: "free", label: "Свободно" },
+  { id: "top", label: "Сверху" },
+  { id: "north", label: "Фасад +Y" },
+  { id: "east", label: "Фасад +X" },
+  { id: "south", label: "Фасад −Y" },
+  { id: "west", label: "Фасад −X" },
+] as const;
+
+type CameraView = (typeof CAMERA_VIEWS)[number]["id"];
+
+/**
  * Рабочее место проектировщика.
  *
  * Один экран, три колонки: список проектов, план и числовая панель. Разносить
@@ -82,6 +100,7 @@ export function DesignStudio() {
   const [snapStepMm, setSnapStepMm] = useState(SNAP_STEPS[0].value);
   const [showOtherFloors, setShowOtherFloors] = useState(true);
   const [view, setView] = useState<"plan" | "3d">("plan");
+  const [cameraView, setCameraView] = useState<CameraView>("free");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [facePick, setFacePick] = useState<{ moduleId: string; faceId: FaceId } | null>(null);
@@ -643,20 +662,39 @@ export function DesignStudio() {
           </div>
           <div
             className={cn(
-              "h-full overflow-hidden rounded-sm border border-border",
+              "relative h-full overflow-hidden rounded-sm border border-border",
               view === "3d" ? "block" : "hidden",
             )}
           >
             {view === "3d" && (
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    Загрузка 3D-сцены…
-                  </div>
-                }
-              >
-                <HouseView3D model={project.model} />
-              </Suspense>
+              <>
+                <Suspense
+                  fallback={
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      Загрузка 3D-сцены…
+                    </div>
+                  }
+                >
+                  <HouseView3D model={project.model} cameraView={cameraView} />
+                </Suspense>
+                <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                  {CAMERA_VIEWS.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setCameraView(v.id)}
+                      className={cn(
+                        "rounded-sm border px-2 py-1 text-[11px] shadow-sm",
+                        cameraView === v.id
+                          ? "border-accent bg-accent/15 text-accent"
+                          : "border-border bg-background/90 hover:border-accent",
+                      )}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

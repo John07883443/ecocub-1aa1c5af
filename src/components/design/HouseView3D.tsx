@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useMemo } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import { Edges, OrbitControls, Sky } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
 import { BASE_MODULE } from "@/lib/house-project/catalog";
@@ -13,7 +13,6 @@ import {
   rectOf,
 } from "@/lib/house-project/geometry";
 import type { HouseModel, ModuleInstance, OpeningInstance } from "@/lib/house-project/types";
-import { FACE_IDS } from "@/lib/house-project/types";
 
 /**
  * Объём дома по канонической модели. Только просмотр.
@@ -38,11 +37,24 @@ function toScene(xMm: number, yMm: number): [number, number] {
   return [xMm * MM, -yMm * MM];
 }
 
+/**
+ * Ракурсы.
+ *
+ * `top` — ортографический вид сверху: параллельная проекция, в которой
+ * ближний угол дома не крупнее дальнего, и габарит можно сверять с планом.
+ * Остальные — фасадные направления. Стороны света здесь не называются
+ * намеренно: ориентация дома на участке в модели не хранится, и подписать
+ * фасад «северным» значило бы сообщить то, чего система не знает. Подписи
+ * ракурсов живут в панели редактора.
+ */
+export type CameraView = "free" | "top" | "north" | "east" | "south" | "west";
+
 interface Props {
   model: HouseModel;
   autoRotate?: boolean;
   /** Показывать основание и землю. На странице проекта — да, в редакторе — по желанию. */
   showGround?: boolean;
+  cameraView?: CameraView;
 }
 
 /** Проёмы одной грани модуля — тонкие пластины поверх стены. */
@@ -188,7 +200,48 @@ function Foundation({ model, centre }: { model: HouseModel; centre: [number, num
   );
 }
 
-export default function HouseView3D({ model, autoRotate = false, showGround = true }: Props) {
+/**
+ * Переводит камеру в выбранный ракурс.
+ *
+ * Живёт внутри сцены, потому что доступ к камере и к управлению есть только
+ * из контекста Canvas. Ракурс применяется при смене `view`, а не каждый кадр:
+ * иначе мышь не смогла бы отвести камеру от заданного положения, и режим
+ * «свободно» перестал бы существовать.
+ */
+function CameraRig({ view, span, height }: { view: CameraView; span: number; height: number }) {
+  const { camera, controls } = useThree();
+
+  useEffect(() => {
+    if (view === "free") return;
+    const d = span * 1.6;
+    const target: [number, number, number] = [0, height / 2, 0];
+    const position: Record<Exclude<CameraView, "free">, [number, number, number]> = {
+      top: [0, span * 3, 0.001],
+      north: [0, height / 2, -d],
+      east: [d, height / 2, 0],
+      south: [0, height / 2, d],
+      west: [-d, height / 2, 0],
+    };
+    camera.position.set(...position[view]);
+    camera.lookAt(...target);
+    camera.updateProjectionMatrix();
+    const orbit = controls as {
+      target?: { set: (x: number, y: number, z: number) => void };
+      update?: () => void;
+    } | null;
+    orbit?.target?.set(...target);
+    orbit?.update?.();
+  }, [view, span, height, camera, controls]);
+
+  return null;
+}
+
+export default function HouseView3D({
+  model,
+  autoRotate = false,
+  showGround = true,
+  cameraView = "free",
+}: Props) {
   const b = useMemo(() => boundsOf(model.modules), [model.modules]);
   const centre = useMemo<[number, number]>(() => {
     const [cx, cz] = toScene(b.minX + b.widthMm / 2, b.minY + b.depthMm / 2);
@@ -254,6 +307,8 @@ export default function HouseView3D({ model, autoRotate = false, showGround = tr
         />
       ))}
 
+      <CameraRig view={cameraView} span={span} height={BASE_MODULE.clearHeightMm * MM} />
+
       <OrbitControls
         enableDamping
         dampingFactor={0.08}
@@ -262,12 +317,10 @@ export default function HouseView3D({ model, autoRotate = false, showGround = tr
         maxDistance={span * 3}
         minPolarAngle={0.12}
         maxPolarAngle={Math.PI / 2 - 0.05}
-        autoRotate={autoRotate}
+        autoRotate={autoRotate && cameraView === "free"}
         autoRotateSpeed={0.6}
         makeDefault
       />
     </Canvas>
   );
 }
-
-export { FACE_IDS };

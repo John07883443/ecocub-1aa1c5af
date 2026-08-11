@@ -9,6 +9,7 @@ import {
   localToWorld,
   openingSegment,
   rectOf,
+  worldFace,
 } from "@/lib/house-project/geometry";
 import { pickAnchor, snapAnchors, snapToStep, type SnapAnchor } from "@/lib/house-project/snap";
 import type { FaceId, ModuleInstance } from "@/lib/house-project/types";
@@ -87,11 +88,30 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
     anchor: SnapAnchor | null;
   } | null>(null);
   const [pan, setPan] = useState<{ px: number; py: number; view: View } | null>(null);
+  /** Рамка выделения: две точки в координатах модели. */
+  const [marquee, setMarquee] = useState<{
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+    additive: boolean;
+    base: string[];
+  } | null>(null);
+  /** Перетаскивание проёма вдоль его грани. */
+  const [openingDrag, setOpeningDrag] = useState<{
+    id: string;
+    startOffsetMm: number;
+    startAlongMm: number;
+    currentOffsetMm: number;
+  } | null>(null);
   const [measure, setMeasure] = useState<{
     a: { x: number; y: number };
     b?: { x: number; y: number };
   } | null>(null);
   const [hoverFace, setHoverFace] = useState<string | null>(null);
+  const [menu, setMenu] = useState<
+    | { kind: "module"; id: string; px: number; py: number }
+    | { kind: "opening"; id: string; px: number; py: number }
+    | null
+  >(null);
 
   useEffect(() => {
     const el = hostRef.current;
@@ -181,10 +201,37 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
   const onPointerDownModule = (e: React.PointerEvent, m: ModuleInstance) => {
     if (tool !== "select") return;
     e.stopPropagation();
+    setMenu(null);
+
+    // Правая кнопка выбирает объект и открывает меню, но ничего не двигает:
+    // иначе вызов меню сдвигал бы модуль на пиксель-другой.
+    if (e.button === 2) {
+      if (!selection.includes(m.id)) dispatch({ type: "select", ids: [m.id] });
+      const rect = hostRef.current?.getBoundingClientRect();
+      setMenu({
+        kind: "module",
+        id: m.id,
+        px: e.clientX - (rect?.left ?? 0),
+        py: e.clientY - (rect?.top ?? 0),
+      });
+      return;
+    }
+
     (e.target as Element).setPointerCapture?.(e.pointerId);
 
-    const ids = selection.includes(m.id) ? selection : [m.id];
-    if (!selection.includes(m.id)) dispatch({ type: "select", ids: [m.id] });
+    // Shift и Ctrl добавляют модуль к выделению и убирают из него: без этого
+    // групповые операции недостижимы — выбрать второй модуль было бы нечем.
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+    let ids: string[];
+    if (additive) {
+      ids = selection.includes(m.id) ? selection.filter((id) => id !== m.id) : [...selection, m.id];
+      dispatch({ type: "select", ids });
+      // Снятие выделения не должно начинать перетаскивание.
+      if (!ids.includes(m.id)) return;
+    } else {
+      ids = selection.includes(m.id) ? selection : [m.id];
+      if (!selection.includes(m.id)) dispatch({ type: "select", ids });
+    }
 
     const start = pointerModel(e);
     const origin = new Map<string, { x: number; y: number }>();
@@ -195,11 +242,57 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
     setDrag({ ids, startModel: start, origin, current: start, anchor: null });
   };
 
+  /**
+   * Проекция точки на грань проёма: сколько миллиметров от начала грани.
+   *
+   * Проём живёт на прямой, а курсор — на плоскости, поэтому перетаскивание
+   * считается скалярным произведением на направляющую грани. Иначе проём
+   * «убегал» бы от курсора при движении поперёк стены.
+   */
+  const alongFaceMm = useCallback(
+    (m: ModuleInstance, faceId: FaceId, p: { x: number; y: number }): number => {
+      const face = worldFace(m, faceId);
+      const dx = face.to.x - face.from.x;
+      const dy = face.to.y - face.from.y;
+      const len = Math.hypot(dx, dy);
+      if (!len) return 0;
+      return ((p.x - face.from.x) * dx + (p.y - face.from.y) * dy) / len;
+    },
+    [],
+  );
+
   const onPointerMove = (e: React.PointerEvent) => {
     if (pan) {
       const dx = (e.clientX - pan.px) / pan.view.scale;
       const dy = (e.clientY - pan.py) / pan.view.scale;
       setView({ ...pan.view, x: pan.view.x - dx, y: pan.view.y + dy });
+      return;
+    }
+    if (marquee) {
+      const to = pointerModel(e);
+      setMarquee({ ...marquee, to });
+      // Выделение обновляется прямо во время протяжки: человек должен видеть,
+      // что попадёт в рамку, до того как отпустит кнопку.
+      const inside = modulesInRect(marquee.from, to);
+      const ids = marquee.additive ? [...new Set([...marquee.base, ...inside])] : inside;
+      if (ids.join() !== selection.join()) dispatch({ type: "select", ids });
+      return;
+    }
+    if (openingDrag) {
+      const opening = project.model.openings.find((o) => o.id === openingDrag.id);
+      const module = opening ? modules.find((m) => m.id === opening.moduleId) : undefined;
+      if (!opening || !module) return;
+      const along = alongFaceMm(module, opening.faceId, pointerModel(e));
+      const span = localFace(defOf(module), opening.faceId).spanMm;
+      const raw = openingDrag.startOffsetMm + (along - openingDrag.startAlongMm);
+      // Проём не может выйти за грань — и не выходит уже в момент таскания,
+      // а не после проверки. Значение держится в состоянии перетаскивания и
+      // уходит в модель один раз, на отпускании: иначе каждое движение мыши
+      // легло бы отдельным шагом в историю отмены.
+      setOpeningDrag({
+        ...openingDrag,
+        currentOffsetMm: Math.max(0, Math.min(span - opening.widthMm, Math.round(raw))),
+      });
       return;
     }
     if (!drag) return;
@@ -242,7 +335,28 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
     setDrag(null);
   };
 
+  /** Идентификаторы модулей активного этажа, попавших в прямоугольник. */
+  const modulesInRect = useCallback(
+    (a: { x: number; y: number }, b: { x: number; y: number }): string[] => {
+      const minX = Math.min(a.x, b.x);
+      const maxX = Math.max(a.x, b.x);
+      const minY = Math.min(a.y, b.y);
+      const maxY = Math.max(a.y, b.y);
+      return modules
+        .filter((m) => m.floor === activeFloor)
+        .filter((m) => {
+          const r = rectOf(m);
+          // Достаточно пересечения: требовать полного охвата значит заставлять
+          // человека тянуть рамку с запасом за габарит дома.
+          return r.x < maxX && r.x + r.w > minX && r.y < maxY && r.y + r.h > minY;
+        })
+        .map((m) => m.id);
+    },
+    [modules, activeFloor],
+  );
+
   const onBackgroundPointerDown = (e: React.PointerEvent) => {
+    setMenu(null);
     const p = pointerModel(e);
     if (tool === "add") {
       dispatch({
@@ -256,9 +370,48 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
       setMeasure((prev) => (prev && !prev.b ? { ...prev, b: p } : { a: p }));
       return;
     }
-    // Правая кнопка и пустое место — панорамирование.
-    setPan({ px: e.clientX, py: e.clientY, view });
-    dispatch({ type: "select", ids: [] });
+
+    // Правая и средняя кнопки двигают лист, левая тянет рамку выделения.
+    // Разделение обычное для чертёжных программ: без него нельзя выбрать
+    // несколько модулей, а панорамирование остаётся под привычной рукой.
+    if (e.button === 2 || e.button === 1) {
+      setPan({ px: e.clientX, py: e.clientY, view });
+      return;
+    }
+
+    const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+    setMarquee({ from: p, to: p, additive, base: additive ? selection : [] });
+    if (!additive && selection.length) dispatch({ type: "select", ids: [] });
+  };
+
+  /**
+   * Отпускание кнопки: доводим до конца то, что было начато.
+   *
+   * Обработчик висит только на контейнере, и это важно. Захват указателя
+   * (`setPointerCapture`) перенаправляет pointerup на сам модуль или проём, но
+   * событие после этого продолжает всплывать до контейнера. Пока такой же
+   * обработчик стоял и на элементе, и на контейнере, каждое перетаскивание
+   * заканчивалось двумя одинаковыми действиями: состояние внутри одного
+   * события ещё не успевало обновиться, и вторая проверка видела ту же
+   * незавершённую операцию. Внешне ничего не менялось, а в истории отмены
+   * появлялся лишний шаг — первое нажатие «отменить» выглядело как
+   * неработающая кнопка.
+   */
+  const finishGesture = () => {
+    commitDrag();
+    if (openingDrag) {
+      const opening = project.model.openings.find((o) => o.id === openingDrag.id);
+      if (opening && opening.offsetMm !== openingDrag.currentOffsetMm) {
+        dispatch({
+          type: "patch-opening",
+          id: openingDrag.id,
+          patch: { offsetMm: openingDrag.currentOffsetMm },
+        });
+      }
+      setOpeningDrag(null);
+    }
+    setMarquee(null);
+    setPan(null);
   };
 
   /* --- Сетка ----------------------------------------------------------- */
@@ -323,7 +476,6 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
           strokeWidth={selected ? 2 : 1.2}
           style={{ cursor: ghost ? "default" : tool === "select" ? "move" : "crosshair" }}
           onPointerDown={(e) => !ghost && onPointerDownModule(e, m)}
-          onPointerUp={commitDrag}
         />
         {/* Внутренний контур — толщина стены. На нём видно, где общая стена. */}
         {!ghost && wall > 1.5 && (
@@ -398,14 +550,8 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
       className="relative h-full w-full touch-none overflow-hidden rounded-sm border border-border bg-[#fafaf9]"
       onPointerDown={onBackgroundPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={() => {
-        commitDrag();
-        setPan(null);
-      }}
-      onPointerLeave={() => {
-        commitDrag();
-        setPan(null);
-      }}
+      onPointerUp={finishGesture}
+      onPointerLeave={finishGesture}
       onContextMenu={(e) => e.preventDefault()}
     >
       <svg width={size.width} height={size.height} className="block">
@@ -469,7 +615,11 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
           {project.model.openings.map((o) => {
             const m = modules.find((x) => x.id === o.moduleId);
             if (!m || m.floor !== activeFloor || drag?.ids.includes(m.id)) return null;
-            const seg = openingSegment(m, o);
+            // Во время перетаскивания проём рисуется по временному смещению:
+            // в модель оно уходит один раз, на отпускании кнопки.
+            const shown =
+              openingDrag?.id === o.id ? { ...o, offsetMm: openingDrag.currentOffsetMm } : o;
+            const seg = openingSegment(m, shown);
             if (!seg) return null;
             const a = toScreen(seg.from.x, seg.from.y);
             const b = toScreen(seg.to.x, seg.to.y);
@@ -483,8 +633,8 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
                 y2={b.y}
                 strokeWidth={selected ? 6 : 4.5}
                 strokeLinecap="butt"
+                style={{ cursor: "grab" }}
                 className={cn(
-                  "cursor-pointer",
                   selected
                     ? "stroke-accent"
                     : o.kind === "door"
@@ -495,7 +645,27 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
                 )}
                 onPointerDown={(e) => {
                   e.stopPropagation();
+                  setMenu(null);
                   dispatch({ type: "select-opening", id: o.id });
+
+                  if (e.button === 2) {
+                    const rect = hostRef.current?.getBoundingClientRect();
+                    setMenu({
+                      kind: "opening",
+                      id: o.id,
+                      px: e.clientX - (rect?.left ?? 0),
+                      py: e.clientY - (rect?.top ?? 0),
+                    });
+                    return;
+                  }
+                  if (tool !== "select") return;
+                  (e.target as Element).setPointerCapture?.(e.pointerId);
+                  setOpeningDrag({
+                    id: o.id,
+                    startOffsetMm: o.offsetMm,
+                    startAlongMm: alongFaceMm(m, o.faceId, pointerModel(e)),
+                    currentOffsetMm: o.offsetMm,
+                  });
                 }}
               />
             );
@@ -550,6 +720,40 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
             </text>
           </g>
         )}
+
+        {/* Рамка выделения */}
+        {marquee && (
+          <rect
+            className="pointer-events-none fill-accent/10 stroke-accent"
+            strokeWidth={1}
+            strokeDasharray="4 3"
+            x={Math.min(toScreen(marquee.from.x, 0).x, toScreen(marquee.to.x, 0).x)}
+            y={Math.min(toScreen(0, marquee.from.y).y, toScreen(0, marquee.to.y).y)}
+            width={Math.abs(toScreen(marquee.to.x, 0).x - toScreen(marquee.from.x, 0).x)}
+            height={Math.abs(toScreen(0, marquee.to.y).y - toScreen(0, marquee.from.y).y)}
+          />
+        )}
+
+        {/* Смещение проёма во время перетаскивания — число, а не «на глаз». */}
+        {openingDrag &&
+          (() => {
+            const o = project.model.openings.find((x) => x.id === openingDrag.id);
+            const m = o ? modules.find((x) => x.id === o.moduleId) : undefined;
+            if (!o || !m) return null;
+            const seg = openingSegment(m, { ...o, offsetMm: openingDrag.currentOffsetMm });
+            if (!seg) return null;
+            const mid = toScreen((seg.from.x + seg.to.x) / 2, (seg.from.y + seg.to.y) / 2);
+            return (
+              <text
+                x={mid.x}
+                y={mid.y - 10}
+                textAnchor="middle"
+                className="pointer-events-none fill-accent text-[11px] font-semibold"
+              >
+                {openingDrag.currentOffsetMm} мм
+              </text>
+            );
+          })()}
 
         {/* Линейка */}
         {measure && (
@@ -612,7 +816,106 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
             Убрать линейку
           </button>
         )}
+        {selection.length > 1 && (
+          <span className="pointer-events-auto rounded-sm bg-accent/15 px-2 py-1 text-accent shadow-sm">
+            Выбрано модулей: {selection.length}
+          </span>
+        )}
       </div>
+
+      {/*
+        Контекстное меню. Оно обязательно, а не «в дополнение к горячим
+        клавишам»: человек, впервые открывший редактор, не знает про Delete и
+        не обязан догадываться. Правая кнопка на объекте — привычный способ
+        спросить «что с этим можно сделать».
+      */}
+      {menu && (
+        <div
+          className="absolute z-20 min-w-44 rounded-sm border border-border bg-background py-1 shadow-lg"
+          style={{
+            left: Math.min(menu.px, size.width - 190),
+            top: Math.min(menu.py, size.height - 190),
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {menu.kind === "module" ? (
+            <>
+              <MenuHeader>
+                {selection.length > 1 ? `Модулей: ${selection.length}` : `Модуль ${menu.id}`}
+              </MenuHeader>
+              <MenuItem onClick={() => dispatch({ type: "rotate", ids: selection, direction: 1 })}>
+                Повернуть на 90°
+              </MenuItem>
+              <MenuItem onClick={() => dispatch({ type: "mirror", ids: selection })}>
+                Отразить
+              </MenuItem>
+              <MenuItem onClick={() => dispatch({ type: "duplicate-modules", ids: selection })}>
+                Дублировать
+              </MenuItem>
+              <MenuItem
+                onClick={() =>
+                  dispatch({ type: "move-to-floor", ids: selection, floor: activeFloor + 1 })
+                }
+              >
+                Поднять на {activeFloor + 2}-й этаж
+              </MenuItem>
+              {activeFloor > 0 && (
+                <MenuItem
+                  onClick={() =>
+                    dispatch({ type: "move-to-floor", ids: selection, floor: activeFloor - 1 })
+                  }
+                >
+                  Опустить на {activeFloor}-й этаж
+                </MenuItem>
+              )}
+              <MenuItem danger onClick={() => dispatch({ type: "delete-modules", ids: selection })}>
+                Удалить
+              </MenuItem>
+            </>
+          ) : (
+            <>
+              <MenuHeader>Проём</MenuHeader>
+              <MenuItem danger onClick={() => dispatch({ type: "delete-opening", id: menu.id })}>
+                Удалить проём
+              </MenuItem>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
+
+  function MenuHeader({ children }: { children: React.ReactNode }) {
+    return (
+      <p className="border-b border-border px-3 pb-1.5 pt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+        {children}
+      </p>
+    );
+  }
+
+  function MenuItem({
+    children,
+    onClick,
+    danger,
+  }: {
+    children: React.ReactNode;
+    onClick: () => void;
+    danger?: boolean;
+  }) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          onClick();
+          setMenu(null);
+        }}
+        className={cn(
+          "block w-full px-3 py-1.5 text-left text-[13px] hover:bg-secondary",
+          danger && "text-destructive",
+        )}
+      >
+        {children}
+      </button>
+    );
+  }
 }
