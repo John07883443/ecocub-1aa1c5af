@@ -5,11 +5,25 @@
  * продукта. Ролевая система, таблица пользователей и восстановление пароля
  * здесь были бы дороже, чем то, что они защищают.
  *
- * Механизм. В окружении сервера лежит ECOCUB_ADMIN_SECRET. Человек вводит его
+ * Механизм. Пароль владельца задаётся при первом открытии раздела прямо в
+ * браузере и хранится на сервере хешем (scrypt с солью). Человек вводит его
  * один раз, сервер сверяет и выдаёт подписанную HttpOnly-куку на 12 часов.
- * Кука хранит только срок годности и подпись — сам секрет в браузер не
+ * Кука хранит только срок годности и подпись — сам пароль в браузер не
  * попадает ни в каком виде, поэтому украсть его из localStorage или из
  * DevTools нельзя.
+ *
+ * Почему пароль задаётся из браузера, а не только переменной окружения.
+ * Переменная лежит в файле на VPS, и добраться до неё можно лишь по SSH.
+ * Владелец продукта работает с телефона; в результате раздел неделями стоял
+ * бы закрытым, а работать в нём некому. Схема «первый вход задаёт пароль»
+ * знакома по домашним серверам (Home Assistant, Jenkins) и снимает это
+ * ограничение, не открывая запись всему интернету.
+ *
+ * Окно перехвата. Пока пароль не задан, задать его может любой, кто откроет
+ * страницу. Окно длится от выкладки до первого входа владельца — минуты, — и
+ * закрывается навсегда: второй раз занять место нельзя. На случай, если в это
+ * окно кто-то влез или пароль забыт, остаётся ECOCUB_ADMIN_SECRET: заданная
+ * переменная перебивает пароль из базы.
  *
  * Почему кука подписана, а не случайна. Случайный токен пришлось бы где-то
  * хранить и чистить, то есть завести ещё одну таблицу и фоновую уборку.
@@ -17,10 +31,9 @@
  * секрета. Минус — досрочно отозвать сессию нельзя; лечится сменой секрета,
  * и для одного пользователя это приемлемо.
  *
- * Поведение без секрета. В production мутации закрыты наглухо: открытый на
- * запись боевой endpoint хуже, чем неработающая админка. В разработке
- * (NODE_ENV !== production) доступ разрешён с предупреждением в лог — иначе
- * редактор нельзя было бы открыть локально, не заведя секрет.
+ * Поведение без пароля. Читать проекты можно, менять — нет. В разработке
+ * (NODE_ENV !== production) правки разрешены без входа с предупреждением в
+ * лог, иначе редактор нельзя было бы открыть локально.
  */
 
 const COOKIE_NAME = "ecocub_design";
@@ -37,9 +50,75 @@ export function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
-/** Настроен ли доступ. Редактор показывает это состояние прямо в интерфейсе. */
-export function adminConfigured(): boolean {
+/** Задан ли запасной пароль в окружении сервера. */
+export function envSecretConfigured(): boolean {
   return secret() !== null;
+}
+
+/**
+ * Ключ, которым подписываются куки сессии.
+ *
+ * Переменная окружения имеет приоритет: это и запасной вход, и способ
+ * выкинуть все текущие сессии, если пароль скомпрометирован. Иначе берётся
+ * хеш пароля из базы — он для подписи ничем не хуже случайной строки и
+ * автоматически обесценивает куки при смене пароля.
+ */
+async function signingKey(): Promise<string | null> {
+  const env = secret();
+  if (env) return env;
+  const { readOwnerSecret } = await import("./house-projects.server.ts");
+  const owner = await readOwnerSecret();
+  return owner ? `db:${owner.hash}` : null;
+}
+
+/** Задан ли пароль хоть каким-то способом. */
+export async function adminConfigured(): Promise<boolean> {
+  return (await signingKey()) !== null;
+}
+
+/** Занято ли место владельца. Пока нет — редактор предложит придумать пароль. */
+export async function ownerClaimed(): Promise<boolean> {
+  if (envSecretConfigured()) return true;
+  const { readOwnerSecret } = await import("./house-projects.server.ts");
+  return (await readOwnerSecret()) !== null;
+}
+
+/** Минимальная длина пароля. Короче — это не пароль, а формальность. */
+export const MIN_PASSWORD_LENGTH = 8;
+
+async function hashPassword(password: string, salt: string): Promise<string> {
+  const { scrypt } = await import("node:crypto");
+  return new Promise((resolve, reject) => {
+    // scrypt намеренно медленный: подбор по словарю становится дорогим даже
+    // при утечке базы. Параметры по умолчанию Node — 16384/8/1.
+    scrypt(password, salt, 64, (err, key) => (err ? reject(err) : resolve(key.toString("hex"))));
+  });
+}
+
+/**
+ * Занять место владельца, задав пароль. Второй раз не сработает.
+ * Возвращает false, если место уже занято.
+ */
+export async function claimOwner(password: string): Promise<boolean> {
+  if (envSecretConfigured()) return false;
+  if (password.length < MIN_PASSWORD_LENGTH) return false;
+  const { randomBytes } = await import("node:crypto");
+  const { writeOwnerSecret } = await import("./house-projects.server.ts");
+  const salt = randomBytes(16).toString("hex");
+  return writeOwnerSecret(
+    { salt, hash: await hashPassword(password, salt), createdAt: new Date().toISOString() },
+    { onlyIfEmpty: true },
+  );
+}
+
+/** Подходит ли введённое значение: пароль из базы или переменная окружения. */
+async function passwordMatches(input: string): Promise<boolean> {
+  const env = secret();
+  if (env) return safeEqual(input, env);
+  const { readOwnerSecret } = await import("./house-projects.server.ts");
+  const owner = await readOwnerSecret();
+  if (!owner) return false;
+  return safeEqual(await hashPassword(input, owner.salt), owner.hash);
 }
 
 async function hmac(payload: string, key: string): Promise<string> {
@@ -56,17 +135,17 @@ async function safeEqual(a: string, b: string): Promise<boolean> {
   return timingSafeEqual(bufA, bufB);
 }
 
-/** Проверить введённый секрет и выпустить токен сессии. null — не подошёл. */
+/** Проверить введённый пароль и выпустить токен сессии. null — не подошёл. */
 export async function issueToken(input: string): Promise<string | null> {
-  const key = secret();
+  const key = await signingKey();
   if (!key) return null;
-  if (!(await safeEqual(input, key))) return null;
+  if (!(await passwordMatches(input))) return null;
   const exp = String(Date.now() + TTL_MS);
   return `${exp}.${await hmac(exp, key)}`;
 }
 
 async function tokenValid(token: string): Promise<boolean> {
-  const key = secret();
+  const key = await signingKey();
   if (!key) return false;
   const [exp, sig] = token.split(".");
   if (!exp || !sig) return false;
@@ -117,7 +196,7 @@ export async function checkAccess(request: Request): Promise<Access> {
   const token = readCookie(request, COOKIE_NAME);
   if (token && (await tokenValid(token))) return { allowed: true, mode: "session" };
 
-  if (!adminConfigured()) {
+  if (!(await adminConfigured())) {
     if (!isProduction()) {
       console.warn(
         "Проектирование: ECOCUB_ADMIN_SECRET не задан — в режиме разработки правки разрешены без входа. " +
@@ -134,8 +213,8 @@ export async function checkAccess(request: Request): Promise<Access> {
 export function denied(access: Extract<Access, { allowed: false }>): Response {
   const message =
     access.reason === "not-configured"
-      ? "Режим проектирования на этом сервере не настроен: не задана переменная ECOCUB_ADMIN_SECRET. " +
-        "Пока её нет, изменение проектов закрыто для всех."
+      ? "Пароль режима проектирования ещё не задан. Откройте раздел «Проектирование» и придумайте его — " +
+        "до этого изменение проектов закрыто для всех."
       : "Нужен вход в режим проектирования.";
   return Response.json({ ok: false, reason: access.reason, message }, { status: 403 });
 }

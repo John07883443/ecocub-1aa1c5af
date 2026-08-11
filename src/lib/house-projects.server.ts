@@ -566,6 +566,82 @@ export function coverUrl(projectId: string): string {
   return `/api/design/cover/${projectId}`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Пароль владельца                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Пароль режима проектирования, заданный из браузера.
+ *
+ * Лежит в той же базе, что и проекты, отдельной строкой — и только хешем.
+ * Хранить пароль рядом с данными, которые он защищает, обычно плохо, но здесь
+ * альтернатива хуже: единственное другое место — файл окружения на сервере,
+ * а до него владелец с телефона не дотянется. Именно из-за этого раздел и
+ * простаивал закрытым.
+ *
+ * Строка одна: пользователь системы один. Таблица «пользователи» с ролями для
+ * одного человека — это лишняя сущность, которую придётся сопровождать годами.
+ */
+export interface OwnerSecretRow {
+  salt: string;
+  hash: string;
+  createdAt: string;
+}
+
+const OWNER_SCHEMA = `
+CREATE TABLE IF NOT EXISTS design_owner (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  salt       TEXT NOT NULL,
+  hash       TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`;
+
+export async function readOwnerSecret(): Promise<OwnerSecretRow | null> {
+  const instance = await getDb();
+  if (!instance) return null;
+  try {
+    instance.exec(OWNER_SCHEMA);
+    const row = instance
+      .prepare(`SELECT salt, hash, created_at FROM design_owner WHERE id = 1`)
+      .get() as { salt: string; hash: string; created_at: string } | undefined;
+    return row ? { salt: row.salt, hash: row.hash, createdAt: row.created_at } : null;
+  } catch (e) {
+    console.warn("Проектирование: пароль владельца не читается:", (e as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Записать пароль. `onlyIfEmpty` защищает от перехвата: занять пустое место
+ * можно один раз, а сменить пароль — только зная старый (это проверяет
+ * вызывающий) или через переменную окружения.
+ */
+export async function writeOwnerSecret(
+  value: OwnerSecretRow,
+  opts: { onlyIfEmpty?: boolean } = {},
+): Promise<boolean> {
+  const instance = await getDb();
+  if (!instance) {
+    throw new RepositoryError(
+      "read-only",
+      "Хранилище недоступно, пароль сохранить некуда. Проверьте HOUSE_PROJECTS_DB_PATH и права на каталог.",
+    );
+  }
+  instance.exec(OWNER_SCHEMA);
+  if (opts.onlyIfEmpty) {
+    const existing = instance.prepare(`SELECT 1 FROM design_owner WHERE id = 1`).get();
+    if (existing) return false;
+  }
+  instance
+    .prepare(
+      `INSERT INTO design_owner (id, salt, hash, created_at) VALUES (1, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET salt = excluded.salt, hash = excluded.hash, created_at = excluded.created_at`,
+    )
+    .run(value.salt, value.hash, value.createdAt);
+  return true;
+}
+
 /**
  * Ошибка репозитория → HTTP-ответ. Один перевод на все роуты: иначе один
  * из них однажды отдаст 500 там, где человеку нужно прочитать «адрес занят».

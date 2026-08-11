@@ -81,7 +81,8 @@ type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 export function DesignStudio() {
   const [ready, setReady] = useState(false);
   const [allowed, setAllowed] = useState(false);
-  const [configured, setConfigured] = useState(true);
+  const [claimed, setClaimed] = useState(true);
+  const [minLength, setMinLength] = useState(8);
   const [devMode, setDevMode] = useState(false);
   const [secret, setSecret] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
@@ -132,7 +133,8 @@ export function DesignStudio() {
       try {
         const session = await designApi.session();
         if (cancelled) return;
-        setConfigured(session.configured);
+        setClaimed(session.claimed);
+        setMinLength(session.minPasswordLength);
         setAllowed(session.allowed);
         setDevMode(session.mode === "dev");
         if (session.allowed) {
@@ -339,22 +341,34 @@ export function DesignStudio() {
     }
   };
 
-  const doLogin = async () => {
+  const doLogin = async (claiming = false) => {
     setLoggingIn(true);
     try {
-      await designApi.login(secret);
+      if (claiming) {
+        await designApi.claim(secret);
+        setClaimed(true);
+        toast.success("Пароль задан. Запишите его — восстановить нельзя.");
+      } else {
+        await designApi.login(secret);
+      }
       setAllowed(true);
       setSecret("");
       const projects = await refreshList();
       if (projects.length) await open(projects[0].id);
     } catch (e) {
-      toast.error(
-        e instanceof ApiError && e.reason === "wrong-secret"
-          ? "Секрет не подошёл"
-          : e instanceof Error
-            ? e.message
-            : "Войти не удалось",
-      );
+      if (e instanceof ApiError && e.reason === "already-claimed") {
+        // Кто-то занял место, пока страница была открыта: показываем обычный вход.
+        setClaimed(true);
+        toast.error(e.message);
+      } else {
+        toast.error(
+          e instanceof ApiError && e.reason === "wrong-password"
+            ? "Пароль не подошёл"
+            : e instanceof Error
+              ? e.message
+              : "Войти не удалось",
+        );
+      }
     } finally {
       setLoggingIn(false);
     }
@@ -371,38 +385,54 @@ export function DesignStudio() {
   }
 
   if (!allowed) {
+    // Пароля ещё нет — предлагаем придумать его прямо здесь. Отправлять
+    // человека в SSH на сервер за переменной окружения значит не пустить его
+    // в раздел вовсе: владелец продукта работает с телефона.
+    const claiming = !claimed;
     return (
       <div className="mx-auto max-w-md py-16">
-        <h2 className="text-xl font-semibold">Вход в режим проектирования</h2>
-        {configured ? (
-          <>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Раздел закрыт: менять и публиковать проекты может только владелец. Секрет задан в
-              окружении сервера и в браузер не передаётся.
-            </p>
-            <div className="mt-5 flex gap-2">
-              <Input
-                type="password"
-                value={secret}
-                autoComplete="current-password"
-                placeholder="Секрет"
-                onChange={(e) => setSecret(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void doLogin()}
-              />
-              <Button disabled={loggingIn || !secret} onClick={() => void doLogin()}>
-                {loggingIn ? <Loader2 className="size-4 animate-spin" /> : "Войти"}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="mt-3 rounded-sm bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-800">
-            <p className="font-medium">Режим проектирования на этом сервере не настроен.</p>
-            <p className="mt-2">
-              Задайте переменную окружения <code>ECOCUB_ADMIN_SECRET</code> длиной не меньше 16
-              символов и перезапустите приложение. Пока её нет, изменение и публикация проектов
-              закрыты для всех — включая случайного посетителя.
-            </p>
-          </div>
+        <h2 className="text-xl font-semibold">
+          {claiming ? "Придумайте пароль" : "Вход в режим проектирования"}
+        </h2>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {claiming
+            ? `Пароль задаётся один раз и защищает изменение и публикацию проектов. Не короче ${minLength} символов; хранится на сервере в виде хеша, восстановить его нельзя — запишите.`
+            : "Раздел закрыт: менять и публиковать проекты может только владелец. Пароль хранится на сервере хешем и в браузер не передаётся."}
+        </p>
+        <div className="mt-5 flex gap-2">
+          <Input
+            type="password"
+            value={secret}
+            autoComplete={claiming ? "new-password" : "current-password"}
+            placeholder={claiming ? "Новый пароль" : "Пароль"}
+            onChange={(e) => setSecret(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void doLogin(claiming)}
+          />
+          <Button
+            disabled={loggingIn || secret.length < (claiming ? minLength : 1)}
+            onClick={() => void doLogin(claiming)}
+          >
+            {loggingIn ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : claiming ? (
+              "Задать"
+            ) : (
+              "Войти"
+            )}
+          </Button>
+        </div>
+        {claiming && (
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+            Пока пароль не задан, задать его может любой, кто откроет эту страницу. Сделайте это
+            сейчас — второй раз занять место уже нельзя. Если пароль потеряется, запасной задаётся
+            переменной <code>ECOCUB_ADMIN_SECRET</code> на сервере: она перебивает этот.
+          </p>
+        )}
+        {!storage.writable && (
+          <p className="mt-4 rounded-sm bg-destructive/10 p-3 text-xs text-destructive">
+            Хранилище на сервере недоступно, пароль сохранить некуда. Проверьте переменную
+            HOUSE_PROJECTS_DB_PATH и права на каталог.
+          </p>
         )}
       </div>
     );
@@ -420,8 +450,8 @@ export function DesignStudio() {
     <div className="space-y-3">
       {devMode && (
         <p className="rounded-sm bg-amber-500/10 px-3 py-2 text-xs text-amber-800">
-          Режим разработки: ECOCUB_ADMIN_SECRET не задан, правки разрешены без входа. На боевом
-          сервере в этом состоянии запись была бы закрыта.
+          Режим разработки: пароль не задан, правки разрешены без входа. На боевом сервере в этом
+          состоянии запись была бы закрыта.
         </p>
       )}
       {!storage.writable && (

@@ -85,6 +85,37 @@ jobs:
             -e "ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts" \
             .output/ deploy@${{ secrets.VPS_HOST }}:/home/deploy/incoming/output/
 
+      # Запасной вход в режим проектирования.
+      #
+      # Обычно пароль задаётся прямо в браузере при первом открытии /design и
+      # хранится на сервере хешем. Этот шаг нужен для другого случая: пароль
+      # забыт, либо его успел задать кто-то посторонний. Тогда владелец кладёт
+      # значение в секрет репозитория ECOCUB_ADMIN_SECRET (Settings → Secrets
+      # and variables → Actions), и оно перебивает всё остальное.
+      #
+      # Секрет уходит на сервер через stdin, а не аргументом команды:
+      # аргументы видны в списке процессов на удалённой машине. В логи он не
+      # попадает — GitHub маскирует значения секретов.
+      - name: Запасной пароль режима проектирования
+        env:
+          ADMIN_SECRET: ${{ secrets.ECOCUB_ADMIN_SECRET }}
+        run: |
+          if [ -z "$ADMIN_SECRET" ]; then
+            echo "ECOCUB_ADMIN_SECRET не задан — пароль задаётся в браузере, шаг пропущен"
+            exit 0
+          fi
+          printf '%s' "$ADMIN_SECRET" | ssh -i ~/.ssh/id_ed25519 \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            deploy@${{ secrets.VPS_HOST }} \
+            'set -eu
+             secret=$(cat)
+             f=/home/deploy/ecocub.env
+             touch "$f"; chmod 600 "$f"
+             grep -v "^ECOCUB_ADMIN_SECRET=" "$f" > "$f.tmp" || true
+             printf "ECOCUB_ADMIN_SECRET=%s\n" "$secret" >> "$f.tmp"
+             mv "$f.tmp" "$f"
+             echo "запасной пароль записан в окружение сервера"'
+
       - name: Активация на сервере
         run: |
           ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts \

@@ -45,7 +45,13 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export interface SessionState {
+  /** Пароль задан хоть каким-то способом. */
   configured: boolean;
+  /** Место владельца занято: форму «придумайте пароль» показывать нельзя. */
+  claimed: boolean;
+  /** Пароль задан переменной окружения сервера, а не из браузера. */
+  envSecret: boolean;
+  minPasswordLength: number;
   production: boolean;
   allowed: boolean;
   mode: "session" | "dev" | null;
@@ -54,10 +60,17 @@ export interface SessionState {
 export const designApi = {
   session: () => call<SessionState>("/api/design/session"),
 
-  login: (secret: string) =>
+  login: (password: string) =>
     call<{ ok: true }>("/api/design/session", {
       method: "POST",
-      body: JSON.stringify({ secret }),
+      body: JSON.stringify({ password }),
+    }),
+
+  /** Задать пароль первый раз. Работает, только пока место свободно. */
+  claim: (password: string) =>
+    call<{ ok: true; claimed: true }>("/api/design/session", {
+      method: "POST",
+      body: JSON.stringify({ claim: password }),
     }),
 
   logout: () => call<{ ok: true }>("/api/design/session", { method: "DELETE" }),
