@@ -48,7 +48,9 @@
 Базовый компонент `Section` (`src/components/Container.tsx`) несёт
 `scroll-mt-28 md:scroll-mt-32`, чтобы прыжок по якорю не залезал под липкую
 шапку. Отдельные страницы: `/technology`, `/concrete`, `/portfolio`,
-`/presentation`, `/contacts`, `/blog`, `/constructor` (3D-конструктор дома).
+`/presentation`, `/contacts`, `/blog`, `/constructor` (3D-конструктор дома),
+`/houses` (каталог домов EcoCub), `/houses/<slug>` (страница проекта),
+`/design` (CAD Light, пункт основного меню).
 Экспериментальные версии конструктора (`/constructor-ai-v3`,
 `/constructor-ai-v3-1`, `/constructor-lab`) удалены 10.08.2026 по решению
 владельца: в продукте остался один конструктор.
@@ -75,6 +77,17 @@ One/Two, Super Family, Nasledie, Dinastiya).
 test:standards`) заново собирают из констант напечатанные в альбоме площади.
 Оттуда же берётся образец для AI-генерации планировок: к собранному дому
 подбирается ближайший реальный проект.
+
+CAD Light и каталог домов — `src/lib/house-project` (канонический формат,
+миллиметры, `schemaVersion`), `src/lib/house-projects.server.ts` (SQLite на
+диске сервера), `src/components/design/*` (редактор `/design`),
+`src/components/houses/*` и `/houses` (публичный каталог). Габариты модуля,
+высоты проёмов и правила площади не дублируются: справочник
+`house-project/catalog.ts` берёт их из `src/lib/standards`. Два конструктора
+живут параллельно намеренно — публичный работает с упрощённым кубиком 3 × 3 м,
+CAD Light с заводским модулем 3200 × 3420; мост между ними в
+`house-project/adapters.ts`. Мутации закрыты секретом `ECOCUB_ADMIN_SECRET`
+(см. `src/lib/design-auth.server.ts`), тесты — `npm run test:house-project`.
 
 Практическое правило: если облачному агенту нужен ассет с ПК пользователя
 (фавикон, изображения из Тильды, локальный env и пр.) — это добывает

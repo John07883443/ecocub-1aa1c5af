@@ -98,7 +98,15 @@ export function Header({ variant = "light" }: HeaderProps) {
             />
           </Link>
 
-          <nav className="hidden items-center gap-6 lg:flex">
+          {/*
+            Порог десктопного меню — xl, а не lg.
+            Пунктов стало восемь, и на 1024–1280 px строка меню переставала
+            помещаться рядом с логотипом и телефоном: названия переносились в
+            две строки, а номер наезжал на «Проектирование». Ниже 1280 px
+            меню уезжает в бургер целиком — это честнее, чем показывать
+            слипшуюся строку.
+          */}
+          <nav className="hidden items-center gap-5 xl:flex">
             {mainNav.map((item) => (
               <Link
                 key={item.to}
@@ -114,7 +122,7 @@ export function Header({ variant = "light" }: HeaderProps) {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-3 xl:flex">
             <a
               href={site.phoneHref}
               onClick={() => analytics.contactClick("phone", "header")}
@@ -132,7 +140,7 @@ export function Header({ variant = "light" }: HeaderProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(onDark ? "text-white" : "", "lg:hidden")}
+                className={cn(onDark ? "text-white" : "", "xl:hidden")}
                 aria-label="Открыть меню"
               >
                 <Menu className="size-6" />

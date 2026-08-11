@@ -1,0 +1,82 @@
+{
+  "id": "hp-weekend-mini",
+  "schemaVersion": 1,
+  "status": "draft",
+  "title": "Weekend Mini",
+  "slug": "weekend-mini-cad",
+  "description": "Три модуля EcoCub углом: спальня, санузел и общая комната. Терраса занимает свободный угол габарита.",
+  "createdAt": "2026-08-11T00:00:00.000Z",
+  "updatedAt": "2026-08-11T00:00:00.000Z",
+  "version": 1,
+  "model": {
+    "units": "mm",
+    "modules": [
+      {
+        "id": "M1",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 0,
+          "y": 3200
+        },
+        "rotationDeg": 90,
+        "note": "Weekend Mini. Заводская планировка и карточка каталога eco-cub.ru"
+      },
+      {
+        "id": "M2",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 3420,
+          "y": 3200
+        },
+        "rotationDeg": 90,
+        "note": "Weekend Mini. Заводская планировка и карточка каталога eco-cub.ru"
+      },
+      {
+        "id": "M3",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 3420,
+          "y": 0
+        },
+        "rotationDeg": 90,
+        "note": "Weekend Mini. Заводская планировка и карточка каталога eco-cub.ru"
+      }
+    ],
+    "openings": [],
+    "foundation": {
+      "kind": "piles",
+      "clearanceMm": 500,
+      "visible": true
+    },
+    "groundOffsetMm": 0
+  },
+  "publication": {
+    "gallery": [],
+    "highlights": [
+      "Высота помещений 3,15 м",
+      "Три модуля",
+      "Терраса в вырезе габарита"
+    ],
+    "tags": [
+      "3 модуля",
+      "1 этаж"
+    ],
+    "currency": "RUB",
+    "isFeatured": false
+  },
+  "source": {
+    "referenceHouseName": "Weekend Mini",
+    "referenceDocumentIds": [
+      "weekend-mini-factory-plan"
+    ],
+    "notes": "Раскладка восстановлена по заводской планировке и перенесена из src/lib/standards/weekend-mini.ts.",
+    "unresolvedQuestions": [
+      "Ориентация модулей (3 420 вдоль длинной стороны дома) следует из пропорций плана, но чертежом не подтверждена.",
+      "Где именно сняты стены в стыках — на плане не показано, проёмы в модель не переносились.",
+      "Габарит террасы и вылет навеса за габарит дома неизвестны."
+    ]
+  }
+}
