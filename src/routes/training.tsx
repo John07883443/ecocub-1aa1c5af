@@ -48,6 +48,7 @@ export const Route = createFileRoute("/training")({
 function NoteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [text, setText] = useState(value);
   const [listening, setListening] = useState(false);
+  const [problem, setProblem] = useState("");
 
   type RecognitionCtor = new () => {
     lang: string;
@@ -57,6 +58,7 @@ function NoteField({ value, onChange }: { value: string; onChange: (v: string) =
     stop: () => void;
     onresult: ((e: { results: Array<Array<{ transcript: string }>> }) => void) | null;
     onend: (() => void) | null;
+    onerror: ((e: { error?: string }) => void) | null;
   };
   const Recognition =
     typeof window === "undefined"
@@ -67,7 +69,15 @@ function NoteField({ value, onChange }: { value: string; onChange: (v: string) =
           | undefined);
 
   const dictate = () => {
-    if (!Recognition) return;
+    // Диктовка не заработала у владельца, и молча — что хуже всего. Причин
+    // ровно три, и все они теперь называются вслух: браузер без поддержки,
+    // отказ в доступе к микрофону, ошибка самого распознавания. Раньше
+    // кнопка просто ничего не делала, и понять, что не так, было нельзя.
+    setProblem("");
+    if (!Recognition) {
+      setProblem("Браузер не умеет распознавать речь — впишите причину текстом");
+      return;
+    }
     const recognition = new Recognition();
     recognition.lang = "ru-RU";
     recognition.interimResults = false;
@@ -82,32 +92,48 @@ function NoteField({ value, onChange }: { value: string; onChange: (v: string) =
       onChange(merged);
     };
     recognition.onend = () => setListening(false);
+    recognition.onerror = (e: { error?: string }) => {
+      setListening(false);
+      setProblem(
+        e?.error === "not-allowed" || e?.error === "service-not-allowed"
+          ? "Микрофон запрещён: разрешите доступ в настройках сайта"
+          : "Не удалось распознать — впишите причину текстом",
+      );
+    };
     setListening(true);
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setListening(false);
+      setProblem("Распознавание не запустилось — впишите причину текстом");
+    }
   };
 
   return (
-    <div className="mt-2 flex gap-1">
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => onChange(text)}
-        placeholder="Своя причина"
-        className="h-8 min-w-0 flex-1 rounded-sm border border-border bg-background px-2 text-[12px]"
-      />
-      {Boolean(Recognition) && (
+    <div className="mt-2">
+      <div className="flex gap-1">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => onChange(text)}
+          placeholder="Своя причина"
+          className="h-8 min-w-0 flex-1 rounded-sm border border-border bg-background px-2 text-[12px]"
+        />
+        {/* Кнопка показывается всегда: если распознавания нет, она объяснит это
+          словами. Скрытая кнопка выглядит как «не работает вообще». */}
         <button
           type="button"
           onClick={dictate}
           title="Надиктовать причину"
           aria-label="Надиктовать причину"
-          className={`h-8 w-8 shrink-0 rounded-sm border text-sm ${
+          className={`h-8 shrink-0 rounded-sm border px-2 text-xs ${
             listening ? "border-rose-600 bg-rose-600 text-white" : "border-border"
           }`}
         >
-          ●
+          {listening ? "Говорите…" : "Голос"}
         </button>
-      )}
+      </div>
+      {problem && <p className="mt-1 text-[11px] text-rose-600">{problem}</p>}
     </div>
   );
 }
