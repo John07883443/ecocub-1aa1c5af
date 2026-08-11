@@ -42,21 +42,27 @@ const UNIVERSAL_ROLE: Role = "living";
  */
 const DEFAULT_TEMPLATE_ID = "family-one";
 
-/** Центрирует стартовую планировку на текущей сетке (координаты в метрах). */
-function seedsToModules(templateId: string, n: number): ModuleItem[] {
-  const tpl = TEMPLATES.find((t) => t.id === templateId);
-  if (!tpl) return [];
-  const minX = Math.min(...tpl.seeds.map((s) => s.x));
-  const maxX = Math.max(...tpl.seeds.map((s) => s.x));
-  const minZ = Math.min(...tpl.seeds.map((s) => s.z));
-  const maxZ = Math.max(...tpl.seeds.map((s) => s.z));
+/** Точка стартовой раскладки: своя у шаблона и у дома, открытого из каталога. */
+export interface Seed {
+  x: number;
+  z: number;
+  floor: number;
+}
+
+/** Центрирует раскладку на текущей сетке (координаты в метрах). */
+function placeSeeds(seeds: Seed[], n: number): ModuleItem[] {
+  if (!seeds.length) return [];
+  const minX = Math.min(...seeds.map((s) => s.x));
+  const maxX = Math.max(...seeds.map((s) => s.x));
+  const minZ = Math.min(...seeds.map((s) => s.z));
+  const maxZ = Math.max(...seeds.map((s) => s.z));
   // Центрируем внутри зоны застройки: дом не должен упереться в отступ.
   const min = minAnchor();
   const max = maxAnchor(n);
   const offX = min + Math.max(0, Math.round((max - min - (maxX - minX)) / 2)) - minX;
   const offZ = min + Math.max(0, Math.round((max - min - (maxZ - minZ)) / 2)) - minZ;
   // Роли из шаблонов не переносим: кубики одинаковые, отличается только форма.
-  return tpl.seeds.map((s) => ({
+  return seeds.map((s) => ({
     id: newId(),
     x: s.x + offX,
     z: s.z + offZ,
@@ -65,12 +71,25 @@ function seedsToModules(templateId: string, n: number): ModuleItem[] {
   }));
 }
 
-export function useHouseBuilder(basePricePerM2: number) {
+/** Раскладка шаблона по его идентификатору. */
+function seedsToModules(templateId: string, n: number): ModuleItem[] {
+  const tpl = TEMPLATES.find((t) => t.id === templateId);
+  return tpl ? placeSeeds(tpl.seeds, n) : [];
+}
+
+/**
+ * `initialSeeds` — раскладка, пришедшая извне: так открывается копия дома из
+ * каталога («Открыть в конструкторе»). Копия именно копия: дальше она живёт
+ * в состоянии этой вкладки и с опубликованным проектом уже не связана.
+ */
+export function useHouseBuilder(basePricePerM2: number, initialSeeds?: Seed[]) {
   const [sotki, setSotkiState] = useState(DEFAULT_SOTKI);
   const gridN = useMemo(() => gridSizeForSotki(sotki), [sotki]);
 
   const [modules, setModules] = useState<ModuleItem[]>(() =>
-    seedsToModules(DEFAULT_TEMPLATE_ID, gridSizeForSotki(DEFAULT_SOTKI)),
+    initialSeeds?.length
+      ? placeSeeds(initialSeeds, gridSizeForSotki(DEFAULT_SOTKI))
+      : seedsToModules(DEFAULT_TEMPLATE_ID, gridSizeForSotki(DEFAULT_SOTKI)),
   );
   const [floor, setFloor] = useState(0);
   // Роль остаётся в API ради совместимости с экспериментальными версиями,

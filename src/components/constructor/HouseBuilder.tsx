@@ -7,7 +7,7 @@ import { PlanEditor } from "./PlanEditor";
 import { StatsPanel } from "./StatsPanel";
 import { AiLayoutBlock } from "./AiLayoutBlock";
 import { PlanBlock } from "./PlanBlock";
-import { useHouseBuilder } from "@/lib/constructor/useHouseBuilder";
+import { useHouseBuilder, type Seed } from "@/lib/constructor/useHouseBuilder";
 import { canRemove } from "@/lib/constructor/geometry";
 import {
   CELL_M,
@@ -42,10 +42,15 @@ function buildSummary(stats: HouseStats, sotki: number, designName: string) {
 export interface HouseBuilderProps {
   basePricePerM2: number;
   onRequestQuote?: (summary: string) => void;
+  /**
+   * Стартовая раскладка вместо шаблона по умолчанию. Приходит со страницы
+   * дома из каталога: конструктор открывается на копии этой конфигурации.
+   */
+  initialSeeds?: Seed[];
 }
 
-export function HouseBuilder({ basePricePerM2, onRequestQuote }: HouseBuilderProps) {
-  const api = useHouseBuilder(basePricePerM2);
+export function HouseBuilder({ basePricePerM2, onRequestQuote, initialSeeds }: HouseBuilderProps) {
+  const api = useHouseBuilder(basePricePerM2, initialSeeds);
   const [view, setView] = useState<"plan" | "3d">("plan");
   const [mounted, setMounted] = useState(false);
   const [opened3d, setOpened3d] = useState(false);

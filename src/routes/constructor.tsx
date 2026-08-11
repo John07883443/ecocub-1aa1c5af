@@ -6,8 +6,39 @@ import { HouseBuilder } from "@/components/constructor/HouseBuilder";
 import { ContactForm } from "@/components/ContactForm";
 import { site } from "@/lib/site";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
+import { fetchPublishedHouse } from "@/lib/house-projects";
+import { seedsFromModel } from "@/lib/house-project/adapters";
+import { CELL_M } from "@/lib/constructor/constants";
+import type { HouseProject } from "@/lib/house-project/types";
+
+/**
+ * `?house=<slug>` открывает конструктор на копии опубликованного дома —
+ * это действие кнопки «Открыть в конструкторе» на странице каталога.
+ *
+ * Копия существует только в состоянии вкладки: конструктор ничего никуда не
+ * сохраняет, поэтому изменить исходный проект отсюда невозможно в принципе.
+ * Заодно это снимает вопрос о правах — публичному посетителю нечего давать.
+ */
+/**
+ * Поле помечено необязательным намеренно: без этого TanStack Router считает
+ * параметр обязательным и требует `search` у каждой ссылки на конструктор —
+ * включая те, что стояли на сайте до появления каталога.
+ */
+type ConstructorSearch = { house?: string };
 
 export const Route = createFileRoute("/constructor")({
+  validateSearch: (search: Record<string, unknown>): ConstructorSearch =>
+    typeof search.house === "string" && search.house ? { house: search.house } : {},
+  loaderDeps: ({ search }) => ({ house: search.house }),
+  loader: async ({ deps }) => {
+    if (!deps.house) return { source: null };
+    // Дом мог быть снят с публикации после того, как ссылку скопировали.
+    // Это не повод показывать ошибку: конструктор открывается как обычно.
+    const project = (await fetchPublishedHouse({ data: deps.house })) as HouseProject | null;
+    return {
+      source: project ? { title: project.title, slug: project.slug, model: project.model } : null,
+    };
+  },
   head: () => ({
     meta: [
       { property: "og:url", content: "https://eco-cub.ru/constructor" },
@@ -36,7 +67,9 @@ export const Route = createFileRoute("/constructor")({
 
 function ConstructorPage() {
   usePageEngagement("constructor");
+  const { source } = Route.useLoaderData();
   const [summary, setSummary] = useState<string | undefined>(undefined);
+  const initialSeeds = source ? seedsFromModel(source.model) : undefined;
 
   const handleQuote = (text: string) => {
     setSummary(text);
@@ -66,7 +99,19 @@ function ConstructorPage() {
             </p>
           </div>
 
-          <HouseBuilder basePricePerM2={site.basePricePerM2} onRequestQuote={handleQuote} />
+          {source && (
+            <p className="mb-4 rounded-sm border border-accent/40 bg-accent/5 px-4 py-3 text-sm">
+              Открыта копия проекта <b>{source.title}</b> из каталога. Меняйте её как угодно —
+              опубликованный проект не изменится. Конструктор работает с упрощённым кубиком {CELL_M}{" "}
+              × {CELL_M} м, поэтому площадь здесь отличается от расчётной на странице дома.
+            </p>
+          )}
+
+          <HouseBuilder
+            basePricePerM2={site.basePricePerM2}
+            onRequestQuote={handleQuote}
+            initialSeeds={initialSeeds}
+          />
         </Container>
       </Section>
 

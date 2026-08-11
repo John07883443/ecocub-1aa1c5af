@@ -14,7 +14,9 @@
     "test:header": "node scripts/header-stability.mjs",
     "format": "prettier --write .",
     "test:standards": "node --experimental-strip-types --test \"src/lib/standards/__tests__/*.test.ts\"",
-    "test:planner": "node --experimental-strip-types --test \"src/lib/planner/__tests__/*.test.ts\""
+    "test:planner": "node --experimental-strip-types --test \"src/lib/planner/__tests__/*.test.ts\"",
+    "test:house-project": "node --experimental-strip-types --test \"src/lib/house-project/__tests__/*.test.ts\"",
+    "house-projects:export": "node --experimental-strip-types scripts/house-projects-export.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

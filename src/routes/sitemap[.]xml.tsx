@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getAllPosts, getCategories, getTags } from "@/lib/blog";
 import { fetchProjects } from "@/lib/projects";
+import { fetchPublishedHouses } from "@/lib/house-projects";
 
 const SITE_URL = "https://eco-cub.ru";
 
@@ -9,6 +10,7 @@ const staticRoutes = [
   "/concrete",
   "/technology",
   "/portfolio",
+  "/houses",
   "/blog",
   "/presentation",
   "/contacts",
@@ -56,6 +58,13 @@ export const Route = createFileRoute("/sitemap.xml")({
           urls.push(
             url(`/projects/${project.slug}`, project.updated_at ?? undefined, "monthly", "0.7"),
           );
+        }
+
+        // Каталог CAD Light. Черновики сюда не попадают: серверная функция
+        // отдаёт только опубликованные дома. Раздел «Проектирование» в карте
+        // отсутствует намеренно — он служебный и закрыт от индексации.
+        for (const house of await fetchPublishedHouses()) {
+          urls.push(url(`/houses/${house.slug}`, house.updatedAt.slice(0, 10), "monthly", "0.7"));
         }
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>

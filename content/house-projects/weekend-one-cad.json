@@ -1,0 +1,127 @@
+{
+  "id": "hp-weekend-one",
+  "schemaVersion": 1,
+  "status": "published",
+  "title": "Weekend One",
+  "slug": "weekend-one-cad",
+  "description": "Компактный дом из четырёх модулей EcoCub. Смещение соседних модулей на половину глубины даёт вырезы под террасу и крыльцо, кухня-гостиная собрана из двух модулей со снятой общей стеной.",
+  "createdAt": "2026-08-11T00:00:00.000Z",
+  "updatedAt": "2026-08-11T00:00:00.000Z",
+  "publishedAt": "2026-08-11T00:00:00.000Z",
+  "version": 1,
+  "model": {
+    "units": "mm",
+    "modules": [
+      {
+        "id": "A",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 0,
+          "y": 0
+        },
+        "rotationDeg": 0,
+        "note": "Лист 12: Модуль A"
+      },
+      {
+        "id": "B",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 3200,
+          "y": 1710
+        },
+        "rotationDeg": 0,
+        "note": "Лист 13: Модуль B"
+      },
+      {
+        "id": "C",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 6190,
+          "y": 1710
+        },
+        "rotationDeg": 0,
+        "note": "Лист 14: Модуль C"
+      },
+      {
+        "id": "D",
+        "moduleTypeId": "ecocub-3200x3420",
+        "floor": 0,
+        "positionMm": {
+          "x": 9390,
+          "y": 0
+        },
+        "rotationDeg": 0,
+        "note": "Лист 15: Модуль D"
+      }
+    ],
+    "openings": [
+      {
+        "id": "wo-door-d",
+        "moduleId": "D",
+        "faceId": "Р-4",
+        "kind": "door",
+        "offsetMm": 600,
+        "widthMm": 800,
+        "heightMm": 2100,
+        "sillMm": 0,
+        "variantId": "h2100",
+        "note": "Лист 15, развёртка Р-4 модуля D: цепочка 600 | 800 | 2020. Сторона света у обозначений Р-1…Р-4 в альбоме не зафиксирована — привязка грани требует подтверждения архитектором."
+      },
+      {
+        "id": "wo-passage-bc",
+        "moduleId": "C",
+        "faceId": "Р-4",
+        "kind": "passage",
+        "offsetMm": 210,
+        "widthMm": 3000,
+        "heightMm": 3150,
+        "sillMm": 0,
+        "variantId": "h3150",
+        "note": "Выведен из площади: кухня-гостиная 17,35 м² против 16,68 у двух модулей в чистоте. Разница 0,63 м² = снятая общая стена 210 × 3000 (openedJointGainM2)."
+      }
+    ],
+    "foundation": {
+      "kind": "piles",
+      "clearanceMm": 500,
+      "visible": true
+    },
+    "groundOffsetMm": 0
+  },
+  "publication": {
+    "gallery": [
+      "/images/projects/weekend-one.jpg",
+      "/images/projects/weekend-one-2.jpg"
+    ],
+    "highlights": [
+      "Высота помещений 3,15 м",
+      "Кухня-гостиная из двух модулей со снятой стеной",
+      "Терраса в вырезе габарита, без отдельного модуля"
+    ],
+    "tags": [
+      "4 модуля",
+      "1 этаж",
+      "терраса"
+    ],
+    "currency": "RUB",
+    "isFeatured": false,
+    "coverImage": "/images/projects/weekend-one.jpg",
+    "priceFrom": 5500000
+  },
+  "source": {
+    "referenceHouseName": "Weekend One",
+    "referenceDocumentIds": [
+      "weekend-one-album",
+      "weekend-one-deck"
+    ],
+    "notes": "Раскладка модулей и стыки взяты из src/lib/standards/weekend-one.ts, то есть с листов 3, 4 и 12–15 альбома.",
+    "unresolvedQuestions": [
+      "Габарит застройки в альбоме 12 590 × 6 920, а по наружным граням модулей выходит 12 590 × 5 130. Разница 1 790 мм по глубине — зона террасы и крыльца между осями Г и Д; модулями она не занята.",
+      "Положение окон на развёртках Р-1…Р-4 не восстанавливается: цепочка не различает проём и простенок. В модель перенесены только входная дверь и открытый проём между B и C.",
+      "Соответствие обозначений Р-1…Р-4 сторонам света альбомом не зафиксировано. В модели принят обход контура против часовой стрелки, начиная с грани длиной 3 200.",
+      "Шаг и раскладка свай в альбоме отсутствуют."
+    ]
+  }
+}
