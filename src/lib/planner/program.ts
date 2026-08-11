@@ -55,8 +55,24 @@ export function bedroomCount(moduleCount: number): number {
   if (moduleCount <= 2) return 0;
   if (moduleCount <= 5) return 1;
   if (moduleCount <= 7) return 2;
-  return 3;
+  if (moduleCount <= 16) return 3;
+  // Выше шестнадцати модулей каталог не подсказывает ничего: самый большой
+  // разобранный дом — Dinastiya, 133 м² и три спальни. Дальше идёт
+  // экстраполяция, и она сделана самым скромным способом — по спальне на
+  // каждые четыре лишних модуля. Иначе весь избыток уходил в общую зону, и
+  // дом из двадцати двух кубиков получал гостиную на 130 м².
+  return 3 + Math.floor((moduleCount - 16) / 4);
 }
+
+/**
+ * Сколько модулей отдаём общей зоне.
+ *
+ * Потолок взят с самого большого проекта каталога: гостиная с кухней-столовой
+ * Dinastiya — 46,6 м², это пять модулей конструктора. Больше не делаем не из
+ * экономии, а потому что такой комнаты никто не строил и мы не знаем, как её
+ * обставлять.
+ */
+export const MAX_COMMON_MODULES = 5;
 
 /**
  * Разложить кубики по назначениям.
@@ -142,7 +158,9 @@ export function assignRoles(modules: ModuleItem[]): ModuleItem[] {
     .sort((a, b) => b.exterior - a.exterior || b.depth - a.depth || a.index - b.index)[0];
   if (kitchen && restIds.size > 1) assigned.set(kitchen.index, "kitchen");
 
-  // 4. Остальное — общая зона: смежные модули сольются в одно помещение.
+  // 4. Остальное — общая зона: смежные модули сольются в одно помещение,
+  //    а если их окажется слишком много, зона поделится на комнаты при
+  //    зонировании (см. splitOversizedCommon в zoning.ts).
   const roles = open.map((m, i) => ({ ...m, role: assigned.get(i) ?? ("living" as Role) }));
 
   // Верхние этажи целиком под спальни: так устроены двухэтажные раскладки.

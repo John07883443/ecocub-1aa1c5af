@@ -35,7 +35,9 @@ export const Route = createFileRoute("/training")({
 });
 
 function TrainingPage() {
-  const [sizes, setSizes] = useState<number[]>([3, 4, 5, 6, 7, 8]);
+  // Сегменты по числу кубиков: дефекты у дома из трёх модулей и из двадцати
+  // двух разные, и размечать их вперемешку бессмысленно.
+  const [sizes, setSizes] = useState<number[]>([3, 4, 5, 6]);
   const [perSize, setPerSize] = useState(4);
   const [run, setRun] = useState(() => `run-${Date.now()}`);
   const [seed, setSeed] = useState(1);
@@ -76,9 +78,9 @@ function TrainingPage() {
 
       <div className="mt-6 flex flex-wrap items-end gap-4 rounded-sm border border-border p-4">
         <label className="text-sm">
-          Кубиков в доме
-          <div className="mt-1 flex gap-1">
-            {[2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          Кубиков в доме (один этаж)
+          <div className="mt-1 flex max-w-[520px] flex-wrap gap-1">
+            {Array.from({ length: 21 }, (_, i) => i + 2).map((n) => (
               <button
                 key={n}
                 type="button"
@@ -125,6 +127,12 @@ function TrainingPage() {
         <span className="text-sm text-muted-foreground">
           {batch.length} домов · отмечено {done} · сохранено {saved}
         </span>
+
+        <p className="w-full text-xs text-muted-foreground">
+          До девяти кубиков формы перебираются полностью, выше — детерминированная выборка: при
+          двенадцати модулях форм уже полмиллиона. Партия повторяется при том же зерне, поэтому
+          прогоны можно сравнивать между собой.
+        </p>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

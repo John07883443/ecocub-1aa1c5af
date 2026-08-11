@@ -1,7 +1,7 @@
 import { MODULE_SIDE_M } from "../constructor/constants.ts";
 import type { ModuleItem } from "../constructor/types.ts";
 import { computeJoints, deriveOpenings, roomHasRoute } from "./rooms.ts";
-import { bathroomCount, bedroomCount } from "./program.ts";
+import { MAX_COMMON_MODULES, bathroomCount, bedroomCount } from "./program.ts";
 import { houseFromModules } from "./zoning.ts";
 import type { HouseState, RoomType } from "./types.ts";
 
@@ -39,6 +39,8 @@ interface Invariant {
 }
 
 const PRIVATE: RoomType[] = ["bedroom", "bathroom", "storage", "office"];
+/** Общая зона: помещения, которые перетекают друг в друга без дверей. */
+const COMMON: RoomType[] = ["living", "kitchen", "dining"];
 
 const INVARIANTS: Invariant[] = [
   {
@@ -74,7 +76,12 @@ const INVARIANTS: Invariant[] = [
     code: "split-public",
     severity: "error",
     check: (house) => {
-      const publicRooms = house.rooms.filter((r) => r.type === "living" || r.type === "kitchen");
+      // Столовая — такая же общая зона, как гостиная и кухня, а холл её
+      // соединяет. Без них в списке разрезанная на комнаты зона выглядела
+      // разорванной: столовая между двумя гостиными делала их «несвязанными».
+      const publicRooms = house.rooms.filter(
+        (r) => COMMON.includes(r.type) || r.type === "entryway",
+      );
       const modules = house.modules.filter((m) => publicRooms.some((r) => r.id === m.roomId));
       if (modules.length <= 1) return [];
       const seen = new Set([modules[0].id]);
@@ -189,12 +196,32 @@ const INVARIANTS: Invariant[] = [
     },
   },
   {
+    code: "oversized-common",
+    severity: "error",
+    // Гостиная на пятнадцать модулей — не просторный дом, а нераспределённый
+    // остаток. Потолок взят с самого большого проекта каталога: 46,6 м² у
+    // Dinastiya, это пять модулей конструктора.
+    check: (house) =>
+      house.rooms
+        .filter(
+          (r) =>
+            (r.type === "living" || r.type === "kitchen") &&
+            r.moduleIds.length > MAX_COMMON_MODULES,
+        )
+        .map((r) => ({
+          code: "oversized-common",
+          severity: "error" as const,
+          message: `Общая зона на ${r.moduleIds.length} модулей — больше, чем в любом построенном доме`,
+          roomId: r.id,
+        })),
+  },
+  {
     code: "no-common-room",
     severity: "error",
     check: (house) => {
       const heated = house.rooms.filter((r) => r.type !== "terrace");
       if (heated.length <= 1) return [];
-      const hasCommon = heated.some((r) => r.type === "living" || r.type === "kitchen");
+      const hasCommon = heated.some((r) => COMMON.includes(r.type));
       return hasCommon
         ? []
         : [{ code: "no-common-room", severity: "error", message: "В доме нет общей зоны" }];

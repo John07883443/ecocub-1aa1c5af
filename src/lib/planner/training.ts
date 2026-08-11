@@ -1,7 +1,7 @@
 import { MODULE_SIDE_M } from "../constructor/constants.ts";
 import type { ModuleItem } from "../constructor/types.ts";
 import { auditModules, errors, type Finding } from "./audit.ts";
-import { polyominoes, toModules } from "./shapes.ts";
+import { shapesOfSize, toModules } from "./shapes.ts";
 import { houseFromModules } from "./zoning.ts";
 
 /**
@@ -75,13 +75,16 @@ export function buildBatch(options: {
   seed?: number;
 }): TrainingCase[] {
   const sizes = options.sizes?.length ? options.sizes : [3, 4, 5, 6, 7, 8];
+  // Один этаж и до 22 кубиков: дальше дом перестаёт быть модульным в том
+  // смысле, в каком его делает завод, а второй этаж — отдельная задача с
+  // лестницей и опиранием.
   const perSize = Math.max(1, Math.min(24, options.perSize ?? 6));
   const seed = options.seed ?? 1;
   const out: TrainingCase[] = [];
 
   for (const n of sizes) {
-    if (n < 2 || n > 9) continue;
-    const forms = polyominoes(n);
+    if (n < 2 || n > 22) continue;
+    const forms = shapesOfSize(n, Math.max(perSize * 3, 40), seed);
     const step = Math.max(1, Math.floor(forms.length / perSize));
     for (let i = 0; i < perSize; i += 1) {
       const index = (seed * 7 + i * step) % forms.length;

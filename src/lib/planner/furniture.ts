@@ -830,10 +830,35 @@ export function planRoom(house: HouseState, roomId: string, presetIndex = 0): Fu
   // кровать или кухонная линия помещались прекрасно — не проходил стул.
   // Теперь предметы добавляются по порядку важности, а конфликтующие
   // отбрасываются: главное остаётся, лишнее уходит.
-  const valid = planner(geo)
+  // Столовая на четыре-пять модулей — это уже не комната со столом у стены, а
+  // зона в общем объёме: стен по периметру почти не остаётся, проёмы идут
+  // подряд. Для неё работает набор гостиной, поэтому при неудаче берём его.
+  // Прогон по формам до двадцати двух кубиков без этого оставлял такие зоны
+  // пустыми.
+  const fallback: Partial<Record<RoomType, RoomType>> = { dining: "living" };
+
+  const candidates = (() => {
+    const first = planner(geo);
+    if (first.length) return first;
+    const alt = fallback[geo.type];
+    return alt && PLANNERS[alt] ? PLANNERS[alt](geo) : first;
+  })();
+
+  const valid = candidates
     .map((c) => trimToFit(c, geo))
     .filter((c) => c.items.length > 0)
     .sort((a, b) => b.score - a.score);
+
+  if (!valid.length && fallback[geo.type]) {
+    const alt = PLANNERS[fallback[geo.type]!];
+    const second = alt
+      ? alt(geo)
+          .map((c) => trimToFit(c, geo))
+          .filter((c) => c.items.length > 0)
+          .sort((a, b) => b.score - a.score)
+      : [];
+    if (second.length) valid.push(...second);
+  }
 
   if (!valid.length) {
     return {

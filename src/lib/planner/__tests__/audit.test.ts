@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { auditModules, errors } from "../audit.ts";
-import { polyominoes, toModules } from "../shapes.ts";
+import { polyominoes, sampleShapes, toModules } from "../shapes.ts";
 import { TEMPLATES } from "../../constructor/constants.ts";
 
 /**
@@ -34,6 +34,25 @@ test("любая форма дома до семи кубиков даёт пр�
   }
   // 2 + 6 + 19 + 63 + 216 + 760 — это все формы, а не выборка.
   assert.equal(checked, 1066);
+});
+
+test("большие дома до двадцати двух кубиков тоже проходят аудит", () => {
+  // Выше девяти кубиков полный перебор невозможен: при двенадцати форм уже
+  // полмиллиона. Берём детерминированную выборку — тот же набор при том же
+  // зерне, иначе тест ловил бы разное при каждом запуске.
+  let checked = 0;
+  for (let n = 10; n <= 22; n += 1) {
+    for (const shape of sampleShapes(n, 12, 1)) {
+      const found = errors(auditModules(toModules(shape)));
+      assert.deepEqual(
+        found.map((f) => `${f.code}: ${f.message}`),
+        [],
+        `${n} кубиков, форма ${JSON.stringify(shape)}`,
+      );
+      checked += 1;
+    }
+  }
+  assert.ok(checked >= 130, `проверено ${checked} домов`);
 });
 
 test("готовые раскладки тоже проходят аудит", () => {

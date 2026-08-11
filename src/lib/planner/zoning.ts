@@ -1,8 +1,9 @@
 // .ts в импортах — для запуска доменных тестов через node --experimental-strip-types.
 import type { ModuleItem, Role } from "../constructor/types.ts";
+import { MODULE_SIDE_M } from "../constructor/constants.ts";
 import { MODULE } from "../standards/ecocub.ts";
 import { emptyHouse, newModuleId, newRoomId } from "./actions.ts";
-import { assignRoles } from "./program.ts";
+import { MAX_COMMON_MODULES, assignRoles } from "./program.ts";
 import { computeAdjacency } from "./geometry.ts";
 import { computeJoints } from "./rooms.ts";
 import { relayoutAll } from "./furniture.ts";
@@ -104,7 +105,94 @@ export function houseFromModules(input: ModuleItem[]): HouseState {
     }
   }
 
-  return relayoutAll(retypeCirculation({ ...emptyHouse(), modules, rooms }));
+  return relayoutAll(retypeCirculation(splitOversizedCommon({ ...emptyHouse(), modules, rooms })));
+}
+
+/**
+ * Разрезать разросшуюся общую зону на комнаты.
+ *
+ * Дом из двадцати двух кубиков давал одну гостиную на пятнадцать модулей —
+ * сто тридцать метров, каких нет ни в одном построенном проекте. Загонять
+ * излишек в спальни не выходит: чем меньше остаётся общей зоны, тем чаще
+ * приватная комната теряет выход, и геометрия справедливо отказывает.
+ *
+ * Реальные проекты решают это иначе — делят общее на зоны. Super Family на
+ * 92 м² разбивает его на кухню-гостиную 22,4 и столовую 11,4; Nasledie на 113
+ * добавляет отдельный коридор. Здесь то же самое: зона режется на связные
+ * куски не больше пяти модулей и получает разные назначения.
+ *
+ * Резать начинаем с дальнего от начала координат конца, чтобы кухня осталась
+ * там, где её поставило назначение помещений.
+ */
+function splitOversizedCommon(house: HouseState): HouseState {
+  const COMMON: RoomType[] = ["living", "kitchen", "dining"];
+  const rooms: RoomZone[] = [];
+  const modules = house.modules.map((m) => ({ ...m }));
+  const byId = new Map(modules.map((m) => [m.id, m]));
+
+  for (const room of house.rooms) {
+    if (!COMMON.includes(room.type) || room.moduleIds.length <= MAX_COMMON_MODULES) {
+      rooms.push(room);
+      continue;
+    }
+    const chunks = partition(room.moduleIds, byId, MAX_COMMON_MODULES);
+    // Назначения по порядку: первым остаётся исходный тип, дальше столовая и
+    // гостиные. Больше трёх общих зон подряд не встречается ни в одном
+    // проекте, поэтому дальше всё — гостиные.
+    const types: RoomType[] = [room.type, "dining", "living"];
+    chunks.forEach((chunk, i) => {
+      const id = i === 0 ? room.id : newRoomId();
+      rooms.push({
+        id,
+        type: types[Math.min(i, types.length - 1)],
+        floor: room.floor,
+        moduleIds: chunk,
+      });
+      for (const moduleId of chunk) byId.get(moduleId)!.roomId = id;
+    });
+  }
+
+  return { ...house, modules, rooms };
+}
+
+/** Разбить группу модулей на связные куски не больше заданного размера. */
+function partition(
+  moduleIds: string[],
+  byId: Map<string, ModuleFootprint>,
+  limit: number,
+): string[][] {
+  const left = new Set(moduleIds);
+  const out: string[][] = [];
+  while (left.size) {
+    // Начинаем с самого дальнего модуля: так первый кусок остаётся у входа.
+    const start = [...left].sort((a, b) => {
+      const p = byId.get(a)!;
+      const q = byId.get(b)!;
+      return q.z - p.z || q.x - p.x;
+    })[0];
+    const chunk: string[] = [];
+    const queue = [start];
+    left.delete(start);
+    while (queue.length && chunk.length < limit) {
+      const cur = queue.shift()!;
+      chunk.push(cur);
+      const c = byId.get(cur)!;
+      for (const id of [...left]) {
+        if (chunk.length + queue.length >= limit) break;
+        const o = byId.get(id)!;
+        const touching =
+          (Math.abs(o.x - c.x) === MODULE_SIDE_M && Math.abs(o.z - c.z) < MODULE_SIDE_M) ||
+          (Math.abs(o.z - c.z) === MODULE_SIDE_M && Math.abs(o.x - c.x) < MODULE_SIDE_M);
+        if (!touching) continue;
+        left.delete(id);
+        queue.push(id);
+      }
+    }
+    // Всё, что осталось в очереди, возвращается в общий котёл.
+    for (const id of queue) left.add(id);
+    out.push(chunk);
+  }
+  return out;
 }
 
 /**
