@@ -11,6 +11,13 @@ import {
   moduleLevelMm,
   supportAreaMm2,
 } from "@/lib/house-project/geometry";
+import {
+  clearSpanMm,
+  heightOptions,
+  placeOnFace,
+  wallOf,
+  widthOptions,
+} from "@/lib/house-project/opening-place";
 import type { DoorSwing, FaceId, OpeningKind } from "@/lib/house-project/types";
 import { FACE_IDS } from "@/lib/house-project/types";
 
@@ -100,6 +107,79 @@ export function Inspector({ editor }: { editor: DesignEditor }) {
             <Trash2 className="size-4" /> Удалить
           </Button>
         </div>
+
+        {/*
+          Готовые размеры первым делом, поля с цифрами — под ними.
+
+          Проектировщик почти никогда не хочет произвольную ширину: он хочет
+          «во всю стену», «половину», «треть». Доли считаются от ЧИСТОЙ длины
+          стены, то есть за вычетом двух простенков по 210 мм, — проём во всю
+          грань физически невозможен, по краям стоит стена. Кому этих вариантов
+          мало, вводит своё число ниже: варианты не заменяют поля, а избавляют
+          от арифметики в уме в девяти случаях из десяти.
+        */}
+        {module && (
+          <div className="space-y-2 rounded-sm border border-border bg-muted/40 p-2.5">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Ширина · стена {span} мм, чистая {clearSpanMm(span, wallOf(module))} мм
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {widthOptions(span, wallOf(module)).map((o) => (
+                  <Button
+                    key={o.id}
+                    size="sm"
+                    variant={selectedOpening.widthMm === o.widthMm ? "default" : "outline"}
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => {
+                      // Ширина меняется вместе со смещением: проём остаётся
+                      // на месте серединой, а не расползается вправо от левого
+                      // края и не вылезает за угловой простенок.
+                      const centre = selectedOpening.offsetMm + selectedOpening.widthMm / 2;
+                      const placed = placeOnFace(span, centre, o.widthMm, wallOf(module));
+                      dispatch({
+                        type: "patch-opening",
+                        id: selectedOpening.id,
+                        patch: { offsetMm: placed.offsetMm, widthMm: placed.widthMm },
+                      });
+                    }}
+                  >
+                    {o.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Высота · потолок {def?.clearHeightMm ?? 3150} мм
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {heightOptions(def?.clearHeightMm).map((o) => (
+                  <Button
+                    key={o.id}
+                    size="sm"
+                    variant={
+                      selectedOpening.sillMm === o.sillMm && selectedOpening.heightMm === o.heightMm
+                        ? "default"
+                        : "outline"
+                    }
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() =>
+                      dispatch({
+                        type: "patch-opening",
+                        id: selectedOpening.id,
+                        patch: { sillMm: o.sillMm, heightMm: o.heightMm },
+                      })
+                    }
+                  >
+                    {o.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           <label className="block">

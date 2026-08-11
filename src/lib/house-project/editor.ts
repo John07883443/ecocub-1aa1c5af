@@ -2,6 +2,7 @@ import { useCallback, useMemo, useReducer } from "react";
 import { findOpeningPreset, OPENING_PRESETS } from "./catalog";
 import { createModule, newId } from "./factory";
 import { footprintOf, localFace, defOf } from "./geometry";
+import { placeOnFace, presetWidthOn } from "./opening-place";
 import type { FaceId, HouseProject, ModuleInstance, OpeningInstance, RotationDeg } from "./types";
 
 /**
@@ -42,7 +43,14 @@ export type EditorAction =
   | { type: "delete-modules"; ids: string[] }
   | { type: "duplicate-modules"; ids: string[] }
   | { type: "move-to-floor"; ids: string[]; floor: number }
-  | { type: "add-opening"; moduleId: string; faceId: FaceId; presetId: string }
+  | {
+      type: "add-opening";
+      moduleId: string;
+      faceId: FaceId;
+      presetId: string;
+      /** Куда попал курсор вдоль грани, мм. Без него проём встаёт по центру. */
+      alongMm?: number;
+    }
   | { type: "patch-opening"; id: string; patch: Partial<OpeningInstance> }
   | { type: "delete-opening"; id: string }
   | { type: "patch-project"; patch: Partial<HouseProject> }
@@ -79,27 +87,34 @@ function turn(deg: RotationDeg, direction: 1 | -1): RotationDeg {
 /**
  * Проём по пресету на указанной грани.
  *
- * Ставится по центру грани: это единственное положение, которое не требует
- * догадки. Проектировщик затем вводит смещение с чертежа — и валидация
- * напомнит, что размер, не привязанный к варианту из стандарта, нужно
- * сверить.
+ * Если известно, куда попал курсор, проём встаёт серединой в эту точку — так
+ * работает бросок из панели инструментов на стену. Если нет, проём встаёт по
+ * центру грани: это единственное положение, которое не требует догадки.
+ * В обоих случаях он держится в пределах чистой длины стены и не наезжает на
+ * угловой простенок толщиной 210 мм.
+ *
+ * Проектировщик затем вводит смещение с чертежа — и валидация напомнит, что
+ * размер, не привязанный к варианту из стандарта, нужно сверить.
  */
 function openingFromPreset(
   module: ModuleInstance,
   faceId: FaceId,
   presetId: string,
+  alongMm?: number,
 ): OpeningInstance | null {
   const preset = findOpeningPreset(presetId) ?? OPENING_PRESETS[0];
   if (!preset) return null;
   const span = localFace(defOf(module), faceId).spanMm;
-  const width = Math.min(preset.widthMm, span - defOf(module).wallThicknessMm * 2);
+  const wall = defOf(module).wallThicknessMm;
+  const width = presetWidthOn(module, faceId, presetId);
+  const placed = placeOnFace(span, alongMm ?? span / 2, width, wall);
   return {
     id: newId("o"),
     moduleId: module.id,
     faceId,
     kind: preset.kind,
-    offsetMm: Math.round((span - width) / 2),
-    widthMm: Math.max(100, width),
+    offsetMm: placed.offsetMm,
+    widthMm: placed.widthMm,
     heightMm: preset.heightMm,
     sillMm: preset.sillMm,
     variantId: preset.variantId,
@@ -238,7 +253,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case "add-opening": {
       const module = project.model.modules.find((m) => m.id === action.moduleId);
       if (!module) return state;
-      const opening = openingFromPreset(module, action.faceId, action.presetId);
+      const opening = openingFromPreset(module, action.faceId, action.presetId, action.alongMm);
       if (!opening) return state;
       return {
         ...withHistory(state, {

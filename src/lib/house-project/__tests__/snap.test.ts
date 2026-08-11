@@ -115,6 +115,41 @@ test("повёрнутый модуль стыкуется вровень со �
   );
 });
 
+test("положения с наложением на третий модуль не предлагаются", () => {
+  // Дом из двух модулей, стоящих один над другим по Y справа от начала
+  // координат. Третий модуль стыкуется к их левым граням.
+  const a = mod("a", W, 0);
+  const b = mod("b", W, D);
+  const moving = mod("c", 50_000, 50_000);
+  const anchors = snapAnchors([a, b, moving], moving, D / 2);
+
+  for (const p of anchors) {
+    for (const other of [a, b]) {
+      const r = rectOf(other);
+      const ox = Math.min(p.x + W, r.x + r.w) - Math.max(p.x, r.x);
+      const oy = Math.min(p.y + D, r.y + r.h) - Math.max(p.y, r.y);
+      const wall = BASE_MODULE.wallThicknessMm;
+      assert.ok(
+        !(ox > wall && oy > wall),
+        `положение ${p.x},${p.y} налезает на ${other.id} на ${ox} × ${oy} мм`,
+      );
+    }
+  }
+  // Ровная стыковка слева при этом никуда не делась.
+  assert.ok(anchors.some((p) => p.x === 0 && p.y === 0));
+});
+
+test("общая стена переживает отсев наложений", () => {
+  const anchor = mod("a", 0, 0);
+  const moving = mod("b", 50_000, 50_000);
+  const wall = BASE_MODULE.wallThicknessMm;
+  const anchors = snapAnchors([anchor, moving], moving, D / 2);
+  assert.ok(
+    anchors.some((p) => p.x === W - wall && p.y === 0 && p.joint === "shared-wall"),
+    "наложение ровно на толщину стены — это стык, а не пересечение",
+  );
+});
+
 test("слишком малое перекрытие граней не предлагается", () => {
   const anchor = mod("a", 0, 0);
   const moving = mod("b", 50_000, 50_000);

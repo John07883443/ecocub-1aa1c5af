@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DesignEditor } from "@/lib/house-project/editor";
-import { BASE_MODULE } from "@/lib/house-project/catalog";
+import { BASE_MODULE, DEFAULT_MODULE_TYPE_ID } from "@/lib/house-project/catalog";
 import {
   boundsOf,
   defOf,
@@ -11,10 +11,20 @@ import {
   rectOf,
   worldFace,
 } from "@/lib/house-project/geometry";
+import {
+  nearestFace,
+  placeOnFace,
+  presetWidthOn,
+  wallOf,
+  type FaceHit,
+} from "@/lib/house-project/opening-place";
 import { pickAnchor, snapAnchors, snapToStep, type SnapAnchor } from "@/lib/house-project/snap";
 import type { FaceId, ModuleInstance } from "@/lib/house-project/types";
 import { FACE_IDS } from "@/lib/house-project/types";
 import { cn } from "@/lib/utils";
+
+/** Тип данных перетаскивания «проём из панели инструментов». */
+export const OPENING_DND_TYPE = "application/x-ecocub-opening";
 
 /**
  * План этажа в миллиметрах.
@@ -38,6 +48,10 @@ interface Props {
   snapStepMm: number;
   showOtherFloors: boolean;
   onFacePick: (moduleId: string, faceId: FaceId) => void;
+  /** Пресет проёма, взятый в верхней панели и ждущий стены. */
+  openingPresetId: string | null;
+  /** Проём поставлен — панель гасит подсветку взятого инструмента. */
+  onOpeningToolDone: () => void;
 }
 
 interface View {
@@ -53,6 +67,14 @@ const MAX_SCALE = 0.25;
 
 /** Порог примагничивания в пикселях — на экране он должен быть постоянным. */
 const SNAP_THRESHOLD_PX = 34;
+
+/**
+ * На каком расстоянии от стены проём считается наведённым на неё, пикселей.
+ *
+ * Больше порога примагничивания модулей: попасть в линию труднее, чем в
+ * прямоугольник, а промах здесь ничего не портит — проём просто не ставится.
+ */
+const FACE_PICK_PX = 46;
 
 function fitView(width: number, height: number, modules: ModuleInstance[]): View {
   if (!modules.length || width < 10 || height < 10) {
@@ -70,7 +92,15 @@ function fitView(width: number, height: number, modules: ModuleInstance[]): View
   return { x: cx - width / 2 / clamped, y: cy + height / 2 / clamped, scale: clamped };
 }
 
-export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePick }: Props) {
+export function PlanCanvas({
+  editor,
+  tool,
+  snapStepMm,
+  showOtherFloors,
+  onFacePick,
+  openingPresetId,
+  onOpeningToolDone,
+}: Props) {
   const { state, dispatch } = editor;
   const { project, activeFloor, selection } = state;
   const modules = project.model.modules;
@@ -107,6 +137,8 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
     b?: { x: number; y: number };
   } | null>(null);
   const [hoverFace, setHoverFace] = useState<string | null>(null);
+  /** Курсор в координатах модели: по нему живут оба призрака. */
+  const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
   const [menu, setMenu] = useState<
     | { kind: "module"; id: string; px: number; py: number }
     | { kind: "opening"; id: string; px: number; py: number }
@@ -171,10 +203,13 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
       setMeasure(null);
       setMenu(null);
       setMarquee(null);
+      // Взятый в панели проём тоже кладётся обратно: держать его в руке
+      // после отказа не должен ни один инструмент.
+      onOpeningToolDone();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [onOpeningToolDone]);
 
   /* --- Масштаб колесом ------------------------------------------------ */
 
@@ -212,7 +247,129 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
     return snapAnchors(modules, movingModules[0], snapStepMm);
   }, [drag, movingModules, modules, snapStepMm]);
 
+  /* --- Призрак нового модуля ------------------------------------------- */
+
+  /**
+   * Модуль, которого ещё нет, но видно, где он встанет.
+   *
+   * Раньше «Модуль» работал вслепую: клик по пустому месту — и кубик появлялся
+   * там, где пришёлся угол курсора, часто со ступенькой к соседу, которую потом
+   * приходилось исправлять перетаскиванием. Призрак показывает результат до
+   * нажатия, и примагничивается он тем же кодом, что и настоящее
+   * перетаскивание, — двух правд о «вплотную» в редакторе быть не должно.
+   *
+   * Курсор держит середину модуля, а не угол: целятся в место, где будет
+   * комната, а не в её левый нижний угол.
+   */
+  const ghost = useMemo(() => {
+    if (tool !== "add" || !hoverPoint) return null;
+    const probe: ModuleInstance = {
+      id: "__ghost__",
+      moduleTypeId: DEFAULT_MODULE_TYPE_ID,
+      floor: activeFloor,
+      positionMm: { x: 0, y: 0 },
+      rotationDeg: 0,
+    };
+    const f = footprintOf(probe);
+    const rawX = hoverPoint.x - f.widthMm / 2;
+    const rawY = hoverPoint.y - f.depthMm / 2;
+    const candidates = snapAnchors(modules, probe, snapStepMm);
+    const picked = pickAnchor(candidates, rawX, rawY, SNAP_THRESHOLD_PX / view.scale);
+    const positionMm = picked
+      ? { x: picked.x, y: picked.y }
+      : { x: snapToStep(rawX, snapStepMm), y: snapToStep(rawY, snapStepMm) };
+
+    // Вне привязки модуль можно поставить куда угодно, в том числе поверх
+    // соседа. Запрещать это нельзя — иногда так и надо, а разбирается с этим
+    // проверка проекта. Но показать наложение до нажатия обязательно: молча
+    // получить два модуля в одном объёме человек не должен.
+    const wallLimit = defOf(probe).wallThicknessMm;
+    const collides = modules.some((other) => {
+      if (other.floor !== probe.floor) return false;
+      const r = rectOf(other);
+      const ox = Math.min(positionMm.x + f.widthMm, r.x + r.w) - Math.max(positionMm.x, r.x);
+      const oy = Math.min(positionMm.y + f.depthMm, r.y + r.h) - Math.max(positionMm.y, r.y);
+      return ox > wallLimit && oy > wallLimit;
+    });
+
+    return {
+      module: { ...probe, positionMm },
+      anchors: candidates,
+      picked,
+      collides,
+      widthMm: f.widthMm,
+      depthMm: f.depthMm,
+    };
+  }, [tool, hoverPoint, activeFloor, modules, snapStepMm, view.scale]);
+
+  /* --- Призрак проёма --------------------------------------------------- */
+
+  /**
+   * Пресет, ждущий стены.
+   *
+   * Один и тот же для обоих способов взять проём — кликом по кнопке панели и
+   * перетаскиванием её на план. Так и должно быть: во время HTML-перетаскивания
+   * `dataTransfer.getData` намеренно возвращает пустую строку, читать данные
+   * разрешено только в момент отпускания. Значит, знать пресет заранее может
+   * лишь тот, кто начал перетаскивание, — панель. Она его и объявляет.
+   */
+  const placingPresetId = openingPresetId;
+
+  /**
+   * Куда встанет проём, если отпустить кнопку прямо сейчас.
+   *
+   * Стена ищется по расстоянию до отрезка, а не попаданием в тонкую полоску:
+   * проём достаточно поднести к стене. Ширина и положение считаются той же
+   * функцией, что и при настоящей постановке, поэтому показанное на экране и
+   * записанное в модель не могут разойтись.
+   */
+  const openingPreview = useMemo(() => {
+    if (!placingPresetId || !hoverPoint) return null;
+    const hit: FaceHit | null = nearestFace(
+      modules,
+      activeFloor,
+      hoverPoint,
+      FACE_PICK_PX / view.scale,
+    );
+    if (!hit) return null;
+    const module = modules.find((m) => m.id === hit.moduleId);
+    if (!module) return null;
+    const width = presetWidthOn(module, hit.faceId, placingPresetId);
+    const placed = placeOnFace(hit.spanMm, hit.alongMm, width, wallOf(module));
+    const seg = openingSegment(module, {
+      id: "__preview__",
+      moduleId: module.id,
+      faceId: hit.faceId,
+      kind: "window",
+      offsetMm: placed.offsetMm,
+      widthMm: placed.widthMm,
+      heightMm: 0,
+      sillMm: 0,
+    });
+    return seg ? { hit, placed, seg } : null;
+  }, [placingPresetId, hoverPoint, modules, activeFloor, view.scale]);
+
+  /** Поставить проём в подсвеченную стену. Возвращает, получилось ли. */
+  const placeOpening = useCallback(
+    (presetId: string, point: { x: number; y: number }) => {
+      const hit = nearestFace(modules, activeFloor, point, FACE_PICK_PX / view.scale);
+      if (!hit) return false;
+      dispatch({
+        type: "add-opening",
+        moduleId: hit.moduleId,
+        faceId: hit.faceId,
+        presetId,
+        alongMm: hit.alongMm,
+      });
+      return true;
+    },
+    [modules, activeFloor, view.scale, dispatch],
+  );
+
   const onPointerDownModule = (e: React.PointerEvent, m: ModuleInstance) => {
+    // Пока в руке проём, модуль под курсором — это стена, в которую целятся,
+    // а не объект, который двигают. Событие уходит наверх, к постановке.
+    if (placingPresetId) return;
     if (tool !== "select") return;
     e.stopPropagation();
     setMenu(null);
@@ -276,6 +433,11 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
   );
 
   const onPointerMove = (e: React.PointerEvent) => {
+    // Курсор запоминается только когда его кто-то ждёт: в режиме выбора это
+    // была бы перерисовка всего плана на каждое движение мыши впустую.
+    if (tool === "add" || placingPresetId) setHoverPoint(pointerModel(e));
+    else if (hoverPoint) setHoverPoint(null);
+
     if (pan) {
       const dx = (e.clientX - pan.px) / pan.view.scale;
       const dy = (e.clientY - pan.py) / pan.view.scale;
@@ -372,12 +534,24 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
   const onBackgroundPointerDown = (e: React.PointerEvent) => {
     setMenu(null);
     const p = pointerModel(e);
+
+    // Проём в руке важнее любого другого режима: человек уже выбрал действие
+    // в панели, и клик по плану может значить только его.
+    if (placingPresetId) {
+      // Правая кнопка кладёт инструмент обратно — привычный отказ от действия.
+      if (e.button !== 2) placeOpening(placingPresetId, p);
+      onOpeningToolDone();
+      return;
+    }
+
     if (tool === "add") {
-      dispatch({
-        type: "add-module",
+      // Ставим ровно туда, где нарисован призрак, а не туда, где курсор:
+      // иначе примагничивание было бы обманом — показали одно, сделали другое.
+      const pos = ghost?.module.positionMm ?? {
         x: snapToStep(p.x, snapStepMm),
         y: snapToStep(p.y, snapStepMm),
-      });
+      };
+      dispatch({ type: "add-module", x: pos.x, y: pos.y });
       return;
     }
     if (tool === "measure") {
@@ -545,7 +719,7 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
           onPointerEnter={() => setHoverFace(key)}
           onPointerLeave={() => setHoverFace((cur) => (cur === key ? null : cur))}
           onPointerDown={(e) => {
-            if (tool !== "select") return;
+            if (placingPresetId || tool !== "select") return;
             e.stopPropagation();
             onFacePick(m.id, faceId);
           }}
@@ -561,12 +735,43 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
   return (
     <div
       ref={hostRef}
-      className="relative h-full w-full touch-none overflow-hidden rounded-sm border border-border bg-[#fafaf9]"
+      className={cn(
+        "relative h-full w-full touch-none overflow-hidden rounded-sm border bg-[#fafaf9]",
+        placingPresetId ? "border-accent" : "border-border",
+      )}
+      style={{ cursor: placingPresetId || tool === "add" ? "crosshair" : undefined }}
       onPointerDown={onBackgroundPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={finishGesture}
-      onPointerLeave={finishGesture}
+      onPointerLeave={() => {
+        finishGesture();
+        setHoverPoint(null);
+      }}
       onContextMenu={(e) => e.preventDefault()}
+      /*
+        Перетаскивание из панели инструментов.
+
+        Обычный HTML-drag, а не своя реализация на указателе: браузер сам
+        рисует «взятый» элемент и сам решает, что делать при отпускании за
+        пределами плана. Координаты в dragover приходят те же экранные, что и
+        в событиях указателя, поэтому призрак считается одним и тем же кодом.
+      */
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes(OPENING_DND_TYPE)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        const rect = hostRef.current?.getBoundingClientRect();
+        if (rect) setHoverPoint(toModel(e.clientX - rect.left, e.clientY - rect.top));
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData(OPENING_DND_TYPE) || placingPresetId;
+        const rect = hostRef.current?.getBoundingClientRect();
+        if (id && rect) placeOpening(id, toModel(e.clientX - rect.left, e.clientY - rect.top));
+        setHoverPoint(null);
+        onOpeningToolDone();
+      }}
+      onDragLeave={() => setHoverPoint(null)}
     >
       <svg width={size.width} height={size.height} className="block">
         {/* Подложка-чертёж под всем остальным. */}
@@ -658,6 +863,9 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
                         : "stroke-sky-600",
                 )}
                 onPointerDown={(e) => {
+                  // С проёмом в руке существующий проём не перехватывает клик:
+                  // иначе поставить второе окно рядом с первым было бы нельзя.
+                  if (placingPresetId) return;
                   e.stopPropagation();
                   setMenu(null);
                   dispatch({ type: "select-opening", id: o.id });
@@ -709,6 +917,133 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
                 />
               );
             })}
+          </g>
+        )}
+
+        {/*
+          Призрак нового модуля.
+
+          Полупрозрачный, пунктиром, с подписью габарита — и с точками всех
+          положений, куда он может встать вплотную к соседям. Точка, в которую
+          он примагнитился, залита цветом: видно не только «куда встанет», но и
+          «почему именно туда».
+        */}
+        {ghost && (
+          <g className="pointer-events-none">
+            {ghost.anchors.slice(0, 400).map((a, i) => {
+              const p = toScreen(a.x + ghost.widthMm / 2, a.y + ghost.depthMm / 2);
+              const active = ghost.picked?.x === a.x && ghost.picked?.y === a.y;
+              return (
+                <circle
+                  key={i}
+                  cx={p.x}
+                  cy={p.y}
+                  r={active ? 5 : 2.5}
+                  className={
+                    active
+                      ? "fill-accent"
+                      : a.joint === "shared-wall"
+                        ? "fill-emerald-500/50"
+                        : "fill-foreground/25"
+                  }
+                />
+              );
+            })}
+            {(() => {
+              const r = rectOf(ghost.module);
+              const p = toScreen(r.x, r.y + r.h);
+              const w = r.w * view.scale;
+              const h = r.h * view.scale;
+              const wall = defOf(ghost.module).wallThicknessMm * view.scale;
+              return (
+                <>
+                  <rect
+                    x={p.x}
+                    y={p.y}
+                    width={w}
+                    height={h}
+                    className={
+                      ghost.collides
+                        ? "fill-destructive/15 stroke-destructive"
+                        : "fill-accent/15 stroke-accent"
+                    }
+                    strokeWidth={1.5}
+                    strokeDasharray="7 5"
+                  />
+                  {wall > 1.5 && (
+                    <rect
+                      x={p.x + wall}
+                      y={p.y + wall}
+                      width={Math.max(0, w - wall * 2)}
+                      height={Math.max(0, h - wall * 2)}
+                      className={cn(
+                        "fill-none",
+                        ghost.collides ? "stroke-destructive/40" : "stroke-accent/40",
+                      )}
+                      strokeWidth={1}
+                    />
+                  )}
+                  {w > 46 && (
+                    <text
+                      x={p.x + w / 2}
+                      y={p.y + h / 2}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className={cn(
+                        "select-none text-[10px] font-medium",
+                        ghost.collides ? "fill-destructive" : "fill-accent",
+                      )}
+                    >
+                      {ghost.collides ? "наложение" : ghost.picked ? "вплотную" : `${r.w} × ${r.h}`}
+                    </text>
+                  )}
+                </>
+              );
+            })()}
+          </g>
+        )}
+
+        {/* Призрак проёма: подсвеченная стена и отрезок будущего проёма. */}
+        {openingPreview && (
+          <g className="pointer-events-none">
+            {(() => {
+              const module = modules.find((m) => m.id === openingPreview.hit.moduleId);
+              if (!module) return null;
+              const face = worldFace(module, openingPreview.hit.faceId);
+              const fa = toScreen(face.from.x, face.from.y);
+              const fb = toScreen(face.to.x, face.to.y);
+              const a = toScreen(openingPreview.seg.from.x, openingPreview.seg.from.y);
+              const b = toScreen(openingPreview.seg.to.x, openingPreview.seg.to.y);
+              return (
+                <>
+                  <line
+                    x1={fa.x}
+                    y1={fa.y}
+                    x2={fb.x}
+                    y2={fb.y}
+                    strokeWidth={3}
+                    className="stroke-accent/35"
+                  />
+                  <line
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    strokeWidth={7}
+                    strokeLinecap="butt"
+                    className="stroke-accent"
+                  />
+                  <text
+                    x={(a.x + b.x) / 2}
+                    y={(a.y + b.y) / 2 - 12}
+                    textAnchor="middle"
+                    className="fill-accent text-[11px] font-semibold"
+                  >
+                    {openingPreview.placed.widthMm} мм · {openingPreview.hit.faceId}
+                  </text>
+                </>
+              );
+            })()}
           </g>
         )}
 
@@ -834,6 +1169,38 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
         {selection.length > 1 && (
           <span className="pointer-events-auto rounded-sm bg-accent/15 px-2 py-1 text-accent shadow-sm">
             Выбрано модулей: {selection.length}
+          </span>
+        )}
+        {/*
+          Пока проём в руке, человеку нужно знать две вещи: что делать дальше
+          и почему ничего не подсвечивается, если он держит курсор в пустоте.
+        */}
+        {placingPresetId && (
+          <span
+            className={cn(
+              "pointer-events-auto rounded-sm px-2 py-1 shadow-sm",
+              openingPreview
+                ? "bg-accent/15 text-accent"
+                : "bg-background/90 text-muted-foreground",
+            )}
+          >
+            {openingPreview
+              ? "Клик — поставить проём · Esc — отмена"
+              : "Наведите на стену дома · Esc — отмена"}
+          </span>
+        )}
+        {tool === "add" && (
+          <span
+            className={cn(
+              "pointer-events-auto rounded-sm px-2 py-1 shadow-sm",
+              ghost?.collides ? "bg-destructive/10 text-destructive" : "bg-accent/15 text-accent",
+            )}
+          >
+            {ghost?.collides
+              ? "Здесь модуль наложится на соседний"
+              : ghost?.picked
+                ? "Клик — поставить вплотную к соседу"
+                : "Клик — поставить модуль"}
           </span>
         )}
       </div>

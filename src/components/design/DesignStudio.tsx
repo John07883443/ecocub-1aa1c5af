@@ -5,12 +5,16 @@ import {
   Trash2,
   Check,
   CloudOff,
+  Columns3,
   Download,
+  DoorOpen,
   FilePlus2,
-  Grid3x3,
   Loader2,
   MousePointer2,
+  PackagePlus,
+  PanelsTopLeft,
   Redo2,
+  RectangleHorizontal,
   Ruler,
   Save,
   Undo2,
@@ -31,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { OPENING_PRESETS } from "@/lib/house-project/catalog";
+import { OPENING_TOOLS } from "@/lib/house-project/opening-place";
 import { useDesignEditor } from "@/lib/house-project/editor";
 import { createProject } from "@/lib/house-project/factory";
 import { computeMetrics } from "@/lib/house-project/geometry";
@@ -48,7 +53,7 @@ import {
 import { formatArea, plural } from "@/lib/house-projects";
 import { cn } from "@/lib/utils";
 import { Inspector } from "./Inspector";
-import { PlanCanvas, type Tool } from "./PlanCanvas";
+import { OPENING_DND_TYPE, PlanCanvas, type Tool } from "./PlanCanvas";
 import { PublishPanel } from "./PublishPanel";
 import { UnderlayPanel } from "./UnderlayPanel";
 import { ValidationPanel } from "./ValidationPanel";
@@ -72,6 +77,14 @@ const CAMERA_VIEWS = [
 ] as const;
 
 type CameraView = (typeof CAMERA_VIEWS)[number]["id"];
+
+/** Значки инструментов-проёмов. Тип проёма один — значок один. */
+const OPENING_TOOL_ICONS = {
+  window: RectangleHorizontal,
+  door: DoorOpen,
+  panoramic: PanelsTopLeft,
+  passage: Columns3,
+} as const;
 
 /**
  * Рабочее место проектировщика.
@@ -152,6 +165,11 @@ export function DesignStudio() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [facePick, setFacePick] = useState<{ moduleId: string; faceId: FaceId } | null>(null);
+  /** Проём, взятый в верхней панели и ждущий стены. */
+  const [openingPresetId, setOpeningPresetId] = useState<string | null>(null);
+  // Стабильная ссылка: план вешает на неё обработчик Escape, и меняющаяся
+  // на каждый рендер функция переподписывала бы его без нужды.
+  const clearOpeningTool = useCallback(() => setOpeningPresetId(null), []);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -655,20 +673,75 @@ export function DesignStudio() {
         <div className="flex gap-1">
           {(
             [
-              { id: "select", label: "Выбор", icon: MousePointer2 },
-              { id: "add", label: "Модуль", icon: Grid3x3 },
-              { id: "measure", label: "Линейка", icon: Ruler },
+              { id: "select", label: "Выбор", icon: MousePointer2, hint: "Двигать и выделять" },
+              {
+                id: "add",
+                label: "Модуль",
+                icon: PackagePlus,
+                hint: "Поставить кубик 3200 × 3420. Наведите на план — увидите, куда он встанет",
+              },
+              { id: "measure", label: "Линейка", icon: Ruler, hint: "Измерить расстояние" },
             ] as const
-          ).map(({ id, label, icon: Icon }) => (
+          ).map(({ id, label, icon: Icon, hint }) => (
             <Button
               key={id}
               size="sm"
+              title={hint}
               variant={tool === id ? "default" : "outline"}
-              onClick={() => setTool(id)}
+              onClick={() => {
+                setTool(id);
+                // Два инструмента в руке одновременно — это всегда ошибка:
+                // клик по плану означал бы сразу два разных действия.
+                setOpeningPresetId(null);
+              }}
             >
               <Icon className="size-4" /> {label}
             </Button>
           ))}
+        </div>
+
+        <span className="mx-1 h-6 w-px bg-border" />
+
+        {/*
+          Проёмы — там же, где остальные инструменты.
+
+          Раньше окно можно было поставить, только угадав шестипиксельную
+          полоску на грани модуля: действие существовало, но найти его было
+          нечем. Здесь оно берётся как инструмент — кликом или перетаскиванием
+          прямо на стену, — и в обоих случаях до нажатия видно, где проём
+          окажется и какой он будет ширины.
+        */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">Проёмы</span>
+          {OPENING_TOOLS.map((t) => {
+            const Icon = OPENING_TOOL_ICONS[t.kind];
+            const active = openingPresetId === t.presetId;
+            return (
+              <Button
+                key={t.presetId}
+                size="sm"
+                variant={active ? "default" : "outline"}
+                draggable
+                title={`${t.label}: перетащите на стену или возьмите кликом. Ширина подгоняется под чистую длину стены (грань минус два простенка по 210 мм)`}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(OPENING_DND_TYPE, t.presetId);
+                  e.dataTransfer.effectAllowed = "copy";
+                  // План узнаёт пресет отсюда: во время перетаскивания читать
+                  // dataTransfer запрещено, доступны только имена типов.
+                  setOpeningPresetId(t.presetId);
+                  setTool("select");
+                }}
+                onDragEnd={() => setOpeningPresetId(null)}
+                onClick={() => {
+                  setOpeningPresetId(active ? null : t.presetId);
+                  setTool("select");
+                }}
+                className="cursor-grab active:cursor-grabbing"
+              >
+                <Icon className="size-4" /> {t.label}
+              </Button>
+            );
+          })}
         </div>
 
         <span className="mx-1 h-6 w-px bg-border" />
@@ -962,6 +1035,8 @@ export function DesignStudio() {
               snapStepMm={snapStepMm}
               showOtherFloors={showOtherFloors}
               onFacePick={(moduleId, faceId) => setFacePick({ moduleId, faceId })}
+              openingPresetId={openingPresetId}
+              onOpeningToolDone={clearOpeningTool}
             />
           </div>
           <div
