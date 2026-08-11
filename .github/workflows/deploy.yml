@@ -116,6 +116,42 @@ jobs:
              mv "$f.tmp" "$f"
              echo "запасной пароль записан в окружение сервера"'
 
+      # Ключи Google OAuth для входа владельца в режим проектирования.
+      #
+      # Завести их секретами репозитория недостаточно: секреты Actions живут
+      # только внутри workflow, а design-google.server.ts читает
+      # process.env.GOOGLE_OAUTH_* на сервере в момент запроса — в бандл они
+      # не попадают. Поэтому значения кладутся в /home/deploy/ecocub.env, и
+      # обязательно ДО шага активации: pm2 перечитывает этот файл только при
+      # reload по конфигу, что и делает deploy.sh следующим шагом.
+      #
+      # Оба значения уходят одним потоком через stdin, а не аргументами:
+      # аргументы видны в списке процессов на удалённой машине. В логи они не
+      # попадают — GitHub маскирует значения секретов.
+      - name: Ключи Google OAuth
+        env:
+          GOOGLE_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+        run: |
+          if [ -z "$GOOGLE_ID" ] || [ -z "$GOOGLE_SECRET" ]; then
+            echo "GOOGLE_OAUTH_* не заданы — вход через Google останется выключенным, шаг пропущен"
+            exit 0
+          fi
+          printf '%s\n%s\n' "$GOOGLE_ID" "$GOOGLE_SECRET" | ssh -i ~/.ssh/id_ed25519 \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            deploy@${{ secrets.VPS_HOST }} \
+            'set -eu
+             read -r id
+             read -r secret
+             f=/home/deploy/ecocub.env
+             touch "$f"; chmod 600 "$f"
+             grep -v -e "^GOOGLE_OAUTH_CLIENT_ID=" \
+                     -e "^GOOGLE_OAUTH_CLIENT_SECRET=" "$f" > "$f.tmp" || true
+             printf "GOOGLE_OAUTH_CLIENT_ID=%s\n"     "$id"     >> "$f.tmp"
+             printf "GOOGLE_OAUTH_CLIENT_SECRET=%s\n" "$secret" >> "$f.tmp"
+             mv "$f.tmp" "$f"
+             echo "ключи Google записаны в окружение сервера"'
+
       - name: Активация на сервере
         run: |
           ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts \
