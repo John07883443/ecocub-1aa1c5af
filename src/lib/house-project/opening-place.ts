@@ -27,19 +27,42 @@ export const WALL_MM: Mm = BASE_MODULE.wallThicknessMm;
 /** Уже этого проём не бывает: 300 мм — это уже не проём, а щель в кладке. */
 const MIN_WIDTH_MM: Mm = 300;
 
+export interface OpeningTool {
+  presetId: string;
+  label: string;
+  kind: OpeningKind;
+  /**
+   * Ширина при постановке: вся чистая длина стены или число из справочника.
+   *
+   * «Вся стена» не может быть числом в справочнике: у короткой грани это
+   * 2780, у длинной 3000, и записать одно из них значило бы поставить не тот
+   * размер на половине стен.
+   */
+  widthMode: "full" | "preset";
+}
+
 /**
  * Инструменты верхней панели.
  *
  * Каждый ссылается на пресет из справочника: собственных чисел здесь нет и
  * быть не может, иначе панель и каталог разъедутся. Тест проверяет, что все
  * четыре идентификатора существуют.
+ *
+ * Окно по умолчанию — в пол и во всю стену. Это не вкусовое решение: так
+ * выглядит почти всё, что сегодня строится из модулей, и первое, что человек
+ * ставит, должно попадать в частый случай. Подоконник и половинная ширина
+ * никуда не делись — они в готовых вариантах рядом с полем ширины.
  */
-export const OPENING_TOOLS: { presetId: string; label: string; kind: OpeningKind }[] = [
-  { presetId: "window-2500", label: "Окно", kind: "window" },
-  { presetId: "entrance-door", label: "Дверь", kind: "door" },
-  { presetId: "panoramic-3150", label: "Витраж", kind: "panoramic" },
-  { presetId: "passage-open", label: "Проём", kind: "passage" },
+export const OPENING_TOOLS: OpeningTool[] = [
+  { presetId: "window-full", label: "Окно", kind: "window", widthMode: "full" },
+  { presetId: "entrance-door", label: "Дверь", kind: "door", widthMode: "preset" },
+  { presetId: "panoramic-3150", label: "Витраж", kind: "panoramic", widthMode: "full" },
+  { presetId: "passage-open", label: "Проём", kind: "passage", widthMode: "full" },
 ];
+
+export function findOpeningTool(presetId: string): OpeningTool | undefined {
+  return OPENING_TOOLS.find((t) => t.presetId === presetId);
+}
 
 export interface FaceHit {
   moduleId: string;
@@ -196,9 +219,16 @@ export function wallOf(module: ModuleInstance): Mm {
   return defOf(module).wallThicknessMm;
 }
 
-/** Ширина проёма по пресету, ужатая до чистой длины стены. */
+/**
+ * Ширина проёма по пресету на конкретной грани.
+ *
+ * Инструменты с `widthMode: "full"` растягиваются на всю чистую длину стены —
+ * на короткой грани это 2780, на длинной 3000. Остальные берут число из
+ * справочника, ужатое до той же чистой длины: входная дверь 800 остаётся 800.
+ */
 export function presetWidthOn(module: ModuleInstance, faceId: FaceId, presetId: string): Mm {
   const preset = OPENING_PRESETS.find((p) => p.id === presetId) ?? OPENING_PRESETS[0];
   const clear = clearSpanMm(faceSpanMm(module, faceId), wallOf(module));
+  if (findOpeningTool(presetId)?.widthMode === "full") return Math.max(MIN_WIDTH_MM, clear);
   return Math.max(MIN_WIDTH_MM, Math.min(preset.widthMm, clear));
 }

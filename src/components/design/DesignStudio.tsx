@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { OPENING_PRESETS } from "@/lib/house-project/catalog";
+import { bandCandidates } from "@/lib/house-project/opening-band";
 import { OPENING_TOOLS } from "@/lib/house-project/opening-place";
 import { useDesignEditor } from "@/lib/house-project/editor";
 import { createProject } from "@/lib/house-project/factory";
@@ -184,6 +185,44 @@ export function DesignStudio() {
     () => list.filter((p) => showArchived || p.status !== "archived" || p.id === project.id),
     [list, showArchived, project.id],
   );
+
+  /*
+    Подсказка про ленту остекления.
+
+    Спрашивать надо в тот момент, когда окно только что поставлено: через
+    минуту человек уже занят другим, и всплывшее «не желаете ли объединить»
+    будет мешать. Поэтому следим именно за появлением нового проёма, а не за
+    выделением — иначе предложение выскакивало бы каждый раз, когда на окно
+    просто нажали.
+  */
+  const knownOpenings = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(project.model.openings.map((o) => o.id));
+    const before = knownOpenings.current;
+    knownOpenings.current = ids;
+    // Первый показ и смена проекта — не добавление проёма.
+    if (!before || [...before].some((id) => !ids.has(id))) return;
+    const added = [...ids].filter((id) => !before.has(id));
+    if (added.length !== 1) return;
+
+    const candidate = bandCandidates(project.model, added[0])[0];
+    if (!candidate) return;
+    toast("Рядом такое же окно", {
+      description:
+        `Между ними ${candidate.gapMm} мм стены. Объединить в сплошную ленту ` +
+        `${candidate.bandWidthMm} мм? Наружные простенки останутся.`,
+      duration: 9000,
+      action: {
+        label: "Объединить",
+        onClick: () =>
+          dispatch({
+            type: "merge-band",
+            openingId: candidate.openingId,
+            neighbourId: candidate.neighbourId,
+          }),
+      },
+    });
+  }, [project.model, dispatch]);
 
   const issues = useMemo(() => validateProject(project), [project]);
   const metrics = useMemo(() => computeMetrics(project.model), [project.model]);
@@ -722,7 +761,12 @@ export function DesignStudio() {
                 size="sm"
                 variant={active ? "default" : "outline"}
                 draggable
-                title={`${t.label}: перетащите на стену или возьмите кликом. Ширина подгоняется под чистую длину стены (грань минус два простенка по 210 мм)`}
+                title={
+                  `${t.label}: перетащите на стену или возьмите кликом — работает и на плане, и в 3D. ` +
+                  (t.widthMode === "full"
+                    ? "Ширина — вся чистая длина стены (грань минус два простенка по 210 мм)."
+                    : "Ширина — из справочника, ужатая под стену.")
+                }
                 onDragStart={(e) => {
                   e.dataTransfer.setData(OPENING_DND_TYPE, t.presetId);
                   e.dataTransfer.effectAllowed = "copy";
@@ -1054,8 +1098,34 @@ export function DesignStudio() {
                     </div>
                   }
                 >
-                  <HouseView3D model={project.model} cameraView={cameraView} />
+                  <HouseView3D
+                    model={project.model}
+                    cameraView={cameraView}
+                    openingPresetId={openingPresetId}
+                    onPlaceOpening={(moduleId, faceId, alongMm) => {
+                      dispatch({
+                        type: "add-opening",
+                        moduleId,
+                        faceId,
+                        presetId: openingPresetId!,
+                        alongMm,
+                      });
+                      setOpeningPresetId(null);
+                    }}
+                    selectedOpeningId={state.selectedOpeningId}
+                    onSelectOpening={(id) => dispatch({ type: "select-opening", id })}
+                  />
                 </Suspense>
+                {/*
+                  В объёме проём ставится тем же взятым инструментом, что и на
+                  плане. Подсказка нужна: в 3D нет ни граней, ни точек привязки,
+                  и без строки человек не догадается, что стену можно нажать.
+                */}
+                {openingPresetId && (
+                  <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-sm bg-accent px-3 py-1.5 text-[11px] font-medium text-accent-foreground shadow-lg">
+                    Нажмите на стену — проём встанет туда · Esc — отмена
+                  </div>
+                )}
                 <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                   {CAMERA_VIEWS.map((v) => (
                     <button

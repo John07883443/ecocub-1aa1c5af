@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Edges, OrbitControls, Sky } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
-import { BASE_MODULE } from "@/lib/house-project/catalog";
+import { BASE_MODULE, OPENING_PRESETS, findOpeningPreset } from "@/lib/house-project/catalog";
 import {
   boundsOf,
   defOf,
@@ -12,7 +12,13 @@ import {
   moduleLevelMm,
   rectOf,
 } from "@/lib/house-project/geometry";
-import type { HouseModel, ModuleInstance, OpeningInstance } from "@/lib/house-project/types";
+import { nearestFace, placeOnFace, presetWidthOn } from "@/lib/house-project/opening-place";
+import type {
+  FaceId,
+  HouseModel,
+  ModuleInstance,
+  OpeningInstance,
+} from "@/lib/house-project/types";
 
 /**
  * Объём дома по канонической модели. Только просмотр.
@@ -38,6 +44,21 @@ function toScene(xMm: number, yMm: number): [number, number] {
 }
 
 /**
+ * Точка сцены обратно в миллиметры плана.
+ *
+ * Нужна для постановки проёма мышью прямо в объёме: луч попадает в стену и
+ * даёт точку в метрах сцены, а модель живёт в миллиметрах плана. Обратное
+ * преобразование написано здесь, рядом с прямым, — разъехавшаяся пара таких
+ * функций даёт зеркальный дом, и найти это глазами почти невозможно.
+ */
+function fromScene(sx: number, sz: number, centre: [number, number]): { x: number; y: number } {
+  return { x: (sx + centre[0]) / MM, y: -(sz + centre[1]) / MM };
+}
+
+/** Насколько далеко от плоскости стены точка ещё считается попаданием в неё, мм. */
+const FACE_HIT_TOLERANCE_MM = 400;
+
+/**
  * Ракурсы.
  *
  * `top` — ортографический вид сверху: параллельная проекция, в которой
@@ -55,6 +76,69 @@ interface Props {
   /** Показывать основание и землю. На странице проекта — да, в редакторе — по желанию. */
   showGround?: boolean;
   cameraView?: CameraView;
+  /**
+   * Пресет проёма, взятый в панели инструментов.
+   *
+   * Пока он задан, сцена перестаёт быть только просмотром: наведение на стену
+   * рисует будущий проём, клик его ставит. Публичная страница проекта этих
+   * свойств не передаёт и остаётся просмотром, как была.
+   */
+  openingPresetId?: string | null;
+  onPlaceOpening?: (moduleId: string, faceId: FaceId, alongMm: number) => void;
+  selectedOpeningId?: string | null;
+  onSelectOpening?: (id: string) => void;
+}
+
+/** Что будет поставлено, если нажать прямо сейчас. */
+interface OpeningPreview {
+  moduleId: string;
+  faceId: FaceId;
+  alongMm: number;
+  offsetMm: number;
+  widthMm: number;
+  sillMm: number;
+  heightMm: number;
+}
+
+/**
+ * Положение пластины проёма в сцене.
+ *
+ * Вынесено из отрисовки, потому что тем же расчётом живёт призрак будущего
+ * проёма: показать одно, а поставить другое — худшее, что может сделать
+ * редактор.
+ */
+function plateTransform(
+  module: ModuleInstance,
+  faceId: FaceId,
+  offsetMm: number,
+  widthMm: number,
+  sillMm: number,
+  heightMm: number,
+  centre: [number, number],
+): { position: [number, number, number]; rotation: [number, number, number] } {
+  const def = defOf(module);
+  const face = localFace(def, faceId);
+  const from = localToWorld(module, face.from);
+  const to = localToWorld(module, face.to);
+  const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+  const ux = (to.x - from.x) / len;
+  const uy = (to.y - from.y) / len;
+
+  const midMm = offsetMm + widthMm / 2;
+  const [sx, sz] = toScene(from.x + ux * midMm, from.y + uy * midMm);
+  const level = moduleLevelMm(module) * MM;
+
+  return {
+    // Пластина чуть вынесена наружу от стены, иначе она мерцает вровень с ней.
+    position: [
+      sx - centre[0] + ux * 0.02,
+      level + (sillMm + heightMm / 2) * MM,
+      sz - centre[1] + uy * 0.02,
+    ],
+    // Поворот вокруг вертикали: направление грани в плане переносится в сцену
+    // с учётом перевёрнутой оси глубины.
+    rotation: [0, Math.atan2(-uy, ux), 0],
+  };
 }
 
 /** Проёмы одной грани модуля — тонкие пластины поверх стены. */
@@ -62,47 +146,54 @@ function FaceOpenings({
   module,
   openings,
   centre,
+  selectedOpeningId,
+  onSelectOpening,
 }: {
   module: ModuleInstance;
   openings: OpeningInstance[];
   centre: [number, number];
+  selectedOpeningId?: string | null;
+  onSelectOpening?: (id: string) => void;
 }) {
-  const def = defOf(module);
-  const level = moduleLevelMm(module) * MM;
-
   return (
     <>
       {openings.map((o) => {
-        const face = localFace(def, o.faceId);
-        const from = localToWorld(module, face.from);
-        const to = localToWorld(module, face.to);
-        const len = Math.hypot(to.x - from.x, to.y - from.y);
-        if (!len) return null;
-        const ux = (to.x - from.x) / len;
-        const uy = (to.y - from.y) / len;
-
-        const midMm = o.offsetMm + o.widthMm / 2;
-        const px = from.x + ux * midMm;
-        const py = from.y + uy * midMm;
-        const [sx, sz] = toScene(px, py);
-
-        // Поворот пластины вокруг вертикали: направление грани в плане
-        // переносится в сцену с учётом перевёрнутой оси глубины.
-        const angle = Math.atan2(-uy, ux);
+        const t = plateTransform(
+          module,
+          o.faceId,
+          o.offsetMm,
+          o.widthMm,
+          o.sillMm,
+          o.heightMm,
+          centre,
+        );
+        const selected = selectedOpeningId === o.id;
 
         return (
           <mesh
             key={o.id}
-            position={[
-              sx - centre[0] + ux * 0.02,
-              level + (o.sillMm + o.heightMm / 2) * MM,
-              sz - centre[1] - -uy * 0.02,
-            ]}
-            rotation={[0, angle, 0]}
+            position={t.position}
+            rotation={t.rotation}
+            onClick={
+              onSelectOpening
+                ? (e) => {
+                    e.stopPropagation();
+                    onSelectOpening(o.id);
+                  }
+                : undefined
+            }
           >
             <planeGeometry args={[o.widthMm * MM, o.heightMm * MM]} />
             <meshStandardMaterial
-              color={o.kind === "door" ? "#5a4632" : o.kind === "passage" ? "#e8e6e1" : "#22333b"}
+              color={
+                selected
+                  ? "#b98a3c"
+                  : o.kind === "door"
+                    ? "#5a4632"
+                    : o.kind === "passage"
+                      ? "#e8e6e1"
+                      : "#22333b"
+              }
               roughness={o.kind === "passage" ? 0.9 : 0.25}
               metalness={o.kind === "passage" ? 0 : 0.1}
               transparent={o.kind !== "door" && o.kind !== "passage"}
@@ -116,14 +207,52 @@ function FaceOpenings({
   );
 }
 
+/** Полупрозрачная пластина на месте будущего проёма. */
+function OpeningGhost({
+  preview,
+  modules,
+  centre,
+}: {
+  preview: OpeningPreview;
+  modules: ModuleInstance[];
+  centre: [number, number];
+}) {
+  const module = modules.find((m) => m.id === preview.moduleId);
+  if (!module) return null;
+  const t = plateTransform(
+    module,
+    preview.faceId,
+    preview.offsetMm,
+    preview.widthMm,
+    preview.sillMm,
+    preview.heightMm,
+    centre,
+  );
+  return (
+    <mesh position={t.position} rotation={t.rotation}>
+      <planeGeometry args={[preview.widthMm * MM, preview.heightMm * MM]} />
+      <meshBasicMaterial color="#c8973f" transparent opacity={0.45} side={2} depthWrite={false} />
+    </mesh>
+  );
+}
+
 function ModuleBox({
   module,
   openings,
   centre,
+  selectedOpeningId,
+  onSelectOpening,
+  onWallHover,
+  onWallClick,
 }: {
   module: ModuleInstance;
   openings: OpeningInstance[];
   centre: [number, number];
+  selectedOpeningId?: string | null;
+  onSelectOpening?: (id: string) => void;
+  /** Точка на стене этого модуля в миллиметрах плана. null — курсор ушёл. */
+  onWallHover?: (module: ModuleInstance, point: { x: number; y: number } | null) => void;
+  onWallClick?: (module: ModuleInstance, point: { x: number; y: number }) => void;
 }) {
   const def = defOf(module);
   const f = footprintOf(module);
@@ -136,12 +265,39 @@ function ModuleBox({
 
   return (
     <group>
-      <mesh position={[sx - centre[0], y, sz - centre[1]]} castShadow receiveShadow>
+      <mesh
+        position={[sx - centre[0], y, sz - centre[1]]}
+        castShadow
+        receiveShadow
+        onPointerMove={
+          onWallHover
+            ? (e) => {
+                e.stopPropagation();
+                onWallHover(module, fromScene(e.point.x, e.point.z, centre));
+              }
+            : undefined
+        }
+        onPointerOut={onWallHover ? () => onWallHover(module, null) : undefined}
+        onClick={
+          onWallClick
+            ? (e) => {
+                e.stopPropagation();
+                onWallClick(module, fromScene(e.point.x, e.point.z, centre));
+              }
+            : undefined
+        }
+      >
         <boxGeometry args={[f.widthMm * MM, height, f.depthMm * MM]} />
         <meshStandardMaterial color="#e9e7e2" roughness={0.85} metalness={0} />
         <Edges threshold={15} color="#3b3a37" />
       </mesh>
-      <FaceOpenings module={module} openings={openings} centre={centre} />
+      <FaceOpenings
+        module={module}
+        openings={openings}
+        centre={centre}
+        selectedOpeningId={selectedOpeningId}
+        onSelectOpening={onSelectOpening}
+      />
     </group>
   );
 }
@@ -241,7 +397,67 @@ export default function HouseView3D({
   autoRotate = false,
   showGround = true,
   cameraView = "free",
+  openingPresetId = null,
+  onPlaceOpening,
+  selectedOpeningId = null,
+  onSelectOpening,
 }: Props) {
+  const [preview, setPreview] = useState<OpeningPreview | null>(null);
+  const placing = Boolean(openingPresetId && onPlaceOpening);
+
+  /**
+   * Что встанет в стену под курсором.
+   *
+   * Луч попадает в наружную поверхность модуля, поэтому точка попадания в
+   * плане лежит ровно на линии грани — та же геометрия, что и на плане, и
+   * ищется она той же функцией. Крыша отсекается сама: её точка далеко от
+   * всех четырёх граней, и `nearestFace` вернёт null.
+   */
+  const previewAt = useCallback(
+    (module: ModuleInstance, point: { x: number; y: number }): OpeningPreview | null => {
+      if (!openingPresetId) return null;
+      const hit = nearestFace([module], module.floor, point, FACE_HIT_TOLERANCE_MM);
+      if (!hit) return null;
+      const preset = findOpeningPreset(openingPresetId) ?? OPENING_PRESETS[0];
+      const width = presetWidthOn(module, hit.faceId, openingPresetId);
+      const placed = placeOnFace(hit.spanMm, hit.alongMm, width, defOf(module).wallThicknessMm);
+      return {
+        moduleId: module.id,
+        faceId: hit.faceId,
+        alongMm: hit.alongMm,
+        offsetMm: placed.offsetMm,
+        widthMm: placed.widthMm,
+        sillMm: preset.sillMm,
+        heightMm: preset.heightMm,
+      };
+    },
+    [openingPresetId],
+  );
+
+  const handleHover = useCallback(
+    (module: ModuleInstance, point: { x: number; y: number } | null) => {
+      if (!placing) return;
+      setPreview(point ? previewAt(module, point) : null);
+    },
+    [placing, previewAt],
+  );
+
+  const handleClick = useCallback(
+    (module: ModuleInstance, point: { x: number; y: number }) => {
+      if (!placing) return;
+      const next = previewAt(module, point);
+      if (!next) return;
+      onPlaceOpening?.(next.moduleId, next.faceId, next.alongMm);
+      setPreview(null);
+    },
+    [placing, previewAt, onPlaceOpening],
+  );
+
+  // Инструмент положили — призрак должен исчезнуть, а не остаться висеть.
+  useEffect(() => {
+    if (!placing) setPreview(null);
+  }, [placing]);
+
   const b = useMemo(() => boundsOf(model.modules), [model.modules]);
   const centre = useMemo<[number, number]>(() => {
     const [cx, cz] = toScene(b.minX + b.widthMm / 2, b.minY + b.depthMm / 2);
@@ -282,7 +498,15 @@ export default function HouseView3D({
         shadow-camera-top={span}
         shadow-camera-bottom={-span}
         shadow-camera-far={span * 4}
+        /*
+          Смещение карты теней. Одного `bias` мало: на больших плоских стенах
+          он даёт полосатую «лесенку» самозатенения, и с окнами во всю стену
+          её видно сквозь стекло на весь фасад. `normalBias` сдвигает выборку
+          вдоль нормали и убирает именно этот случай — плоскость, почти
+          параллельную лучам света.
+        */
         shadow-bias={-0.0004}
+        shadow-normalBias={0.05}
       />
 
       {showGround && (
@@ -304,8 +528,17 @@ export default function HouseView3D({
           module={m}
           openings={openingsByModule.get(m.id) ?? []}
           centre={centre}
+          selectedOpeningId={selectedOpeningId}
+          // Пока проём в руке, существующий не перехватывает клик: иначе
+          // поставить второе окно рядом с первым было бы нельзя — луч упёрся
+          // бы в пластину. Без обработчика r3f эту пластину не проверяет.
+          onSelectOpening={placing ? undefined : onSelectOpening}
+          onWallHover={placing ? handleHover : undefined}
+          onWallClick={placing ? handleClick : undefined}
         />
       ))}
+
+      {preview && <OpeningGhost preview={preview} modules={model.modules} centre={centre} />}
 
       <CameraRig view={cameraView} span={span} height={BASE_MODULE.clearHeightMm * MM} />
 

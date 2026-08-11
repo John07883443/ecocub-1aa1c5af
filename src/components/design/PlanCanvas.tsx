@@ -19,12 +19,20 @@ import {
   type FaceHit,
 } from "@/lib/house-project/opening-place";
 import { pickAnchor, snapAnchors, snapToStep, type SnapAnchor } from "@/lib/house-project/snap";
-import type { FaceId, ModuleInstance } from "@/lib/house-project/types";
+import type { FaceId, ModuleInstance, OpeningKind } from "@/lib/house-project/types";
 import { FACE_IDS } from "@/lib/house-project/types";
 import { cn } from "@/lib/utils";
 
 /** Тип данных перетаскивания «проём из панели инструментов». */
 export const OPENING_DND_TYPE = "application/x-ecocub-opening";
+
+/** Как проём называется в подсказке под курсором. */
+const OPENING_LABELS: Record<OpeningKind, string> = {
+  window: "Окно",
+  door: "Дверь",
+  panoramic: "Витраж",
+  passage: "Проём",
+};
 
 /**
  * План этажа в миллиметрах.
@@ -137,6 +145,8 @@ export function PlanCanvas({
     b?: { x: number; y: number };
   } | null>(null);
   const [hoverFace, setHoverFace] = useState<string | null>(null);
+  /** Проём под курсором — по нему рисуется подсказка «клик — изменить». */
+  const [hoverOpening, setHoverOpening] = useState<string | null>(null);
   /** Курсор в координатах модели: по нему живут оба призрака. */
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
   const [menu, setMenu] = useState<
@@ -199,17 +209,33 @@ export function PlanCanvas({
   // Escape — а не глазами по углам экрана.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setMeasure(null);
-      setMenu(null);
-      setMarquee(null);
-      // Взятый в панели проём тоже кладётся обратно: держать его в руке
-      // после отказа не должен ни один инструмент.
-      onOpeningToolDone();
+      // Пока курсор в поле ввода, Delete стирает цифру, а не объект. Без
+      // этой проверки правка ширины числом заканчивалась бы удалением проёма.
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "Escape") {
+        setMeasure(null);
+        setMenu(null);
+        setMarquee(null);
+        // Взятый в панели проём тоже кладётся обратно: держать его в руке
+        // после отказа не должен ни один инструмент.
+        onOpeningToolDone();
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (state.selectedOpeningId) {
+          e.preventDefault();
+          dispatch({ type: "delete-opening", id: state.selectedOpeningId });
+        } else if (selection.length) {
+          e.preventDefault();
+          dispatch({ type: "delete-modules", ids: selection });
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onOpeningToolDone]);
+  }, [onOpeningToolDone, dispatch, state.selectedOpeningId, selection]);
 
   /* --- Масштаб колесом ------------------------------------------------ */
 
@@ -843,56 +869,139 @@ export function PlanCanvas({
             const a = toScreen(seg.from.x, seg.from.y);
             const b = toScreen(seg.to.x, seg.to.y);
             const selected = state.selectedOpeningId === o.id;
-            return (
-              <line
-                key={o.id}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                strokeWidth={selected ? 6 : 4.5}
-                strokeLinecap="butt"
-                style={{ cursor: "grab" }}
-                className={cn(
-                  selected
-                    ? "stroke-accent"
-                    : o.kind === "door"
-                      ? "stroke-amber-600"
-                      : o.kind === "passage"
-                        ? "stroke-emerald-600"
-                        : "stroke-sky-600",
-                )}
-                onPointerDown={(e) => {
-                  // С проёмом в руке существующий проём не перехватывает клик:
-                  // иначе поставить второе окно рядом с первым было бы нельзя.
-                  if (placingPresetId) return;
-                  e.stopPropagation();
-                  setMenu(null);
-                  dispatch({ type: "select-opening", id: o.id });
+            const hovered = hoverOpening === o.id;
 
-                  if (e.button === 2) {
-                    const rect = hostRef.current?.getBoundingClientRect();
-                    setMenu({
-                      kind: "opening",
-                      id: o.id,
-                      px: e.clientX - (rect?.left ?? 0),
-                      py: e.clientY - (rect?.top ?? 0),
-                    });
-                    return;
-                  }
-                  if (tool !== "select") return;
-                  (e.target as Element).setPointerCapture?.(e.pointerId);
-                  setOpeningDrag({
-                    id: o.id,
-                    startOffsetMm: o.offsetMm,
-                    startAlongMm: alongFaceMm(m, o.faceId, pointerModel(e)),
-                    currentOffsetMm: o.offsetMm,
-                  });
-                }}
-              />
+            const onDown = (e: React.PointerEvent) => {
+              // С проёмом в руке существующий проём не перехватывает клик:
+              // иначе поставить второе окно рядом с первым было бы нельзя.
+              if (placingPresetId) return;
+              e.stopPropagation();
+              setMenu(null);
+              dispatch({ type: "select-opening", id: o.id });
+
+              if (e.button === 2) {
+                const rect = hostRef.current?.getBoundingClientRect();
+                setMenu({
+                  kind: "opening",
+                  id: o.id,
+                  px: e.clientX - (rect?.left ?? 0),
+                  py: e.clientY - (rect?.top ?? 0),
+                });
+                return;
+              }
+              if (tool !== "select") return;
+              (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+              setOpeningDrag({
+                id: o.id,
+                startOffsetMm: o.offsetMm,
+                startAlongMm: alongFaceMm(m, o.faceId, pointerModel(e)),
+                currentOffsetMm: o.offsetMm,
+              });
+            };
+
+            return (
+              <g key={o.id}>
+                {/*
+                  Невидимая полоса под проёмом — то, во что человек на самом
+                  деле целится. Сам проём рисуется линией в 4,5 пикселя: это
+                  правильная толщина для чертежа, но промахнуться по ней мышью
+                  можно почти всегда. Разводить «как выглядит» и «куда можно
+                  попасть» — обычный приём, и здесь он обязателен: иначе
+                  поставленное окно потом нельзя ни подвинуть, ни удалить.
+                */}
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  strokeWidth={18}
+                  strokeLinecap="butt"
+                  className="stroke-transparent"
+                  style={{ cursor: placingPresetId ? "crosshair" : "grab" }}
+                  onPointerEnter={() => setHoverOpening(o.id)}
+                  onPointerLeave={() => setHoverOpening((cur) => (cur === o.id ? null : cur))}
+                  onPointerDown={onDown}
+                />
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  strokeWidth={selected ? 7 : hovered ? 6.5 : 4.5}
+                  strokeLinecap="butt"
+                  className={cn(
+                    "pointer-events-none transition-[stroke-width]",
+                    selected
+                      ? "stroke-accent"
+                      : hovered
+                        ? "stroke-accent/80"
+                        : o.kind === "door"
+                          ? "stroke-amber-600"
+                          : o.kind === "passage"
+                            ? "stroke-emerald-600"
+                            : "stroke-sky-600",
+                  )}
+                />
+              </g>
             );
           })}
         </g>
+
+        {/*
+          Подсказка при наведении на проём.
+
+          Пока её не было, проём выглядел как декоративная чёрточка на стене:
+          что он вообще нажимается, знал только тот, кто его поставил. Здесь
+          прямо сказано, что это и что с ним делать, — а курсор уже сменился
+          на «взять».
+        */}
+        {hoverOpening &&
+          !placingPresetId &&
+          !openingDrag &&
+          (() => {
+            const o = project.model.openings.find((x) => x.id === hoverOpening);
+            const m = o ? modules.find((x) => x.id === o.moduleId) : undefined;
+            if (!o || !m || m.floor !== activeFloor) return null;
+            const seg = openingSegment(m, o);
+            if (!seg) return null;
+            const mid = toScreen((seg.from.x + seg.to.x) / 2, (seg.from.y + seg.to.y) / 2);
+            const band = o.bandId
+              ? project.model.openings.filter((x) => x.bandId === o.bandId).length
+              : 0;
+            const label =
+              `${OPENING_LABELS[o.kind]} ${o.widthMm} мм` + (band > 1 ? ` · лента из ${band}` : "");
+            const hint = "клик — изменить, правая кнопка — удалить";
+            const width = Math.max(label.length, hint.length) * 6.1 + 26;
+            const top = Math.max(4, mid.y - 46);
+            const left = Math.min(Math.max(4, mid.x - width / 2), size.width - width - 4);
+            return (
+              <g className="pointer-events-none">
+                <rect
+                  x={left}
+                  y={top}
+                  width={width}
+                  height={38}
+                  rx={4}
+                  className="fill-foreground/90"
+                />
+                {/* Значок «нажми»: стрелка курсора перед первой строкой. */}
+                <path
+                  d={`M${left + 9} ${top + 10} l0 11 l2.6 -2.6 l1.9 4.2 l1.9 -0.9 l-1.9 -4.1 l3.4 -0.2 z`}
+                  className="fill-background"
+                />
+                <text
+                  x={left + 24}
+                  y={top + 16}
+                  className="fill-background text-[11px] font-medium"
+                >
+                  {label}
+                </text>
+                <text x={left + 12} y={top + 30} className="fill-background/70 text-[10px]">
+                  {hint}
+                </text>
+              </g>
+            );
+          })()}
 
         {/* Точки допустимых положений — видно, куда модуль может встать. */}
         {drag && anchors.length > 0 && (

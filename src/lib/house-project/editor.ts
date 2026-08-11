@@ -2,6 +2,7 @@ import { useCallback, useMemo, useReducer } from "react";
 import { findOpeningPreset, OPENING_PRESETS } from "./catalog";
 import { createModule, newId } from "./factory";
 import { footprintOf, localFace, defOf } from "./geometry";
+import { bandCandidates, mergeBand } from "./opening-band";
 import { placeOnFace, presetWidthOn } from "./opening-place";
 import type { FaceId, HouseProject, ModuleInstance, OpeningInstance, RotationDeg } from "./types";
 
@@ -52,6 +53,8 @@ export type EditorAction =
       alongMm?: number;
     }
   | { type: "patch-opening"; id: string; patch: Partial<OpeningInstance> }
+  | { type: "merge-band"; openingId: string; neighbourId: string }
+  | { type: "split-band"; id: string }
   | { type: "delete-opening"; id: string }
   | { type: "patch-project"; patch: Partial<HouseProject> }
   | { type: "select"; ids: string[] }
@@ -262,6 +265,53 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         }),
         selectedOpeningId: opening.id,
       };
+    }
+
+    case "merge-band": {
+      // Кандидат пересчитывается здесь, а не приходит готовым из интерфейса.
+      // Подсказка про объединение живёт во всплывающем сообщении несколько
+      // секунд, и за это время окно могли подвинуть или изменить: применять
+      // рассчитанное «тогда» смещение значило бы промахнуться молча.
+      const candidate = bandCandidates(project.model, action.openingId).find(
+        (c) => c.neighbourId === action.neighbourId,
+      );
+      if (!candidate) return state;
+
+      // Оба окна правятся одним шагом истории: объединение — это одно
+      // действие человека, и отменяться оно должно одним нажатием.
+      const patches = mergeBand(project.model, candidate, newId("band"));
+      if (!patches.length) return state;
+      const byId = new Map(patches.map((p) => [p.id, p]));
+      return {
+        ...withHistory(state, {
+          ...project,
+          model: {
+            ...project.model,
+            openings: project.model.openings.map((o) => {
+              const p = byId.get(o.id);
+              return p ? { ...o, offsetMm: p.offsetMm, widthMm: p.widthMm, bandId: p.bandId } : o;
+            }),
+          },
+        }),
+        selectedOpeningId: candidate.openingId,
+      };
+    }
+
+    case "split-band": {
+      // Разъединение снимает только метку. Ширину назад не отматываем: за
+      // время в ленте её могли поменять, и «вернуть как было» означало бы
+      // выкинуть чужую правку.
+      const target = project.model.openings.find((o) => o.id === action.id);
+      if (!target?.bandId) return state;
+      return withHistory(state, {
+        ...project,
+        model: {
+          ...project.model,
+          openings: project.model.openings.map((o) =>
+            o.bandId === target.bandId ? { ...o, bandId: undefined } : o,
+          ),
+        },
+      });
     }
 
     case "patch-opening":

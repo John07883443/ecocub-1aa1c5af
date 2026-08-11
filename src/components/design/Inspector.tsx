@@ -1,4 +1,13 @@
-import { Copy, RotateCcw, RotateCw, Trash2, FlipHorizontal2, MoveVertical } from "lucide-react";
+import {
+  Combine,
+  Copy,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+  FlipHorizontal2,
+  MoveVertical,
+  Ungroup,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +20,7 @@ import {
   moduleLevelMm,
   supportAreaMm2,
 } from "@/lib/house-project/geometry";
+import { bandCandidates, bandMembers } from "@/lib/house-project/opening-band";
 import {
   clearSpanMm,
   heightOptions,
@@ -88,6 +98,11 @@ export function Inspector({ editor }: { editor: DesignEditor }) {
     const module = modules.find((m) => m.id === selectedOpening.moduleId);
     const def = module ? defOf(module) : null;
     const span = module && def ? localFace(def, selectedOpening.faceId).spanMm : 0;
+    // Первый подходящий сосед. Их редко больше одного, а выбирать между
+    // двумя одинаковыми предложениями человеку незачем — он объединит второе
+    // следующим действием.
+    const candidate = bandCandidates(state.project.model, selectedOpening.id)[0];
+    const inBand = bandMembers(state.project.model, selectedOpening.id);
     const preset = selectedOpening.variantId
       ? findOpeningPreset(
           OPENING_PRESETS.find((p) => p.variantId === selectedOpening.variantId)?.id ?? "",
@@ -107,6 +122,54 @@ export function Inspector({ editor }: { editor: DesignEditor }) {
             <Trash2 className="size-4" /> Удалить
           </Button>
         </div>
+
+        {/*
+          Подсказка про ленту остекления.
+
+          Два окна во всю стену на соседних модулях разделены двумя
+          простенками по 210 мм — на фасаде это узкая перемычка посреди
+          сплошного стекла. Человек такое соотношение в уме не считает, и
+          заметить случай должен редактор. Решение всё равно за
+          проектировщиком: перемычку часто оставляют осознанно.
+        */}
+        {candidate && (
+          <div className="rounded-sm border border-accent/50 bg-accent/5 p-2.5">
+            <p className="text-xs font-medium">Рядом такое же окно</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Между ними {candidate.gapMm} мм стены. Объединение уберёт простенки у стыка и даст
+              сплошную ленту {candidate.bandWidthMm} мм. Наружные простенки останутся.
+            </p>
+            <Button
+              size="sm"
+              className="mt-2 h-7 text-[11px]"
+              onClick={() =>
+                dispatch({
+                  type: "merge-band",
+                  openingId: candidate.openingId,
+                  neighbourId: candidate.neighbourId,
+                })
+              }
+            >
+              <Combine className="size-3.5" /> Объединить в ленту
+            </Button>
+          </div>
+        )}
+
+        {inBand.length > 1 && (
+          <div className="flex items-center justify-between rounded-sm border border-border bg-muted/40 p-2.5">
+            <p className="text-[11px] text-muted-foreground">
+              Лента остекления из {inBand.length} окон
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-[11px]"
+              onClick={() => dispatch({ type: "split-band", id: selectedOpening.id })}
+            >
+              <Ungroup className="size-3.5" /> Разъединить
+            </Button>
+          </div>
+        )}
 
         {/*
           Готовые размеры первым делом, поля с цифрами — под ними.

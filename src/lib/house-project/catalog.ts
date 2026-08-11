@@ -155,6 +155,23 @@ const SILL_LINE_MM: Mm = 700;
 
 export const OPENING_PRESETS: OpeningPreset[] = [
   {
+    id: "window-full",
+    label: "Окно в пол во всю стену",
+    kind: "window",
+    // Чистая ширина модуля из стандарта: 3200 − 2 × 210. На длинной грани
+    // редактор подставит чистую глубину — ширина «во всю стену» считается по
+    // конкретной грани, а не берётся отсюда числом.
+    widthMm: MODULE.clearWidthMm,
+    heightMm: topOf("h3150"),
+    sillMm: 0,
+    widthConfirmed: false,
+    sillConfirmed: true,
+    variantId: "h3150",
+    note:
+      "Остекление в пол на всю чистую длину стены. Высота 3150 подтверждена альбомом " +
+      "(модуль B, Р-1…Р-3); ширина считается по грани за вычетом двух простенков по 210 мм.",
+  },
+  {
     id: "entrance-door",
     label: "Входная дверь 800 × 2100",
     kind: "door",

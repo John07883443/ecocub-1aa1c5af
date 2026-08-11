@@ -119,10 +119,25 @@ test("предлагаемые высоты не превышают высоту
   assert.ok(low.length > 0);
 });
 
-test("ширина пресета ужимается под конкретную грань", () => {
+test("ширина считается по конкретной грани, а не берётся числом", () => {
   const m = mod("A");
-  // Панорама 2300 помещается в чистую длину и той и другой грани.
-  assert.equal(presetWidthOn(m, "Р-1", "panoramic-3150"), 2300);
+  // Инструменты «во всю стену» дают чистую длину именно этой грани:
+  // 2780 у короткой и 3000 у длинной. Одного числа для обеих не существует.
+  assert.equal(presetWidthOn(m, "Р-1", "window-full"), clearSpanMm(W));
+  assert.equal(presetWidthOn(m, "Р-2", "window-full"), clearSpanMm(D));
+  assert.equal(presetWidthOn(m, "Р-1", "panoramic-3150"), clearSpanMm(W));
+
   // Входная дверь 800 остаётся 800 — это подтверждённый чертежом габарит.
   assert.equal(presetWidthOn(m, "Р-4", "entrance-door"), 800);
+  // Пресет не из панели берёт своё число из справочника.
+  assert.equal(presetWidthOn(m, "Р-1", "window-2500"), 1500);
+});
+
+test("окно по умолчанию — в пол и во всю стену", () => {
+  const tool = OPENING_TOOLS[0];
+  assert.equal(tool.label, "Окно");
+  assert.equal(tool.widthMode, "full");
+  const preset = OPENING_PRESETS.find((p) => p.id === tool.presetId)!;
+  assert.equal(preset.sillMm, 0, "низ проёма — чистый пол");
+  assert.equal(preset.heightMm, BASE_MODULE.clearHeightMm, "верх — потолок 3150");
 });

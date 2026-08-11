@@ -110,6 +110,7 @@ function parseOpening(raw: unknown): OpeningInstance | null {
     sillMm: mm(r.sillMm, 0),
     swing: swing && SWINGS.includes(swing) ? swing : undefined,
     variantId: str(r.variantId),
+    bandId: str(r.bandId),
     note: str(r.note),
   });
 }
