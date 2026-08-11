@@ -1,5 +1,6 @@
 import { BASE_MODULE } from "./catalog.ts";
 import { defOf, footprintOf, rectOf } from "./geometry.ts";
+import { overlapsAny } from "./overlap.ts";
 import type { Mm, ModuleInstance } from "./types.ts";
 
 /**
@@ -137,22 +138,11 @@ export function snapAnchors(
     стоят справа. Магнит тянул именно туда, потому что точка была ближе всех
     к курсору, и человек получал наложение вместо стыка.
 
-    Наложение ровно на толщину стены не пересечение, а общая стена: два модуля
-    отлиты в один объём. Поэтому порог — «толще стены хотя бы по одной оси»,
-    а не «пересекается вообще».
+    Что считать наложением, решает `overlap.ts` — та же функция, которой
+    запрет проведён в редукторе. Двух ответов на вопрос «это стык или
+    пересечение?» в проекте быть не должно.
   */
-  const wallLimit = defOf(moving).wallThicknessMm;
-  return out.filter((a) => {
-    const candidate = { x: a.x, y: a.y, w: f.widthMm, h: f.depthMm };
-    for (const other of modules) {
-      if (other.id === moving.id || other.floor !== moving.floor) continue;
-      const r = rectOf(other);
-      const ox = Math.min(candidate.x + candidate.w, r.x + r.w) - Math.max(candidate.x, r.x);
-      const oy = Math.min(candidate.y + candidate.h, r.y + r.h) - Math.max(candidate.y, r.y);
-      if (ox > wallLimit && oy > wallLimit) return false;
-    }
-    return true;
-  });
+  return out.filter((a) => !overlapsAny({ ...moving, positionMm: { x: a.x, y: a.y } }, modules));
 }
 
 /** Ближайшая привязка к «сырой» точке, если она в пределах порога. */

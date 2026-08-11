@@ -224,6 +224,14 @@ export function DesignStudio() {
     });
   }, [project.model, dispatch]);
 
+  // Отклонённое действие: редуктор не умеет показывать сообщения, а молча
+  // ничего не сделать хуже ошибки — человек решит, что сломалась мышь.
+  useEffect(() => {
+    if (state.rejection) toast.error(state.rejection.reason);
+    // Следим за номером, а не за объектом: два одинаковых отказа подряд —
+    // это два события, и сказать надо о каждом.
+  }, [state.rejection?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const issues = useMemo(() => validateProject(project), [project]);
   const metrics = useMemo(() => computeMetrics(project.model), [project.model]);
 
@@ -732,6 +740,10 @@ export function DesignStudio() {
                 // Два инструмента в руке одновременно — это всегда ошибка:
                 // клик по плану означал бы сразу два разных действия.
                 setOpeningPresetId(null);
+                // Модуль и линейка работают только на плане. Взять их, стоя в
+                // 3D, значит остаться с инструментом, который никуда не
+                // нажимается, — поэтому вид переключается сам.
+                if (id !== "select") setView("plan");
               }}
             >
               <Icon className="size-4" /> {label}
@@ -870,7 +882,13 @@ export function DesignStudio() {
           ) : saveState === "saved" ? (
             <Check className="size-3.5" />
           ) : null}
-          {saveLabel[saveState]}
+          {/*
+            Причина отказа пишется рядом, а не прячется в подсказке при
+            наведении. «Ошибка сохранения» без причины — сообщение, по
+            которому нельзя ничего сделать: непонятно, потерялась ли правка,
+            надо ли перезагрузить страницу или дело в сети.
+          */}
+          {saveState === "error" && saveError ? `Не сохранено: ${saveError}` : saveLabel[saveState]}
         </span>
 
         <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
@@ -888,7 +906,13 @@ export function DesignStudio() {
           <Button
             size="sm"
             variant={view === "3d" ? "default" : "outline"}
-            onClick={() => setView("3d")}
+            onClick={() => {
+              setView("3d");
+              // Модули и линейка в объёме не работают: уйти туда с ними в
+              // руке значит получить инструмент, который никуда не нажимается.
+              // Проём, наоборот, ставится и там — его не трогаем.
+              setTool("select");
+            }}
           >
             <Box className="size-4" /> 3D
           </Button>

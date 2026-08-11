@@ -1,10 +1,17 @@
 import { useCallback, useMemo, useReducer } from "react";
-import { findOpeningPreset, OPENING_PRESETS } from "./catalog";
-import { createModule, newId } from "./factory";
-import { footprintOf, localFace, defOf } from "./geometry";
-import { bandCandidates, mergeBand } from "./opening-band";
-import { placeOnFace, presetWidthOn } from "./opening-place";
-import type { FaceId, HouseProject, ModuleInstance, OpeningInstance, RotationDeg } from "./types";
+import { findOpeningPreset, OPENING_PRESETS } from "./catalog.ts";
+import { createModule, newId } from "./factory.ts";
+import { footprintOf, localFace, defOf } from "./geometry.ts";
+import { bandCandidates, mergeBand } from "./opening-band.ts";
+import { placeOnFace, presetWidthOn } from "./opening-place.ts";
+import { freeSpotNear, newOverlaps } from "./overlap.ts";
+import type {
+  FaceId,
+  HouseProject,
+  ModuleInstance,
+  OpeningInstance,
+  RotationDeg,
+} from "./types.ts";
 
 /**
  * Состояние редактора: сам проект плюс история отмены.
@@ -31,6 +38,15 @@ export interface EditorState {
   activeFloor: number;
   /** Есть ли несохранённые изменения. */
   dirty: boolean;
+  /**
+   * Последнее отклонённое действие.
+   *
+   * Редуктор не умеет показывать сообщения, а молча ничего не делать хуже
+   * ошибки: человек решит, что сломалась мышь. Поэтому причина кладётся в
+   * состояние, а интерфейс на неё смотрит. Номер нужен, чтобы два одинаковых
+   * отказа подряд считались двумя событиями, а не одним.
+   */
+  rejection: { seq: number; reason: string } | null;
 }
 
 export type EditorAction =
@@ -70,7 +86,41 @@ function withHistory(state: EditorState, next: HouseProject): EditorState {
     future: [],
     project: { ...next, updatedAt: new Date().toISOString() },
     dirty: true,
+    rejection: null,
   };
+}
+
+/**
+ * Застава против наложения модулей.
+ *
+ * Стоит здесь, а не в каждом обработчике мыши, и это принципиально. Способов
+ * сдвинуть модуль много: перетаскивание, ввод координаты числом, поворот,
+ * дублирование, перенос на этаж. Проверять наложение в каждом из них значит
+ * рано или поздно забыть про один — и запрет, который действует «почти
+ * всегда», не запрет вовсе. Через редуктор проходят все, и проверка одна.
+ *
+ * Сравнивается с прежним состоянием: если наложение уже лежало в проекте
+ * (старая запись, импорт чужого JSON), чинить его должно быть можно.
+ */
+function guardOverlap(
+  state: EditorState,
+  next: HouseProject,
+  extra?: Partial<EditorState>,
+): EditorState {
+  const added = newOverlaps(state.project.model.modules, next.model.modules);
+  if (added.length) {
+    return {
+      ...state,
+      rejection: {
+        seq: (state.rejection?.seq ?? 0) + 1,
+        reason:
+          added.length === 1
+            ? "Модули наложились бы друг на друга — так дом не собрать"
+            : `Наложение сразу в ${added.length} местах — так дом не собрать`,
+      },
+    };
+  }
+  return { ...withHistory(state, next), ...extra };
 }
 
 function mapModules(
@@ -138,6 +188,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         selectedOpeningId: null,
         activeFloor: 0,
         dirty: false,
+        rejection: null,
       };
 
     case "saved":
@@ -147,18 +198,16 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 
     case "add-module": {
       const m = createModule(action.x, action.y, state.activeFloor);
-      return {
-        ...withHistory(state, {
-          ...project,
-          model: { ...project.model, modules: [...project.model.modules, m] },
-        }),
-        selection: [m.id],
-      };
+      return guardOverlap(
+        state,
+        { ...project, model: { ...project.model, modules: [...project.model.modules, m] } },
+        { selection: [m.id] },
+      );
     }
 
     case "move-modules": {
       const byId = new Map(action.moves.map((mv) => [mv.id, mv]));
-      return withHistory(
+      return guardOverlap(
         state,
         mapModules(project, (m) => {
           const mv = byId.get(m.id);
@@ -168,14 +217,14 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     }
 
     case "patch-module":
-      return withHistory(
+      return guardOverlap(
         state,
         mapModules(project, (m) => (m.id === action.id ? { ...m, ...action.patch } : m)),
       );
 
     case "rotate": {
       const ids = new Set(action.ids);
-      return withHistory(
+      return guardOverlap(
         state,
         mapModules(project, (m) =>
           ids.has(m.id) ? { ...m, rotationDeg: turn(m.rotationDeg, action.direction) } : m,
@@ -185,7 +234,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 
     case "mirror": {
       const ids = new Set(action.ids);
-      return withHistory(
+      return guardOverlap(
         state,
         mapModules(project, (m) => {
           if (!ids.has(m.id)) return m;
@@ -225,32 +274,44 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
           // друга модули невозможно разделить мышью.
           positionMm: { x: m.positionMm.x + f.widthMm, y: m.positionMm.y },
         };
+        // Место справа почти всегда занято соседом. Требовать от человека
+        // сначала расчистить его — глупость: копия сама обходит занятое.
+        const spot = freeSpotNear(copy, [...project.model.modules, ...copies]);
+        if (!spot) continue;
+        copy.positionMm = spot;
         copies.push(copy);
         for (const o of project.model.openings) {
           if (o.moduleId !== m.id) continue;
           openings.push({ ...o, id: newId("o"), moduleId: copy.id });
         }
       }
-      if (!copies.length) return state;
-      return {
-        ...withHistory(state, {
+      if (!copies.length) {
+        return {
+          ...state,
+          rejection: {
+            seq: (state.rejection?.seq ?? 0) + 1,
+            reason: "Рядом нет свободного места для копии",
+          },
+        };
+      }
+      return guardOverlap(
+        state,
+        {
           ...project,
           model: { ...project.model, modules: [...project.model.modules, ...copies], openings },
-        }),
-        selection: copies.map((c) => c.id),
-      };
+        },
+        { selection: copies.map((c) => c.id) },
+      );
     }
 
     case "move-to-floor": {
       const ids = new Set(action.ids);
       const floor = Math.max(0, action.floor);
-      return {
-        ...withHistory(
-          state,
-          mapModules(project, (m) => (ids.has(m.id) ? { ...m, floor } : m)),
-        ),
-        activeFloor: floor,
-      };
+      return guardOverlap(
+        state,
+        mapModules(project, (m) => (ids.has(m.id) ? { ...m, floor } : m)),
+        { activeFloor: floor },
+      );
     }
 
     case "add-opening": {
@@ -387,6 +448,7 @@ export function useDesignEditor(initial: HouseProject) {
     selectedOpeningId: null,
     activeFloor: 0,
     dirty: false,
+    rejection: null,
   });
 
   const floors = useMemo(() => {

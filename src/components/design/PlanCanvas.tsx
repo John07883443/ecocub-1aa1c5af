@@ -18,6 +18,7 @@ import {
   wallOf,
   type FaceHit,
 } from "@/lib/house-project/opening-place";
+import { overlapsAny } from "@/lib/house-project/overlap";
 import { pickAnchor, snapAnchors, snapToStep, type SnapAnchor } from "@/lib/house-project/snap";
 import type { FaceId, ModuleInstance, OpeningKind } from "@/lib/house-project/types";
 import { FACE_IDS } from "@/lib/house-project/types";
@@ -305,18 +306,10 @@ export function PlanCanvas({
       ? { x: picked.x, y: picked.y }
       : { x: snapToStep(rawX, snapStepMm), y: snapToStep(rawY, snapStepMm) };
 
-    // Вне привязки модуль можно поставить куда угодно, в том числе поверх
-    // соседа. Запрещать это нельзя — иногда так и надо, а разбирается с этим
-    // проверка проекта. Но показать наложение до нажатия обязательно: молча
-    // получить два модуля в одном объёме человек не должен.
-    const wallLimit = defOf(probe).wallThicknessMm;
-    const collides = modules.some((other) => {
-      if (other.floor !== probe.floor) return false;
-      const r = rectOf(other);
-      const ox = Math.min(positionMm.x + f.widthMm, r.x + r.w) - Math.max(positionMm.x, r.x);
-      const oy = Math.min(positionMm.y + f.depthMm, r.y + r.h) - Math.max(positionMm.y, r.y);
-      return ox > wallLimit && oy > wallLimit;
-    });
+    // Вне привязки курсор может увести модуль на соседа. Ставить его туда
+    // нельзя — два объёма не занимают одно место, — поэтому наложение видно
+    // ещё до нажатия, а само нажатие в этом положении ничего не делает.
+    const collides = overlapsAny({ ...probe, positionMm }, modules);
 
     return {
       module: { ...probe, positionMm },
@@ -509,23 +502,46 @@ export function PlanCanvas({
     setDrag({ ...drag, current, anchor });
   };
 
-  const commitDrag = () => {
-    if (!drag) return;
+  /** Положения модулей, если перетаскивание закончить прямо сейчас. */
+  const dragMoves = useCallback((): { id: string; x: number; y: number }[] => {
+    if (!drag) return [];
+    if (drag.anchor && drag.ids.length === 1) {
+      return [{ id: drag.ids[0], x: drag.anchor.x, y: drag.anchor.y }];
+    }
     const dx = drag.current.x - drag.startModel.x;
     const dy = drag.current.y - drag.startModel.y;
+    return drag.ids.map((id) => {
+      const o = drag.origin.get(id)!;
+      return { id, x: snapToStep(o.x + dx, snapStepMm), y: snapToStep(o.y + dy, snapStepMm) };
+    });
+  }, [drag, snapStepMm]);
 
-    let moves: { id: string; x: number; y: number }[];
-    if (drag.anchor && drag.ids.length === 1) {
-      moves = [{ id: drag.ids[0], x: drag.anchor.x, y: drag.anchor.y }];
-    } else {
-      moves = drag.ids.map((id) => {
-        const o = drag.origin.get(id)!;
-        return {
-          id,
-          x: snapToStep(o.x + dx, snapStepMm),
-          y: snapToStep(o.y + dy, snapStepMm),
-        };
-      });
+  /**
+   * Наложится ли перетаскиваемое на чужой объём.
+   *
+   * Считается на каждое движение мыши, чтобы контур успел покраснеть до
+   * отпускания кнопки. Двигаемые модули сверяются с неподвижными и между
+   * собой: групповое перетаскивание тоже не должно схлопывать группу.
+   */
+  const dragCollides = useMemo(() => {
+    if (!drag) return false;
+    const moved = new Map(dragMoves().map((mv) => [mv.id, mv]));
+    const next = modules.map((m) => {
+      const mv = moved.get(m.id);
+      return mv ? { ...m, positionMm: { x: mv.x, y: mv.y } } : m;
+    });
+    return next.some((m) => moved.has(m.id) && overlapsAny(m, next));
+  }, [drag, dragMoves, modules]);
+
+  const commitDrag = () => {
+    if (!drag) return;
+    const moves = dragMoves();
+
+    // Наложение не применяется вовсе: модуль возвращается туда, где стоял.
+    // Контур к этому моменту уже красный, так что откат не выглядит сбоем.
+    if (dragCollides) {
+      setDrag(null);
+      return;
     }
     // Микросдвиг мышью — это не перемещение, а промах по клику. Без порога
     // каждый выбор модуля попадал бы в историю отмены.
@@ -571,6 +587,9 @@ export function PlanCanvas({
     }
 
     if (tool === "add") {
+      // В наложение модуль не ставится вовсе. Призрак уже красный и подписан,
+      // так что отказ не выглядит поломкой: человек видел, куда целится.
+      if (ghost?.collides) return;
       // Ставим ровно туда, где нарисован призрак, а не туда, где курсор:
       // иначе примагничивание было бы обманом — показали одно, сделали другое.
       const pos = ghost?.module.positionMm ?? {
@@ -683,9 +702,11 @@ export function PlanCanvas({
             "transition-colors",
             ghost
               ? "fill-muted stroke-muted-foreground"
-              : selected
-                ? "fill-accent/15 stroke-accent"
-                : "fill-card stroke-foreground/70",
+              : dragging && dragCollides
+                ? "fill-destructive/15 stroke-destructive"
+                : selected
+                  ? "fill-accent/15 stroke-accent"
+                  : "fill-card stroke-foreground/70",
           )}
           strokeWidth={selected ? 2 : 1.2}
           style={{ cursor: ghost ? "default" : tool === "select" ? "move" : "crosshair" }}
@@ -1306,10 +1327,15 @@ export function PlanCanvas({
             )}
           >
             {ghost?.collides
-              ? "Здесь модуль наложится на соседний"
+              ? "Сюда нельзя: модуль наложится на соседний"
               : ghost?.picked
                 ? "Клик — поставить вплотную к соседу"
                 : "Клик — поставить модуль"}
+          </span>
+        )}
+        {dragCollides && (
+          <span className="pointer-events-auto rounded-sm bg-destructive/10 px-2 py-1 text-destructive shadow-sm">
+            Сюда нельзя: модули наложатся друг на друга
           </span>
         )}
       </div>
