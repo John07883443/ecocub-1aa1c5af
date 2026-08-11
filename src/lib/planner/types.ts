@@ -140,6 +140,9 @@ export type FurnitureKind =
   | "boiler"
   | "plant"
   | "wardrobe-rail"
+  | "shoe-rack"
+  | "mirror"
+  | "corner-shower"
   | "lounge"
   | "outdoor-table";
 

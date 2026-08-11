@@ -11,6 +11,7 @@
  * рабочая документация: интерфейс говорит об этом прямо.
  */
 
+import { DOOR_OPENING } from "../standards/ecocub.ts";
 import {
   ENTRY_CLEARANCE_M,
   FURNITURE_CATALOG,
@@ -177,12 +178,19 @@ export function roomGeometry(house: HouseState, roomId: string): RoomGeometry | 
         // прохода. Раньше и туда и туда закладывалось 0,9 м, и в спальне
         // 2,78 × 3,00 с двумя дверями кровать переставала помещаться.
         if (hasDoor) {
+          // Дверь открывается по дуге радиусом в свою ширину, а не отступает
+          // от стены прямоугольником: створка выметает четверть круга. Значит
+          // и держать свободным надо квадрат со стороной в ширину полотна —
+          // 800 мм по стандарту. Раньше резервировалось 600 мм в глубину и
+          // не более метра по фронту, и мебель попадала под открывающуюся
+          // створку.
+          const swing = DOOR_OPENING.widthMm / 1000;
           const clearance =
             joint && (joint.state === "opening" || joint.state === "open")
               ? ENTRY_CLEARANCE_M
-              : MIN_CLEARANCE_M;
+              : swing;
           const c = (part.from + part.to) / 2;
-          const halfW = Math.min(0.5, (part.to - part.from) / 2);
+          const halfW = Math.min(swing / 2, (part.to - part.from) / 2);
           if (side.axis === "x") {
             blocked.push({
               x: side.inside === 1 ? side.at : side.at - clearance,
@@ -368,13 +376,32 @@ function trimToFit(candidate: Candidate, geo: RoomGeometry): Candidate {
  */
 const EXTRAS: Partial<Record<RoomType, FurnitureKind[]>> = {
   bedroom: ["dresser", "plant"],
-  living: ["tv-unit", "armchair", "armchair", "plant"],
+  // Телевизор бывает и без тумбы — просто на стене. Сначала пробуем
+  // тумбу, при нехватке места вешаем панель: висящий телевизор занимает
+  // 250 мм глубины вместо 400 и влезает там, где тумба уже нет.
+  // Телевизор ставит базовый набор гостиной, здесь только добор.
+  living: ["armchair", "armchair", "plant"],
   dining: ["armchair", "armchair", "plant"],
   kitchen: ["fridge", "armchair", "plant"],
-  bathroom: ["washer", "dryer"],
+  bathroom: ["corner-shower", "washer", "dryer"],
   storage: ["boiler", "wardrobe-rail"],
-  entryway: ["bench", "shelf", "plant"],
+  // Прихожая: шкаф, обувница, зеркало — то, без чего вход не работает.
+  entryway: ["wardrobe", "shoe-rack", "mirror", "bench"],
   terrace: ["armchair", "armchair", "plant"],
+};
+
+/**
+ * Замены на случай нехватки места.
+ *
+ * Телевизор бывает и без тумбы — просто на стене. Тумба под ТВ занимает
+ * 400 мм глубины, панель на стене — 250, и влезает там, где тумбе уже негде
+ * стоять. Так же и с кроватью: односпальная вместо двуспальной.
+ */
+const SUBSTITUTES: Partial<Record<FurnitureKind, FurnitureKind>> = {
+  "tv-unit": "tv",
+  bed: "single-bed",
+  wardrobe: "shelf",
+  "corner-shower": "shower",
 };
 
 /** Разместить дополнительные предметы у свободных стен, по одному на стену. */
@@ -385,24 +412,27 @@ function placeExtras(
 ): FurnitureItem[] {
   const out: FurnitureItem[] = [];
   const taken = placed.map(itemRect);
-  for (const kind of kinds) {
-    const spec = FURNITURE_CATALOG[kind];
-    let put: FurnitureItem | null = null;
-    for (const wall of wallsFor(geo, spec.w)) {
-      for (const shift of [0, -0.9, 0.9, -1.8, 1.8]) {
-        const candidate = placeAtWall(kind, wall, wallCenter(wall) + shift);
-        const rect = itemRect(candidate);
-        if (!insideRoom(rect, geo)) continue;
-        if (overlapsAny(rect, taken)) continue;
-        if (overlapsAny(rect, geo.blocked, 0.05)) continue;
-        put = candidate;
-        break;
+  for (const base of kinds) {
+    for (const kind of [base, SUBSTITUTES[base]].filter(Boolean) as FurnitureKind[]) {
+      const spec = FURNITURE_CATALOG[kind];
+      let put: FurnitureItem | null = null;
+      for (const wall of wallsFor(geo, spec.w)) {
+        for (const shift of [0, -0.9, 0.9, -1.8, 1.8]) {
+          const candidate = placeAtWall(kind, wall, wallCenter(wall) + shift);
+          const rect = itemRect(candidate);
+          if (!insideRoom(rect, geo)) continue;
+          if (overlapsAny(rect, taken)) continue;
+          if (overlapsAny(rect, geo.blocked, 0.05)) continue;
+          put = candidate;
+          break;
+        }
+        if (put) break;
       }
-      if (put) break;
+      if (!put) continue;
+      out.push(put);
+      taken.push(itemRect(put));
+      break;
     }
-    if (!put) continue;
-    out.push(put);
-    taken.push(itemRect(put));
   }
   return out;
 }
@@ -460,12 +490,25 @@ function wallsFor(geo: RoomGeometry, minLength: number): RoomWall[] {
 }
 
 function bedroomCandidates(geo: RoomGeometry): Candidate[] {
-  const spec = FURNITURE_CATALOG.bed;
+  // Две ширины кровати. Двуспальная предпочтительнее и получает более высокий
+  // счёт, но в тесную комнату с двумя дверями она не встаёт — там ставится
+  // односпальная. Раньше вариант был один, и комната оставалась пустой:
+  // прогон показал это на трёх готовых раскладках после того, как зона
+  // открывания двери выросла с 600 до 800 мм.
+  return [...bedroomVariants(geo, "bed", 1), ...bedroomVariants(geo, "single-bed", 0.6)];
+}
+
+function bedroomVariants(
+  geo: RoomGeometry,
+  bedKind: "bed" | "single-bed",
+  baseScore: number,
+): Candidate[] {
+  const spec = FURNITURE_CATALOG[bedKind];
   const out: Candidate[] = [];
   for (const wall of wallsFor(geo, spec.w + 0.9)) {
     const items: FurnitureItem[] = [];
     const c = wallCenter(wall);
-    const bed = placeAtWall("bed", wall, c);
+    const bed = placeAtWall(bedKind, wall, c);
     items.push(bed);
 
     // Тумбы по обе стороны изголовья.
@@ -494,7 +537,7 @@ function bedroomCandidates(geo: RoomGeometry): Candidate[] {
     }
 
     // Мягкие предпочтения: изголовье к глухой стене и подальше от двери.
-    let score = 1;
+    let score = baseScore;
     if (!wall.exterior) score += 0.5; // кровать не под окном
     if (!wall.hasDoor) score += 0.6; // и не у двери
     score += Math.min(wall.length, 6) / 20;
@@ -934,7 +977,11 @@ export function planRoom(house: HouseState, roomId: string, presetIndex = 0): Fu
   })();
 
   const extras = EXTRAS[geo.type] ?? [];
-  const valid = candidates
+  // Комната без базового набора всё равно обставляется добором: у прихожей
+  // своего «главного предмета» нет — там важны шкаф, обувница и зеркало, а не
+  // что-то одно. Без этой строки прихожая оставалась пустой.
+  const withBase = candidates.length ? candidates : [{ items: [], score: 0.5, warnings: [] }];
+  const valid = withBase
     .map((c) =>
       extras.length ? { ...c, items: [...c.items, ...placeExtras(geo, c.items, extras)] } : c,
     )
