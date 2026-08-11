@@ -155,6 +155,23 @@ export const FURNITURE_CATALOG: Record<FurnitureKind, FurnitureSpec> = {
   shelf: { w: 1.2, d: 0.45, label: "Стеллаж" },
   bench: { w: 1.0, d: 0.4, label: "Банкетка" },
   "stairs-run": { w: 1.1, d: 2.6, label: "Лестничный марш" },
+  // Ниже — предметы, подписанные прямо на чертежах разобранных проектов.
+  // Каталог собран не по каталогу мебельного магазина, а по тому, что
+  // архитектор нарисовал: «комод» у Family One и Family Two, «остров» и
+  // «Ст.м» / «Суш.м» у Nasledie, кресла вокруг круглого стола на террасе
+  // Weekend One, бойлер в отдельной каморке 0,57 м² там же.
+  armchair: { w: 0.75, d: 0.8, label: "Кресло" },
+  dresser: { w: 1.1, d: 0.45, label: "Комод" },
+  "round-table": { w: 1.2, d: 1.2, label: "Круглый стол" },
+  "kitchen-island": { w: 1.8, d: 0.9, label: "Кухонный остров" },
+  fridge: { w: 0.7, d: 0.7, label: "Холодильник" },
+  dryer: { w: 0.6, d: 0.6, label: "Сушильная машина" },
+  "tv-unit": { w: 1.6, d: 0.4, label: "Тумба под ТВ" },
+  "single-bed": { w: 0.9, d: 2.0, label: "Односпальная кровать" },
+  "double-sink": { w: 1.2, d: 0.5, label: "Двойная раковина" },
+  boiler: { w: 0.6, d: 0.4, label: "Бойлер" },
+  plant: { w: 0.5, d: 0.5, label: "Растение" },
+  "wardrobe-rail": { w: 1.6, d: 0.6, label: "Гардеробная штанга" },
   lounge: { w: 1.6, d: 0.8, label: "Лаунж-зона" },
   "outdoor-table": { w: 1.0, d: 1.0, label: "Уличный стол" },
 };

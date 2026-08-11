@@ -311,6 +311,221 @@ function Shape({ kind }: { kind: FurnitureKind }) {
           />
         </g>
       );
+    case "armchair":
+      // Кресло: спинка толще подлокотников, как на чертежах террас.
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} rx={0.1} {...common} />
+          <rect
+            x={0.08}
+            y={0.18}
+            width={w - 0.16}
+            height={d - 0.26}
+            rx={0.08}
+            fill={SOFT}
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+        </g>
+      );
+    case "dresser":
+      // Комод: три ящика. Подписан прямо на планах Family One и Family Two.
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} {...common} />
+          {[1, 2].map((i) => (
+            <line
+              key={i}
+              x1={(w / 3) * i}
+              y1={0}
+              x2={(w / 3) * i}
+              y2={d}
+              stroke={STROKE}
+              strokeWidth={LINE_THIN}
+            />
+          ))}
+        </g>
+      );
+    case "round-table":
+      return (
+        <g>
+          <circle cx={w / 2} cy={d / 2} r={Math.min(w, d) / 2} {...common} />
+          <circle
+            cx={w / 2}
+            cy={d / 2}
+            r={Math.min(w, d) / 6}
+            fill="none"
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+        </g>
+      );
+    case "kitchen-island":
+      // Остров: столешница с врезанной мойкой. Подписан на плане Nasledie.
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} rx={0.04} {...common} />
+          <rect
+            x={w - 0.75}
+            y={0.18}
+            width={0.5}
+            height={d - 0.36}
+            rx={0.05}
+            fill="none"
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+        </g>
+      );
+    case "fridge":
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} {...common} />
+          <line x1={0} y1={d * 0.38} x2={w} y2={d * 0.38} stroke={STROKE} strokeWidth={LINE_THIN} />
+          <line
+            x1={w - 0.12}
+            y1={d * 0.18}
+            x2={w - 0.12}
+            y2={d * 0.3}
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+        </g>
+      );
+    case "dryer":
+      // Сушильная машина: на плане Nasledie подписана «Суш.м» рядом со «Ст.м».
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} {...common} />
+          <circle
+            cx={w / 2}
+            cy={d / 2}
+            r={Math.min(w, d) / 3}
+            fill="none"
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+          <line x1={0.1} y1={0.12} x2={w - 0.1} y2={0.12} stroke={STROKE} strokeWidth={LINE_THIN} />
+        </g>
+      );
+    case "tv-unit":
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} {...common} />
+          <line x1={0} y1={d / 2} x2={w} y2={d / 2} stroke={STROKE} strokeWidth={LINE_THIN} />
+        </g>
+      );
+    case "single-bed":
+      // Односпальная: та же кровать, одна подушка.
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} rx={0.06} {...common} />
+          <rect
+            x={0.08}
+            y={0.1}
+            width={w - 0.16}
+            height={0.42}
+            rx={0.06}
+            fill={SOFT}
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+          <path
+            d={`M 0.1 ${d * 0.55} Q ${w / 2} ${d * 0.72} ${w - 0.1} ${d * 0.55}`}
+            fill="none"
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+        </g>
+      );
+    case "double-sink":
+      // Двойная раковина: у Dinastiya в общей ванной их две.
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} rx={0.05} {...common} />
+          {[0.25, 0.75].map((k) => (
+            <ellipse
+              key={k}
+              cx={w * k}
+              cy={d / 2}
+              rx={w * 0.18}
+              ry={d * 0.3}
+              fill="none"
+              stroke={STROKE}
+              strokeWidth={LINE_THIN}
+            />
+          ))}
+        </g>
+      );
+    case "boiler":
+      // Бойлер: у Weekend One под него отведена каморка 0,57 м².
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} rx={0.06} {...common} />
+          <line
+            x1={0.1}
+            y1={d - 0.1}
+            x2={w - 0.1}
+            y2={d - 0.1}
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+        </g>
+      );
+    case "plant":
+      return (
+        <g>
+          <circle
+            cx={w / 2}
+            cy={d / 2}
+            r={Math.min(w, d) / 2}
+            fill={FILL}
+            stroke={STROKE}
+            strokeWidth={LINE_THIN}
+          />
+          {[0, 60, 120, 180, 240, 300].map((a) => {
+            const r = Math.min(w, d) / 2;
+            const rad = (a * Math.PI) / 180;
+            return (
+              <line
+                key={a}
+                x1={w / 2}
+                y1={d / 2}
+                x2={w / 2 + Math.cos(rad) * r * 0.9}
+                y2={d / 2 + Math.sin(rad) * r * 0.9}
+                stroke={STROKE}
+                strokeWidth={LINE_THIN}
+              />
+            );
+          })}
+        </g>
+      );
+    case "wardrobe-rail":
+      // Гардеробная штанга: у Nasledie отдельный гардероб 3,6 м².
+      return (
+        <g>
+          <rect x={0} y={0} width={w} height={d} {...common} />
+          <line
+            x1={0.1}
+            y1={d * 0.35}
+            x2={w - 0.1}
+            y2={d * 0.35}
+            stroke={STROKE}
+            strokeWidth={LINE}
+          />
+          {[0.2, 0.4, 0.6, 0.8].map((k) => (
+            <line
+              key={k}
+              x1={w * k}
+              y1={d * 0.35}
+              x2={w * k}
+              y2={d * 0.8}
+              stroke={STROKE}
+              strokeWidth={LINE_THIN}
+            />
+          ))}
+        </g>
+      );
     case "bench":
       return (
         <g>

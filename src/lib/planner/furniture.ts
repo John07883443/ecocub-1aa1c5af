@@ -356,6 +356,58 @@ function trimToFit(candidate: Candidate, geo: RoomGeometry): Candidate {
 }
 
 /**
+ * Дополнительная обстановка: то, что делает комнату комнатой.
+ *
+ * Базовые наборы дают главное — кровать, кухонную линию, ванну. Этого хватает,
+ * чтобы понять назначение помещения, но мало, чтобы понять, как в нём жить: на
+ * чертежах разобранных проектов вокруг круглого стола стоят кресла, у кровати
+ * комод, в котельной бойлер, в гардеробе штанга.
+ *
+ * Порядок в списке — порядок важности. Что не влезло, отбрасывается: обрезка
+ * идёт по тому же правилу, что и везде, и жертвует последним.
+ */
+const EXTRAS: Partial<Record<RoomType, FurnitureKind[]>> = {
+  bedroom: ["dresser", "plant"],
+  living: ["tv-unit", "armchair", "armchair", "plant"],
+  dining: ["armchair", "armchair", "plant"],
+  kitchen: ["fridge", "armchair", "plant"],
+  bathroom: ["washer", "dryer"],
+  storage: ["boiler", "wardrobe-rail"],
+  entryway: ["bench", "shelf", "plant"],
+  terrace: ["armchair", "armchair", "plant"],
+};
+
+/** Разместить дополнительные предметы у свободных стен, по одному на стену. */
+function placeExtras(
+  geo: RoomGeometry,
+  placed: FurnitureItem[],
+  kinds: FurnitureKind[],
+): FurnitureItem[] {
+  const out: FurnitureItem[] = [];
+  const taken = placed.map(itemRect);
+  for (const kind of kinds) {
+    const spec = FURNITURE_CATALOG[kind];
+    let put: FurnitureItem | null = null;
+    for (const wall of wallsFor(geo, spec.w)) {
+      for (const shift of [0, -0.9, 0.9, -1.8, 1.8]) {
+        const candidate = placeAtWall(kind, wall, wallCenter(wall) + shift);
+        const rect = itemRect(candidate);
+        if (!insideRoom(rect, geo)) continue;
+        if (overlapsAny(rect, taken)) continue;
+        if (overlapsAny(rect, geo.blocked, 0.05)) continue;
+        put = candidate;
+        break;
+      }
+      if (put) break;
+    }
+    if (!put) continue;
+    out.push(put);
+    taken.push(itemRect(put));
+  }
+  return out;
+}
+
+/**
  * Диван к уже расставленной кухне — если для него осталась стена.
  *
  * Нужен только в компактных домах, где кухня и гостиная делят один модуль.
@@ -881,7 +933,11 @@ export function planRoom(house: HouseState, roomId: string, presetIndex = 0): Fu
     return alt && PLANNERS[alt] ? PLANNERS[alt](geo) : first;
   })();
 
+  const extras = EXTRAS[geo.type] ?? [];
   const valid = candidates
+    .map((c) =>
+      extras.length ? { ...c, items: [...c.items, ...placeExtras(geo, c.items, extras)] } : c,
+    )
     .map((c) => trimToFit(c, geo))
     .filter((c) => c.items.length > 0)
     .sort((a, b) => b.score - a.score);

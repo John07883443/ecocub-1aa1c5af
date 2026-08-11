@@ -128,6 +128,18 @@ export type FurnitureKind =
   | "shelf"
   | "bench"
   | "stairs-run"
+  | "armchair"
+  | "dresser"
+  | "round-table"
+  | "kitchen-island"
+  | "fridge"
+  | "dryer"
+  | "tv-unit"
+  | "single-bed"
+  | "double-sink"
+  | "boiler"
+  | "plant"
+  | "wardrobe-rail"
   | "lounge"
   | "outdoor-table";
 
