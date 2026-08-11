@@ -50,6 +50,21 @@ export function formatArea(m2: number): string {
   return `${m2.toFixed(1).replace(".", ",")} м²`;
 }
 
+/**
+ * Русское склонение после числа: 1 модуль, 2 модуля, 5 модулей.
+ *
+ * Без этого в карточке стоит «4 модулей» — мелочь, которая читается как
+ * недоделанный сайт, а не как каталог заводских домов.
+ */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const mod100 = Math.abs(n) % 100;
+  const mod10 = mod100 % 10;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
 /** Габарит в метрах: 12 590 × 5 130 мм читается хуже, чем 12,59 × 5,13 м. */
 export function formatBounds(widthMm: number, depthMm: number): string {
   const m = (v: number) => (v / 1000).toFixed(2).replace(".", ",");

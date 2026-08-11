@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Boxes, Layers, Maximize2, Ruler } from "lucide-react";
 import type { ProjectSummary } from "@/lib/house-project/types";
-import { formatArea, formatBounds, formatPrice } from "@/lib/house-projects";
+import { formatArea, formatBounds, formatPrice, plural } from "@/lib/house-projects";
 
 /**
  * Карточка дома в каталоге.
@@ -48,7 +48,8 @@ export function HouseCard({ house }: { house: ProjectSummary }) {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Boxes className="size-4 shrink-0" />
-            {house.metrics.moduleCount} модулей
+            {house.metrics.moduleCount}{" "}
+            {plural(house.metrics.moduleCount, "модуль", "модуля", "модулей")}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Layers className="size-4 shrink-0" />

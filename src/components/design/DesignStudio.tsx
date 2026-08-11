@@ -33,7 +33,7 @@ import {
   stashDraft,
   takeStashedDraft,
 } from "@/lib/design-api";
-import { formatArea } from "@/lib/house-projects";
+import { formatArea, plural } from "@/lib/house-projects";
 import { cn } from "@/lib/utils";
 import { Inspector } from "./Inspector";
 import { PlanCanvas, type Tool } from "./PlanCanvas";

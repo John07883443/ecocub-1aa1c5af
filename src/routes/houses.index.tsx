@@ -98,7 +98,7 @@ function HousesPage() {
       </Section>
 
       {houses.length > 0 && (
-        <Section className="py-6">
+        <Section className="pb-0 pt-8 md:pb-0 md:pt-10">
           <Container>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Этажей:</span>
@@ -162,7 +162,7 @@ function HousesPage() {
         </Section>
       )}
 
-      <Section className="pt-4">
+      <Section className="pt-6 md:pt-8">
         <Container>
           {houses.length === 0 ? (
             <div className="rounded-sm border border-dashed border-border py-20 text-center">
