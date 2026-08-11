@@ -105,7 +105,29 @@ export function houseFromModules(input: ModuleItem[]): HouseState {
     }
   }
 
-  return relayoutAll(retypeCirculation(splitOversizedCommon({ ...emptyHouse(), modules, rooms })));
+  return relayoutAll(
+    nameSingleCommon(retypeCirculation(splitOversizedCommon({ ...emptyHouse(), modules, rooms }))),
+  );
+}
+
+/**
+ * Единственная общая комната в доме — это кухня-гостиная, а не гостиная.
+ *
+ * На доме из трёх кубиков планировщик подписывал её «Гостиная» и рисовал
+ * диван, а кухни не было нигде: выделять её было некуда, отдельного модуля не
+ * осталось. Готовить в таком доме всё равно где-то надо, и в реальных
+ * компактных проектах эта комната так и называется — кухня-гостиная
+ * (Weekend Mini, 3 модуля).
+ */
+function nameSingleCommon(house: HouseState): HouseState {
+  const common = house.rooms.filter(
+    (r) => r.type === "living" || r.type === "kitchen" || r.type === "dining",
+  );
+  if (common.length !== 1 || common[0].type === "kitchen") return house;
+  return {
+    ...house,
+    rooms: house.rooms.map((r) => (r.id === common[0].id ? { ...r, type: "kitchen" as const } : r)),
+  };
 }
 
 /**

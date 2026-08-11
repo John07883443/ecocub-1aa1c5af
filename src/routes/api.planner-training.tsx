@@ -27,6 +27,11 @@ export const Route = createFileRoute("/api/planner-training")({
           approved: verdicts.filter((v) => v.approved).length,
           insights: analyze(verdicts).slice(0, 20),
           reasons: countReasons(verdicts),
+          // Своими словами владелец описывает то, чего в списке причин нет, —
+          // самое ценное в разметке. Отдаём целиком, а не считаем частоты.
+          notes: verdicts
+            .filter((v) => !v.approved && v.note)
+            .map((v) => ({ caseId: v.caseId, note: v.note })),
         });
       },
       POST: async ({ request }) => {

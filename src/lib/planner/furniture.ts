@@ -355,6 +355,26 @@ function trimToFit(candidate: Candidate, geo: RoomGeometry): Candidate {
   return { ...candidate, items: kept, score: candidate.score * (0.5 + 0.5 * ratio) };
 }
 
+/**
+ * Диван к уже расставленной кухне — если для него осталась стена.
+ *
+ * Нужен только в компактных домах, где кухня и гостиная делят один модуль.
+ * Не влез — не беда: обедать за столом можно, а готовить на диване нельзя.
+ */
+function sofaFor(geo: RoomGeometry, placed: FurnitureItem[]): FurnitureItem[] {
+  const spec = FURNITURE_CATALOG.sofa;
+  const taken = placed.map(itemRect);
+  for (const wall of wallsFor(geo, spec.w)) {
+    const sofa = placeAtWall("sofa", wall, wallCenter(wall));
+    const rect = itemRect(sofa);
+    if (!insideRoom(rect, geo)) continue;
+    if (overlapsAny(rect, taken)) continue;
+    if (overlapsAny(rect, geo.blocked, 0.05)) continue;
+    return [sofa];
+  }
+  return [];
+}
+
 /** Жёсткие ограничения: внутри комнаты, без пересечений и без блокировки проходов. */
 export function validateItems(items: FurnitureItem[], geo: RoomGeometry): boolean {
   const placed: Rect[] = [];
@@ -820,7 +840,24 @@ export function planRoom(house: HouseState, roomId: string, presetIndex = 0): Fu
   };
   if (!geo) return base;
 
-  const planner = PLANNERS[geo.type];
+  // Единственная общая комната в доме — это кухня-гостиная, а не гостиная.
+  // На доме из трёх кубиков планировщик рисовал диван и не рисовал кухню:
+  // формально кухни в программе не было, потому что выделять её было некуда.
+  // Готовить в таком доме всё равно где-то надо.
+  const onlyCommon =
+    house.rooms.filter((r) => r.type === "living" || r.type === "kitchen" || r.type === "dining")
+      .length === 1;
+  // Порядок важен: сперва кухонная линия, потом диван. Кухня-гостиная без
+  // кухни хуже, чем без дивана, а при нехватке места отбрасывается то, что
+  // стоит в списке позже.
+  const planner =
+    onlyCommon && (geo.type === "living" || geo.type === "kitchen")
+      ? (g: RoomGeometry) =>
+          kitchenCandidates(g).map((c) => ({
+            ...c,
+            items: [...c.items, ...sofaFor(g, c.items)],
+          }))
+      : PLANNERS[geo.type];
   if (!planner) {
     return { ...base, warnings: ["Тип помещения пока без автоматической расстановки"] };
   }

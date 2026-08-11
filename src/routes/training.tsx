@@ -34,6 +34,84 @@ export const Route = createFileRoute("/training")({
   }),
 });
 
+/**
+ * Своя причина отказа — текстом или голосом.
+ *
+ * Закрытый список причин быстрее в разметке, но он всегда неполон: владелец
+ * первым же прогоном нашёл дефект, которого в списке нет (перегородки внутри
+ * модуля не двигаются). Свободное поле такие случаи ловит.
+ *
+ * Диктовка — через встроенное распознавание речи браузера. Работает не везде,
+ * поэтому кнопка появляется только там, где оно есть, а поле остаётся обычным
+ * текстовым: голос здесь удобство, а не единственный способ ввода.
+ */
+function NoteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [text, setText] = useState(value);
+  const [listening, setListening] = useState(false);
+
+  type RecognitionCtor = new () => {
+    lang: string;
+    interimResults: boolean;
+    continuous: boolean;
+    start: () => void;
+    stop: () => void;
+    onresult: ((e: { results: Array<Array<{ transcript: string }>> }) => void) | null;
+    onend: (() => void) | null;
+  };
+  const Recognition =
+    typeof window === "undefined"
+      ? undefined
+      : (((window as unknown as Record<string, unknown>).SpeechRecognition ??
+          (window as unknown as Record<string, unknown>).webkitSpeechRecognition) as
+          | RecognitionCtor
+          | undefined);
+
+  const dictate = () => {
+    if (!Recognition) return;
+    const recognition = new Recognition();
+    recognition.lang = "ru-RU";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onresult = (e) => {
+      const said = Array.from(e.results)
+        .map((r) => r[0].transcript)
+        .join(" ")
+        .trim();
+      const merged = text ? `${text} ${said}` : said;
+      setText(merged);
+      onChange(merged);
+    };
+    recognition.onend = () => setListening(false);
+    setListening(true);
+    recognition.start();
+  };
+
+  return (
+    <div className="mt-2 flex gap-1">
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => onChange(text)}
+        placeholder="Своя причина"
+        className="h-8 min-w-0 flex-1 rounded-sm border border-border bg-background px-2 text-[12px]"
+      />
+      {Boolean(Recognition) && (
+        <button
+          type="button"
+          onClick={dictate}
+          title="Надиктовать причину"
+          aria-label="Надиктовать причину"
+          className={`h-8 w-8 shrink-0 rounded-sm border text-sm ${
+            listening ? "border-rose-600 bg-rose-600 text-white" : "border-border"
+          }`}
+        >
+          ●
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TrainingPage() {
   // Сегменты по числу кубиков: дефекты у дома из трёх модулей и из двадцати
   // двух разные, и размечать их вперемешку бессмысленно.
@@ -42,20 +120,26 @@ function TrainingPage() {
   const [run, setRun] = useState(() => `run-${Date.now()}`);
   const [seed, setSeed] = useState(1);
   const [marks, setMarks] = useState<
-    Record<string, { approved: boolean; reasons: RejectReason[] }>
+    Record<string, { approved: boolean; reasons: RejectReason[]; note: string }>
   >({});
   const [saved, setSaved] = useState(0);
 
   const batch = useMemo(() => buildBatch({ sizes, perSize, seed }), [sizes, perSize, seed]);
 
   const send = useCallback(
-    async (caseId: string, features: string[], approved: boolean, reasons: RejectReason[]) => {
-      setMarks((m) => ({ ...m, [caseId]: { approved, reasons } }));
+    async (
+      caseId: string,
+      features: string[],
+      approved: boolean,
+      reasons: RejectReason[],
+      note = "",
+    ) => {
+      setMarks((m) => ({ ...m, [caseId]: { approved, reasons, note } }));
       try {
         await fetch("/api/planner-training", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ caseId, run, approved, reasons, features }),
+          body: JSON.stringify({ caseId, run, approved, reasons, features, note }),
         });
         setSaved((n) => n + 1);
       } catch {
@@ -158,7 +242,7 @@ function TrainingPage() {
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => send(c.id, c.features, true, [])}
+                  onClick={() => send(c.id, c.features, true, [], mark?.note ?? "")}
                   className={`h-8 flex-1 rounded-sm border text-sm ${
                     mark?.approved
                       ? "border-emerald-600 bg-emerald-600 text-white"
@@ -169,7 +253,9 @@ function TrainingPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => send(c.id, c.features, false, mark?.reasons ?? [])}
+                  onClick={() =>
+                    send(c.id, c.features, false, mark?.reasons ?? [], mark?.note ?? "")
+                  }
                   className={`h-8 flex-1 rounded-sm border text-sm ${
                     mark && !mark.approved
                       ? "border-rose-600 bg-rose-600 text-white"
@@ -194,6 +280,7 @@ function TrainingPage() {
                             c.features,
                             false,
                             on ? mark.reasons.filter((x) => x !== r) : [...mark.reasons, r],
+                            mark.note,
                           )
                         }
                         className={`rounded-full border px-2 py-0.5 text-[11px] ${
@@ -205,6 +292,13 @@ function TrainingPage() {
                     );
                   })}
                 </div>
+              )}
+
+              {mark && !mark.approved && (
+                <NoteField
+                  value={mark.note}
+                  onChange={(note) => send(c.id, c.features, false, mark.reasons, note)}
+                />
               )}
             </article>
           );
