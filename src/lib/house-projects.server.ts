@@ -492,6 +492,28 @@ export function archive(id: string): Promise<HouseProject> {
   return setStatus(id, "archived");
 }
 
+/**
+ * Удалить проект безвозвратно.
+ *
+ * Долго этой операции здесь не было: в проекте лежит геометрия, снятая с
+ * чертежей, и стирать её одним нажатием опасно. Владелец продукта решил
+ * иначе — список зарастает пробными «Новыми проектами», а архив в этом
+ * случае лишняя церемония. Поэтому удаление есть, но подтверждение
+ * обязательно, и архивирование остаётся рядом как обратимый вариант.
+ *
+ * Обложка удаляется вместе с проектом: иначе картинки копились бы в базе
+ * без единой ссылки на них.
+ */
+export async function remove(id: string): Promise<void> {
+  const instance = await getDb();
+  requireDb(instance);
+  const current = await getAny(id);
+  if (!current) throw new RepositoryError("not-found", "Проект не найден");
+
+  instance.prepare(`DELETE FROM house_project_covers WHERE project_id = ?`).run(current.id);
+  instance.prepare(`DELETE FROM house_projects WHERE id = ?`).run(current.id);
+}
+
 /** Независимая копия. Все идентификаторы перевыпускаются. */
 export async function duplicate(id: string): Promise<HouseProject> {
   const instance = await getDb();

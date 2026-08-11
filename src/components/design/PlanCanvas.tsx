@@ -162,6 +162,20 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
     [toModel],
   );
 
+  // Escape убирает линейку и закрывает меню. Кнопка «Убрать линейку» внизу
+  // никуда не делась, но человек, поставивший отрезок случайно, ищет сначала
+  // Escape — а не глазами по углам экрана.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMeasure(null);
+      setMenu(null);
+      setMarquee(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   /* --- Масштаб колесом ------------------------------------------------ */
 
   useEffect(() => {
@@ -811,9 +825,10 @@ export function PlanCanvas({ editor, tool, snapStepMm, showOtherFloors, onFacePi
           <button
             type="button"
             onClick={() => setMeasure(null)}
-            className="pointer-events-auto rounded-sm border border-border bg-background px-2 py-1 text-foreground shadow-sm hover:border-accent"
+            title="Или нажмите Escape"
+            className="pointer-events-auto rounded-sm border border-rose-300 bg-background px-2 py-1 text-rose-700 shadow-sm hover:border-rose-500"
           >
-            Убрать линейку
+            Убрать линейку · Esc
           </button>
         )}
         {selection.length > 1 && (

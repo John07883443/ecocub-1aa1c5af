@@ -5,6 +5,7 @@ import {
   duplicate,
   getAny,
   publish,
+  remove,
   unpublish,
   toResponse,
   update,
@@ -20,9 +21,8 @@ import { validateProject } from "@/lib/house-project/validate";
  *          из старой вкладки затирало бы более свежую модель.
  * POST   — {"action": "publish" | "unpublish" | "archive" | "duplicate"}.
  *
- * Удаления нет и не будет: снятое с публикации уходит в архив и остаётся
- * доступным для правки. Стереть чертёж одним нажатием — не та операция,
- * которую стоит делать доступной.
+ * DELETE — удалить безвозвратно. Подтверждение спрашивает интерфейс; рядом
+ *          остаётся архив как обратимый вариант.
  */
 export const Route = createFileRoute("/api/design/projects/$id")({
   server: {
@@ -88,6 +88,17 @@ export const Route = createFileRoute("/api/design/projects/$id")({
             project: serializeProject(saved),
             issues: validateProject(saved),
           });
+        } catch (e) {
+          return toResponse(e);
+        }
+      },
+
+      DELETE: async ({ request, params }) => {
+        const access = await checkAccess(request);
+        if (!access.allowed) return denied(access);
+        try {
+          await remove(params.id);
+          return Response.json({ ok: true });
         } catch (e) {
           return toResponse(e);
         }

@@ -44,6 +44,31 @@ export interface SnapAnchor {
 }
 
 /**
+ * Смещения вдоль линии стыка.
+ *
+ * Отсчёт ведётся ОТ НУЛЯ в обе стороны, и это не мелочь. Раньше цикл начинался
+ * от дальнего края (`-(длина - MIN_JOINT_MM)`) и шёл с шагом 1710: получалось
+ * −2420, −710, 1000 — ровной стыковки в списке не было вовсе, и модули всегда
+ * вставали ступенькой. Собрать простой прямоугольный дом было невозможно.
+ *
+ * Ноль и выравнивание по дальним краям добавляются всегда, независимо от шага:
+ * это два положения, которые нужны в любом доме, и терять их из-за того, что
+ * они не попали на сетку выбранного шага, нельзя.
+ */
+function jointOffsets(movingLenMm: Mm, anchorLenMm: Mm, stepMm: Mm): Mm[] {
+  const min = -(movingLenMm - MIN_JOINT_MM);
+  const max = anchorLenMm - MIN_JOINT_MM;
+
+  // 0 — края совпали в начале, разница длин — совпали в конце. У одинаковых
+  // модулей это одно и то же положение, у разных — два законных варианта.
+  const out = new Set<Mm>([0, anchorLenMm - movingLenMm]);
+  for (let o = stepMm; o <= max; o += stepMm) out.add(Math.round(o));
+  for (let o = -stepMm; o >= min; o -= stepMm) out.add(Math.round(o));
+
+  return [...out].filter((o) => o >= min && o <= max).sort((a, b) => a - b);
+}
+
+/**
  * Все положения, в которых модуль встаёт к уже стоящим без зазора.
  *
  * Возвращаются оба вида стыка. Общая стена — это наложение ровно на толщину
@@ -71,16 +96,10 @@ export function snapAnchors(
     if (other.id === moving.id || other.floor !== moving.floor) continue;
     const r = rectOf(other);
 
-    // Смещения вдоль линии стыка: столько шагов, сколько влезает при
-    // сохранении осмысленного перекрытия граней.
-    const offsetsY: Mm[] = [];
-    for (let o = -(f.depthMm - MIN_JOINT_MM); o <= r.h - MIN_JOINT_MM; o += stepMm) {
-      offsetsY.push(Math.round(o));
-    }
-    const offsetsX: Mm[] = [];
-    for (let o = -(f.widthMm - MIN_JOINT_MM); o <= r.w - MIN_JOINT_MM; o += stepMm) {
-      offsetsX.push(Math.round(o));
-    }
+    // Смещения вдоль линии стыка: ноль, выравнивание по краям и шаги в обе
+    // стороны, пока перекрытие граней остаётся осмысленным.
+    const offsetsY = jointOffsets(f.depthMm, r.h, stepMm);
+    const offsetsX = jointOffsets(f.widthMm, r.w, stepMm);
 
     for (const o of offsetsY) {
       push(r.x + r.w, r.y + o, "back-to-back", other.id);

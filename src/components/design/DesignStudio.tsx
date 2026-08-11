@@ -1,6 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Archive,
   Box,
+  Trash2,
   Check,
   CloudOff,
   Download,
@@ -18,6 +20,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { OPENING_PRESETS } from "@/lib/house-project/catalog";
 import { useDesignEditor } from "@/lib/house-project/editor";
 import { createProject } from "@/lib/house-project/factory";
@@ -124,6 +136,9 @@ export function DesignStudio() {
     writable: true,
   });
   const [busy, setBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  /** Проект, для которого открыт вопрос «удалить безвозвратно?». */
+  const [pendingDelete, setPendingDelete] = useState<ProjectSummary | null>(null);
 
   const editor = useDesignEditor(useMemo(() => createProject("Загрузка…"), []));
   const { state, dispatch } = editor;
@@ -141,6 +156,16 @@ export function DesignStudio() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const loadedId = useRef<string | null>(null);
+
+  // Архив по умолчанию не показывается: убранный проект должен исчезать из
+  // списка, иначе архивирование ничего не решает и список только растёт.
+  // Открытый сейчас проект показывается всегда — иначе он пропал бы из-под
+  // курсора в тот момент, когда его архивируют.
+  const archivedCount = useMemo(() => list.filter((p) => p.status === "archived").length, [list]);
+  const visibleList = useMemo(
+    () => list.filter((p) => showArchived || p.status !== "archived" || p.id === project.id),
+    [list, showArchived, project.id],
+  );
 
   const issues = useMemo(() => validateProject(project), [project]);
   const metrics = useMemo(() => computeMetrics(project.model), [project.model]);
@@ -361,6 +386,75 @@ export function DesignStudio() {
       await open(created.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не удалось создать проект");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Убрать проект из списка, не открывая его.
+   *
+   * Безвозвратного удаления в системе нет намеренно: в проекте лежит
+   * геометрия, снятая с чертежей, и стереть её одним нажатием слишком легко.
+   * Архив решает ту же задачу — из списка и из каталога проект пропадает, —
+   * но остаётся обратимым.
+   */
+  const archiveFromList = async (id: string) => {
+    setBusy(true);
+    try {
+      if (id === project.id) await save();
+      await designApi.action(id, "archive");
+      const projects = await refreshList();
+      // Если убрали открытый проект, показываем следующий живой, чтобы
+      // редактор не остался с архивной записью на экране.
+      if (id === project.id) {
+        const next = projects.find((p) => p.status !== "archived");
+        if (next) await open(next.id);
+      }
+      toast.success("Проект убран в архив");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось убрать в архив");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Удалить безвозвратно.
+   *
+   * Спрашивается подтверждение с названием проекта: «Вы уверены?» без имени
+   * человек подтверждает не глядя, а тут стирается геометрия, снятая с
+   * чертежей. Рядом в том же окне предложен архив — обратимый вариант для
+   * тех, кто нажал корзину по инерции.
+   */
+  const deleteProject = async (summary: ProjectSummary) => {
+    setBusy(true);
+    try {
+      await designApi.remove(summary.id);
+      const projects = await refreshList();
+      if (summary.id === project.id) {
+        const next = projects.find((p) => p.status !== "archived") ?? projects[0];
+        if (next) await open(next.id);
+        else dispatch({ type: "load", project: createProject("Новый проект") });
+      }
+      toast.success(`Проект «${summary.title}» удалён`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Удалить не удалось");
+    } finally {
+      setBusy(false);
+      setPendingDelete(null);
+    }
+  };
+
+  /** Вернуть из архива: архив на то и архив, что из него достают. */
+  const restoreFromList = async (id: string) => {
+    setBusy(true);
+    try {
+      await designApi.action(id, "unpublish");
+      await refreshList();
+      toast.success("Проект возвращён в черновики");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось вернуть из архива");
     } finally {
       setBusy(false);
     }
@@ -684,6 +778,44 @@ export function DesignStudio() {
         </span>
       </div>
 
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить «{pendingDelete?.title}» безвозвратно?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Модель дома и обложка будут стёрты с сервера. Отменить это будет нельзя, и в
+                  истории отмены проект тоже не восстановится.
+                </p>
+                {pendingDelete?.status === "published" && (
+                  <p className="font-medium text-destructive">
+                    Проект сейчас опубликован — страница в каталоге домов перестанет открываться, а
+                    ссылки на неё дадут «не найдено».
+                  </p>
+                )}
+                <p className="text-muted-foreground">
+                  Если нужно просто убрать его из списка — закройте это окно и нажмите соседнюю
+                  кнопку «в архив»: оттуда проект можно вернуть.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => pendingDelete && void deleteProject(pendingDelete)}
+            >
+              Удалить безвозвратно
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)_340px]">
         {/* Список проектов */}
         <aside className="order-2 space-y-2 lg:order-1">
@@ -743,8 +875,8 @@ export function DesignStudio() {
           </div>
 
           <ul className="max-h-[30vh] space-y-1 overflow-auto lg:max-h-[70vh]">
-            {list.map((p) => (
-              <li key={p.id}>
+            {visibleList.map((p) => (
+              <li key={p.id} className="group relative">
                 <button
                   type="button"
                   onClick={async () => {
@@ -752,7 +884,7 @@ export function DesignStudio() {
                     await open(p.id);
                   }}
                   className={cn(
-                    "w-full rounded-sm border px-2.5 py-2 text-left text-xs",
+                    "w-full rounded-sm border py-2 pl-2.5 pr-8 text-left text-xs",
                     p.id === project.id
                       ? "border-accent bg-accent/10"
                       : "border-border hover:border-accent",
@@ -768,9 +900,57 @@ export function DesignStudio() {
                     · {p.metrics.moduleCount} мод. · {p.metrics.floors} эт.
                   </span>
                 </button>
+
+                {/*
+                  Убрать из списка прямо здесь, а не через вкладку каталога.
+                  Пробный проект создаётся одним нажатием — значит и убираться
+                  должен одним, иначе список зарастает «Новыми проектами».
+                */}
+                <span className="absolute right-1 top-1.5 flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                  {p.status !== "archived" ? (
+                    <button
+                      type="button"
+                      title="Убрать в архив — обратимо"
+                      aria-label={`Убрать «${p.title}» в архив`}
+                      onClick={() => void archiveFromList(p.id)}
+                      className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    >
+                      <Archive className="size-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      title="Вернуть из архива в черновики"
+                      aria-label={`Вернуть «${p.title}» из архива`}
+                      onClick={() => void restoreFromList(p.id)}
+                      className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-accent"
+                    >
+                      <Undo2 className="size-3.5" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    title="Удалить безвозвратно"
+                    aria-label={`Удалить «${p.title}»`}
+                    onClick={() => setPendingDelete(p)}
+                    className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
+
+          {archivedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className="w-full px-1 text-left text-[11px] text-muted-foreground hover:text-accent"
+            >
+              {showArchived ? "скрыть архив" : `показать архив (${archivedCount})`}
+            </button>
+          )}
         </aside>
 
         {/* Область просмотра */}

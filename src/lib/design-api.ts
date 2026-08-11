@@ -132,6 +132,10 @@ export const designApi = {
     return { project, url: body.url };
   },
 
+  /** Удалить безвозвратно. Подтверждение спрашивает интерфейс, не этот слой. */
+  remove: (id: string) =>
+    call<{ ok: true }>(`/api/design/projects/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
   uploadCover: async (id: string, blob: Blob) => {
     const res = await fetch(`/api/design/cover/${encodeURIComponent(id)}`, {
       method: "PUT",
