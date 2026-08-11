@@ -105,6 +105,10 @@ export function PlanView({ house, floor = 0 }: { house: HouseState; floor?: numb
         const cz = own.reduce((s, m) => s + m.z + MODULE_SIDE_M / 2, 0) / own.length;
         return (
           <g key={`label-${room.id}`} style={{ pointerEvents: "none" }}>
+            {/* Подпись обводится белым и рисуется поверх обводки: иначе
+                название комнаты теряется в мебели под ним. paint-order
+                переставляет порядок так, чтобы обводка ушла ПОД букву и не
+                съедала её толщину. */}
             <text
               x={cx}
               y={cz - 0.12}
@@ -112,10 +116,24 @@ export function PlanView({ house, floor = 0 }: { house: HouseState; floor?: numb
               fill={INK}
               fontSize={0.34}
               fontWeight={500}
+              stroke={SURFACE}
+              strokeWidth={0.14}
+              paintOrder="stroke"
+              strokeLinejoin="round"
             >
               {ROOM_TYPES[room.type].label}
             </text>
-            <text x={cx} y={cz + 0.32} textAnchor="middle" fill={INK} fontSize={0.3}>
+            <text
+              x={cx}
+              y={cz + 0.32}
+              textAnchor="middle"
+              fill={INK}
+              fontSize={0.3}
+              stroke={SURFACE}
+              strokeWidth={0.14}
+              paintOrder="stroke"
+              strokeLinejoin="round"
+            >
               {roomAreaM2(house, room.id).toFixed(2).replace(".", ",")} м²
             </text>
           </g>
@@ -125,23 +143,49 @@ export function PlanView({ house, floor = 0 }: { house: HouseState; floor?: numb
   );
 }
 
-/** Стрелка входа — понятный сценарий «с улицы в дом». */
-function ThresholdMark({ x, z, axis }: { x: number; z: number; axis: "x" | "z" }) {
-  const len = 0.9;
+/**
+ * Входная дверь — полотно и дуга открывания.
+ *
+ * Раньше здесь стояла стрелка «с улицы в дом». Владелец справедливо сказал,
+ * что это не читается как вход и вдобавок мешает: непонятная галочка посреди
+ * чертежа. На планах вход рисуют так же, как любую дверь, — полотном и дугой,
+ * только шире. Так и делаем: приём знакомый, объяснять его не нужно.
+ */
+function EntryDoor({
+  x,
+  z,
+  axis,
+  widthM,
+}: {
+  x: number;
+  z: number;
+  axis: "x" | "z";
+  widthM: number;
+}) {
+  const r = widthM;
+  // Полотно от одного края проёма, дуга — четверть окружности внутрь дома.
   return axis === "z" ? (
-    <polyline
-      points={`${x - 0.22},${z + len - 0.25} ${x},${z + len} ${x + 0.22},${z + len - 0.25}`}
-      fill="none"
-      stroke={INK}
-      strokeWidth={0.07}
-    />
+    <g>
+      <line x1={x - r / 2} y1={z} x2={x - r / 2} y2={z + r} stroke={INK} strokeWidth={0.07} />
+      <path
+        d={`M ${x - r / 2} ${z + r} A ${r} ${r} 0 0 0 ${x + r / 2} ${z}`}
+        fill="none"
+        stroke={INK}
+        strokeWidth={0.04}
+        strokeDasharray="0.14 0.1"
+      />
+    </g>
   ) : (
-    <polyline
-      points={`${x + len - 0.25},${z - 0.22} ${x + len},${z} ${x + len - 0.25},${z + 0.22}`}
-      fill="none"
-      stroke={INK}
-      strokeWidth={0.07}
-    />
+    <g>
+      <line x1={x} y1={z - r / 2} x2={x + r} y2={z - r / 2} stroke={INK} strokeWidth={0.07} />
+      <path
+        d={`M ${x + r} ${z - r / 2} A ${r} ${r} 0 0 1 ${x} ${z + r / 2}`}
+        fill="none"
+        stroke={INK}
+        strokeWidth={0.04}
+        strokeDasharray="0.14 0.1"
+      />
+    </g>
   );
 }
 
@@ -252,7 +296,7 @@ function OpeningMark({ opening }: { opening: ReturnType<typeof deriveOpenings>[n
           stroke={color}
           strokeWidth={0.05}
         />
-        {isEntry && <ThresholdMark x={x} z={z} axis="z" />}
+        {isEntry && <EntryDoor x={x} z={z} axis="z" widthM={widthM} />}
       </g>
     );
   }
@@ -275,7 +319,7 @@ function OpeningMark({ opening }: { opening: ReturnType<typeof deriveOpenings>[n
         stroke={color}
         strokeWidth={0.05}
       />
-      {isEntry && <ThresholdMark x={x} z={z} axis="x" />}
+      {isEntry && <EntryDoor x={x} z={z} axis="x" widthM={widthM} />}
     </g>
   );
 }

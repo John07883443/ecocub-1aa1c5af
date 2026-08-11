@@ -106,8 +106,105 @@ export function houseFromModules(input: ModuleItem[]): HouseState {
   }
 
   return relayoutAll(
-    nameSingleCommon(retypeCirculation(splitOversizedCommon({ ...emptyHouse(), modules, rooms }))),
+    addHallway(
+      nameSingleCommon(
+        retypeCirculation(splitOversizedCommon({ ...emptyHouse(), modules, rooms })),
+      ),
+    ),
   );
+}
+
+/**
+ * Последняя проверка назначений — уже после всех перекроек.
+ *
+ * Столовая из одного модуля не получается: стен по периметру не остаётся, и
+ * стол ставить негде. Отсечь такие при делении зоны мало — модуль у столовой
+ * может забрать прихожая на следующем шаге. Поэтому проверка стоит в самом
+ * конце, когда состав помещений окончателен.
+ */
+function normalizeCommon(house: HouseState): HouseState {
+  return {
+    ...house,
+    rooms: house.rooms.map((r) =>
+      r.type === "dining" && r.moduleIds.length < 2 ? { ...r, type: "living" as const } : r,
+    ),
+  };
+}
+
+/**
+ * Прихожая у входа для домов покрупнее.
+ *
+ * В компактных домах её нет и быть не должно: входят прямо в общую комнату,
+ * как в Weekend Mini на трёх модулях. Отдавать под тамбур целый кубик из
+ * четырёх — расточительство.
+ *
+ * От восьми модулей прихожая появляется отдельным помещением: у Family One
+ * она 5,1 м², у Family Two 3,4, у Nasledie 9,6. Забирается самый южный модуль
+ * общей зоны — тот, у которого вход, — и только если общей зоны после этого
+ * останется достаточно.
+ */
+function addHallway(house: HouseState): HouseState {
+  const heated = house.rooms.filter((r) => r.type !== "terrace");
+  if (heated.length < 4) return house;
+  const modules = house.modules.filter((m) =>
+    heated.some((r) => r.id === m.roomId && r.type !== "terrace"),
+  );
+  // Порог с запасом: на восьми модулях отрезание прихожей оставляло общую
+  // зону из двух кусков, и планировщик переставал их обставлять. Прогон это
+  // и показал — семь форм из восьмикубиковых.
+  if (modules.length < 9) return house;
+  if (house.rooms.some((r) => r.type === "entryway")) return house;
+
+  // Прихожая отрезается от общей зоны: берётся самый южный её модуль — тот,
+  // у которого вход. Отдельного помещения под неё в программе нет, и это
+  // правильно: в реальных проектах прихожая и есть кусок общего объёма,
+  // выгороженный перегородками.
+  const donor = house.rooms
+    .filter((r) => r.type === "living" && r.moduleIds.length >= 3)
+    .sort((a, b) => b.moduleIds.length - a.moduleIds.length || a.id.localeCompare(b.id))[0];
+  if (!donor) return house;
+
+  const byId = new Map(house.modules.map((m) => [m.id, m]));
+  const south = [...donor.moduleIds].sort((a, b) => {
+    const p = byId.get(a)!;
+    const q = byId.get(b)!;
+    return q.z - p.z || p.x - q.x;
+  })[0];
+
+  // Остаток общей зоны обязан остаться связным, иначе прихожая разрежет дом.
+  const left = donor.moduleIds.filter((id) => id !== south);
+  if (!connected(left, byId)) return house;
+
+  const hallId = newRoomId();
+  return {
+    ...house,
+    modules: house.modules.map((m) => (m.id === south ? { ...m, roomId: hallId } : m)),
+    rooms: [
+      ...house.rooms.map((r) => (r.id === donor.id ? { ...r, moduleIds: left } : r)),
+      { id: hallId, type: "entryway" as const, floor: donor.floor, moduleIds: [south] },
+    ],
+  };
+}
+
+/** Связна ли группа модулей по общим граням. */
+function connected(ids: string[], byId: Map<string, ModuleFootprint>): boolean {
+  if (ids.length <= 1) return true;
+  const seen = new Set([ids[0]]);
+  const queue = [ids[0]];
+  while (queue.length) {
+    const cur = byId.get(queue.shift()!)!;
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      const o = byId.get(id)!;
+      const touching =
+        (Math.abs(o.x - cur.x) === MODULE_SIDE_M && Math.abs(o.z - cur.z) < MODULE_SIDE_M) ||
+        (Math.abs(o.z - cur.z) === MODULE_SIDE_M && Math.abs(o.x - cur.x) < MODULE_SIDE_M);
+      if (!touching) continue;
+      seen.add(id);
+      queue.push(id);
+    }
+  }
+  return seen.size === ids.length;
 }
 
 /**
@@ -161,8 +258,12 @@ function splitOversizedCommon(house: HouseState): HouseState {
     // Назначения по порядку: первым остаётся исходный тип, дальше столовая и
     // гостиные. Больше трёх общих зон подряд не встречается ни в одном
     // проекте, поэтому дальше всё — гостиные.
+    // Столовая из одного модуля не получается: стен по периметру не остаётся,
+    // и стол ставить негде. Такой кусок остаётся гостиной.
     const types: RoomType[] = [room.type, "dining", "living"];
     chunks.forEach((chunk, i) => {
+      const wanted = types[Math.min(i, types.length - 1)];
+      const type = wanted === "dining" && chunk.length < 2 ? "living" : wanted;
       const id = i === 0 ? room.id : newRoomId();
       rooms.push({
         id,

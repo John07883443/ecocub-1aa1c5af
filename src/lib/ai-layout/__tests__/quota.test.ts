@@ -195,9 +195,17 @@ test("ноль означает «без ограничения», а не «з�
   // Умолчание после решения владельца: лимитов нет. Ноль здесь легко принять
   // за запрет, поэтому смысл закреплён тестом — иначе снятие лимита однажды
   // превратится в отказ всем подряд.
+  // Умолчание — с лимитами: генерация тратит деньги, и повторы с одного
+  // адреса не должны их жечь.
   const config = readConfig(base);
-  assert.equal(config.freePerVisitor, 0);
-  assert.equal(config.dailyLimit, 0);
+  assert.equal(config.freePerVisitor, 1);
+  assert.equal(config.dailyLimit, 50);
+
+  // Ноль по-прежнему означает «без ограничения», а не «запрещено всем»:
+  // смысл легко перепутать, поэтому он закреплён здесь.
+  const open = readConfig({ ...base, AI_LAYOUT_FREE_PER_VISITOR: "0", AI_LAYOUT_DAILY_LIMIT: "0" });
+  assert.equal(open.freePerVisitor, 0);
+  assert.equal(open.dailyLimit, 0);
   // Снятие лимитов ничего не открывает само по себе: боевой провайдер
   // по-прежнему не стартует без ключей.
   assert.equal(
@@ -205,14 +213,14 @@ test("ноль означает «без ограничения», а не «з�
     "no_credentials",
   );
 
-  // Лимиты возвращаются переменными окружения, без правки кода.
+  // И меняются переменными окружения, без правки кода.
   const capped = readConfig({
     ...base,
-    AI_LAYOUT_FREE_PER_VISITOR: "1",
-    AI_LAYOUT_DAILY_LIMIT: "50",
+    AI_LAYOUT_FREE_PER_VISITOR: "3",
+    AI_LAYOUT_DAILY_LIMIT: "10",
   });
-  assert.equal(capped.freePerVisitor, 1);
-  assert.equal(capped.dailyLimit, 50);
+  assert.equal(capped.freePerVisitor, 3);
+  assert.equal(capped.dailyLimit, 10);
 });
 
 test("аварийный выключатель остаётся единственным тормозом", () => {
