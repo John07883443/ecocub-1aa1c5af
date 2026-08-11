@@ -35,6 +35,8 @@ import { Route as ApiDesignProjectsRouteImport } from './routes/api.design.proje
 import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.result'
 import { Route as ApiAiLayoutFootprintRouteImport } from './routes/api.ai-layout.footprint'
 import { Route as ApiDesignProjectsIdRouteImport } from './routes/api.design.projects.$id'
+import { Route as ApiDesignOauthStartRouteImport } from './routes/api.design.oauth.start'
+import { Route as ApiDesignOauthCallbackRouteImport } from './routes/api.design.oauth.callback'
 import { Route as ApiDesignCoverIdRouteImport } from './routes/api.design.cover.$id'
 
 const TrainingRoute = TrainingRouteImport.update({
@@ -167,6 +169,16 @@ const ApiDesignProjectsIdRoute = ApiDesignProjectsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiDesignProjectsRoute,
 } as any)
+const ApiDesignOauthStartRoute = ApiDesignOauthStartRouteImport.update({
+  id: '/api/design/oauth/start',
+  path: '/api/design/oauth/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignOauthCallbackRoute = ApiDesignOauthCallbackRouteImport.update({
+  id: '/api/design/oauth/callback',
+  path: '/api/design/oauth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDesignCoverIdRoute = ApiDesignCoverIdRouteImport.update({
   id: '/api/design/cover/$id',
   path: '/api/design/cover/$id',
@@ -200,6 +212,8 @@ export interface FileRoutesByFullPath {
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
+  '/api/design/oauth/callback': typeof ApiDesignOauthCallbackRoute
+  '/api/design/oauth/start': typeof ApiDesignOauthStartRoute
   '/api/design/projects/$id': typeof ApiDesignProjectsIdRoute
 }
 export interface FileRoutesByTo {
@@ -229,6 +243,8 @@ export interface FileRoutesByTo {
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
+  '/api/design/oauth/callback': typeof ApiDesignOauthCallbackRoute
+  '/api/design/oauth/start': typeof ApiDesignOauthStartRoute
   '/api/design/projects/$id': typeof ApiDesignProjectsIdRoute
 }
 export interface FileRoutesById {
@@ -259,6 +275,8 @@ export interface FileRoutesById {
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
+  '/api/design/oauth/callback': typeof ApiDesignOauthCallbackRoute
+  '/api/design/oauth/start': typeof ApiDesignOauthStartRoute
   '/api/design/projects/$id': typeof ApiDesignProjectsIdRoute
 }
 export interface FileRouteTypes {
@@ -290,6 +308,8 @@ export interface FileRouteTypes {
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
+    | '/api/design/oauth/callback'
+    | '/api/design/oauth/start'
     | '/api/design/projects/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -319,6 +339,8 @@ export interface FileRouteTypes {
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
+    | '/api/design/oauth/callback'
+    | '/api/design/oauth/start'
     | '/api/design/projects/$id'
   id:
     | '__root__'
@@ -348,6 +370,8 @@ export interface FileRouteTypes {
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
+    | '/api/design/oauth/callback'
+    | '/api/design/oauth/start'
     | '/api/design/projects/$id'
   fileRoutesById: FileRoutesById
 }
@@ -376,6 +400,8 @@ export interface RootRouteChildren {
   BlogCategoryCategoryRoute: typeof BlogCategoryCategoryRoute
   BlogTagTagRoute: typeof BlogTagTagRoute
   ApiDesignCoverIdRoute: typeof ApiDesignCoverIdRoute
+  ApiDesignOauthCallbackRoute: typeof ApiDesignOauthCallbackRoute
+  ApiDesignOauthStartRoute: typeof ApiDesignOauthStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -562,6 +588,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignProjectsIdRouteImport
       parentRoute: typeof ApiDesignProjectsRoute
     }
+    '/api/design/oauth/start': {
+      id: '/api/design/oauth/start'
+      path: '/api/design/oauth/start'
+      fullPath: '/api/design/oauth/start'
+      preLoaderRoute: typeof ApiDesignOauthStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/design/oauth/callback': {
+      id: '/api/design/oauth/callback'
+      path: '/api/design/oauth/callback'
+      fullPath: '/api/design/oauth/callback'
+      preLoaderRoute: typeof ApiDesignOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/design/cover/$id': {
       id: '/api/design/cover/$id'
       path: '/api/design/cover/$id'
@@ -622,6 +662,8 @@ const rootRouteChildren: RootRouteChildren = {
   BlogCategoryCategoryRoute: BlogCategoryCategoryRoute,
   BlogTagTagRoute: BlogTagTagRoute,
   ApiDesignCoverIdRoute: ApiDesignCoverIdRoute,
+  ApiDesignOauthCallbackRoute: ApiDesignOauthCallbackRoute,
+  ApiDesignOauthStartRoute: ApiDesignOauthStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

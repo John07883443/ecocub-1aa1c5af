@@ -51,6 +51,10 @@ export interface SessionState {
   claimed: boolean;
   /** Пароль задан переменной окружения сервера, а не из браузера. */
   envSecret: boolean;
+  /** На сервере настроен вход через Google — можно показывать кнопку. */
+  google: boolean;
+  /** Пароль ещё можно задать: место не занято ни паролем, ни переменной. */
+  passwordClaimAvailable: boolean;
   minPasswordLength: number;
   production: boolean;
   allowed: boolean;

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { googleConfigured } from "@/lib/design-google.server";
 import {
   MIN_PASSWORD_LENGTH,
   adminConfigured,
@@ -9,6 +10,7 @@ import {
   isProduction,
   issueToken,
   ownerClaimed,
+  passwordClaimAvailable,
   sessionCookie,
 } from "@/lib/design-auth.server";
 
@@ -32,6 +34,8 @@ export const Route = createFileRoute("/api/design/session")({
         return Response.json({
           configured: await adminConfigured(),
           claimed: await ownerClaimed(),
+          google: googleConfigured(),
+          passwordClaimAvailable: await passwordClaimAvailable(),
           envSecret: envSecretConfigured(),
           minPasswordLength: MIN_PASSWORD_LENGTH,
           production: isProduction(),

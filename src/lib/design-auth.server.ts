@@ -55,32 +55,74 @@ export function envSecretConfigured(): boolean {
   return secret() !== null;
 }
 
+/** Ключ настройки, под которым лежит случайный секрет подписи сессий. */
+const SIGNING_KEY_SETTING = "session_signing_key";
+/** Ключ настройки с почтой владельца, вошедшего через Google. */
+export const GOOGLE_OWNER_SETTING = "google_owner_email";
+
 /**
  * Ключ, которым подписываются куки сессии.
  *
- * Переменная окружения имеет приоритет: это и запасной вход, и способ
- * выкинуть все текущие сессии, если пароль скомпрометирован. Иначе берётся
- * хеш пароля из базы — он для подписи ничем не хуже случайной строки и
- * автоматически обесценивает куки при смене пароля.
+ * Переменная окружения имеет приоритет: это и запасной вход, и способ разом
+ * выкинуть все сессии, если что-то утекло. Иначе берётся случайный ключ,
+ * который сервер один раз создаёт и хранит в базе.
+ *
+ * Раньше вместо случайного ключа использовался хеш пароля — тогда смена
+ * пароля заодно обесценивала куки. От этого пришлось отказаться: вход через
+ * Google пароля не заводит вовсе, и подписывать сессию стало бы нечем.
  */
 async function signingKey(): Promise<string | null> {
   const env = secret();
   if (env) return env;
-  const { readOwnerSecret } = await import("./house-projects.server.ts");
-  const owner = await readOwnerSecret();
-  return owner ? `db:${owner.hash}` : null;
+
+  const { readSetting, writeSetting } = await import("./house-projects.server.ts");
+  const existing = await readSetting(SIGNING_KEY_SETTING);
+  if (existing) return existing;
+
+  // Ключ создаётся только когда владелец уже есть: до этого подписывать
+  // нечего, а лишняя запись в базе на пустом месте не нужна.
+  if (!(await ownerClaimed())) return null;
+  const { randomBytes } = await import("node:crypto");
+  const fresh = randomBytes(32).toString("hex");
+  try {
+    await writeSetting(SIGNING_KEY_SETTING, fresh, { onlyIfEmpty: true });
+  } catch {
+    return null;
+  }
+  return (await readSetting(SIGNING_KEY_SETTING)) ?? fresh;
 }
 
-/** Задан ли пароль хоть каким-то способом. */
+/** Задан ли доступ хоть каким-то способом. */
 export async function adminConfigured(): Promise<boolean> {
-  return (await signingKey()) !== null;
+  return envSecretConfigured() || (await ownerClaimed());
 }
 
-/** Занято ли место владельца. Пока нет — редактор предложит придумать пароль. */
+/** Почта владельца, вошедшего через Google. null — вход Google ещё не занят. */
+export async function googleOwnerEmail(): Promise<string | null> {
+  const { readSetting } = await import("./house-projects.server.ts");
+  return readSetting(GOOGLE_OWNER_SETTING);
+}
+
+/**
+ * Занято ли место владельца — паролем, аккаунтом Google или переменной
+ * окружения. Пока не занято, редактор предлагает его занять.
+ */
 export async function ownerClaimed(): Promise<boolean> {
   if (envSecretConfigured()) return true;
-  const { readOwnerSecret } = await import("./house-projects.server.ts");
-  return (await readOwnerSecret()) !== null;
+  const { readOwnerSecret, readSetting } = await import("./house-projects.server.ts");
+  if (await readOwnerSecret()) return true;
+  return (await readSetting(GOOGLE_OWNER_SETTING)) !== null;
+}
+
+/**
+ * Выпустить сессию без пароля — после подтверждённого входа через Google.
+ * Вызывается только из обработчика ответа Google, проверившего личность.
+ */
+export async function issueTokenForOwner(): Promise<string | null> {
+  const key = await signingKey();
+  if (!key) return null;
+  const exp = String(Date.now() + TTL_MS);
+  return `${exp}.${await hmac(exp, key)}`;
 }
 
 /** Минимальная длина пароля. Короче — это не пароль, а формальность. */
@@ -100,8 +142,9 @@ async function hashPassword(password: string, salt: string): Promise<string> {
  * Возвращает false, если место уже занято.
  */
 export async function claimOwner(password: string): Promise<boolean> {
-  if (envSecretConfigured()) return false;
   if (password.length < MIN_PASSWORD_LENGTH) return false;
+  // Занято аккаунтом Google или переменной окружения — пароль уже не завести.
+  if (!(await passwordClaimAvailable())) return false;
   const { randomBytes } = await import("node:crypto");
   const { writeOwnerSecret } = await import("./house-projects.server.ts");
   const salt = randomBytes(16).toString("hex");
@@ -119,6 +162,19 @@ async function passwordMatches(input: string): Promise<boolean> {
   const owner = await readOwnerSecret();
   if (!owner) return false;
   return safeEqual(await hashPassword(input, owner.salt), owner.hash);
+}
+
+/**
+ * Можно ли ещё задать пароль.
+ *
+ * Условие — «владельца нет вообще», а не «нет пароля». Разница
+ * принципиальная: пока проверялось только отсутствие пароля, посторонний мог
+ * завести себе пароль уже после того, как владелец вошёл через Google, и
+ * получить полный доступ в обход него. Место у раздела одно на все способы
+ * входа.
+ */
+export async function passwordClaimAvailable(): Promise<boolean> {
+  return !(await ownerClaimed());
 }
 
 async function hmac(payload: string, key: string): Promise<string> {

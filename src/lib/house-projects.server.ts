@@ -642,6 +642,68 @@ export async function writeOwnerSecret(
   return true;
 }
 
+/* ------------------------------------------------------------------ */
+/* Мелкие серверные настройки                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Пара «ключ — значение» для того, что не заслуживает своей таблицы:
+ * ключ подписи сессий, почта владельца из Google. Заводить под каждую такую
+ * величину отдельную таблицу — значит писать миграцию ради одной строки.
+ */
+const SETTINGS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS design_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+`;
+
+export async function readSetting(key: string): Promise<string | null> {
+  const instance = await getDb();
+  if (!instance) return null;
+  try {
+    instance.exec(SETTINGS_SCHEMA);
+    const row = instance.prepare(`SELECT value FROM design_settings WHERE key = ?`).get(key) as
+      | { value: string }
+      | undefined;
+    return row?.value ?? null;
+  } catch (e) {
+    console.warn(`Проектирование: настройка ${key} не читается:`, (e as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Записать настройку. `onlyIfEmpty` нужен там, где место занимается один раз
+ * и навсегда: почта владельца именно такая — иначе следующий вошедший через
+ * Google просто вытеснил бы предыдущего.
+ */
+export async function writeSetting(
+  key: string,
+  value: string,
+  opts: { onlyIfEmpty?: boolean } = {},
+): Promise<boolean> {
+  const instance = await getDb();
+  if (!instance) {
+    throw new RepositoryError(
+      "read-only",
+      "Хранилище недоступно, настройку сохранить некуда. Проверьте HOUSE_PROJECTS_DB_PATH и права на каталог.",
+    );
+  }
+  instance.exec(SETTINGS_SCHEMA);
+  if (opts.onlyIfEmpty) {
+    const existing = instance.prepare(`SELECT 1 FROM design_settings WHERE key = ?`).get(key);
+    if (existing) return false;
+  }
+  instance
+    .prepare(
+      `INSERT INTO design_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+    .run(key, value);
+  return true;
+}
+
 /**
  * Ошибка репозитория → HTTP-ответ. Один перевод на все роуты: иначе один
  * из них однажды отдаст 500 там, где человеку нужно прочитать «адрес занят».

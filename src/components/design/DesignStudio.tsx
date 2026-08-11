@@ -78,10 +78,42 @@ const AUTOSAVE_DELAY_MS = 1500;
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
+/**
+ * Фирменный знак Google.
+ *
+ * Нарисован разметкой, а не картинкой: правила Google требуют показывать знак
+ * без искажений и перекраски, а свой SVG это гарантирует и не добавляет
+ * лишнего запроса к серверу за файлом.
+ */
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.7 30.1 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.7 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.1 24.6c0-1.6-.1-3.2-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 6.9l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16.4z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.4 28.7c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.8-6.1C1 16.8 0 20.3 0 24s1 7.2 2.6 10.4l7.8-5.7z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2.1 1.4-4.8 2.3-8.7 2.3-6.3 0-11.7-3.7-13.6-9.1l-7.8 5.7C6.5 42.6 14.6 48 24 48z"
+      />
+    </svg>
+  );
+}
+
 export function DesignStudio() {
   const [ready, setReady] = useState(false);
   const [allowed, setAllowed] = useState(false);
   const [claimed, setClaimed] = useState(true);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [passwordAvailable, setPasswordAvailable] = useState(true);
   const [minLength, setMinLength] = useState(8);
   const [devMode, setDevMode] = useState(false);
   const [secret, setSecret] = useState("");
@@ -127,6 +159,28 @@ export function DesignStudio() {
     }
   }, []);
 
+  // Возврат из Google приносит исход параметром адреса. Показываем его
+  // человеческой строкой и убираем параметр, чтобы он не висел в ссылке.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get("oauth");
+    if (!outcome) return;
+    const messages: Record<string, string> = {
+      claimed: "Готово: этот аккаунт Google теперь владелец раздела",
+      cancelled: "Вход отменён",
+      "not-allowed": "Этот аккаунт Google не имеет доступа к разделу",
+      unverified: "Почта в этом аккаунте Google не подтверждена",
+      "bad-state": "Вход не завершён: попробуйте ещё раз с этой же вкладки",
+      "exchange-failed": "Google не подтвердил вход. Проверьте ключи на сервере",
+      "not-configured": "Вход через Google на сервере не настроен",
+      storage: "Хранилище недоступно, вход сохранить не удалось",
+    };
+    const text = messages[outcome] ?? "Вход через Google не удался";
+    if (outcome === "claimed") toast.success(text);
+    else toast.error(text);
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -134,6 +188,8 @@ export function DesignStudio() {
         const session = await designApi.session();
         if (cancelled) return;
         setClaimed(session.claimed);
+        setGoogleReady(session.google);
+        setPasswordAvailable(session.passwordClaimAvailable);
         setMinLength(session.minPasswordLength);
         setAllowed(session.allowed);
         setDevMode(session.mode === "dev");
@@ -389,43 +445,81 @@ export function DesignStudio() {
     // человека в SSH на сервер за переменной окружения значит не пустить его
     // в раздел вовсе: владелец продукта работает с телефона.
     const claiming = !claimed;
+    // Пароль показываем, пока им ещё можно воспользоваться: если владелец
+    // вошёл через Google, форма пароля превратилась бы в тупик.
+    const showPassword = passwordAvailable || !claiming;
     return (
       <div className="mx-auto max-w-md py-16">
         <h2 className="text-xl font-semibold">
-          {claiming ? "Придумайте пароль" : "Вход в режим проектирования"}
+          {claiming ? "Вход в режим проектирования" : "Вход в режим проектирования"}
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
           {claiming
-            ? `Пароль задаётся один раз и защищает изменение и публикацию проектов. Не короче ${minLength} символов; хранится на сервере в виде хеша, восстановить его нельзя — запишите.`
-            : "Раздел закрыт: менять и публиковать проекты может только владелец. Пароль хранится на сервере хешем и в браузер не передаётся."}
+            ? "Раздел ещё никем не занят. Войдите через Google — этот аккаунт станет владельцем, и все функции откроются."
+            : "Раздел закрыт: менять и публиковать проекты может только владелец."}
         </p>
-        <div className="mt-5 flex gap-2">
-          <Input
-            type="password"
-            value={secret}
-            autoComplete={claiming ? "new-password" : "current-password"}
-            placeholder={claiming ? "Новый пароль" : "Пароль"}
-            onChange={(e) => setSecret(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void doLogin(claiming)}
-          />
-          <Button
-            disabled={loggingIn || secret.length < (claiming ? minLength : 1)}
-            onClick={() => void doLogin(claiming)}
-          >
-            {loggingIn ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : claiming ? (
-              "Задать"
-            ) : (
-              "Войти"
+
+        {googleReady && (
+          <>
+            <a
+              href="/api/design/oauth/start"
+              className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-sm border border-border bg-background text-sm font-medium transition-colors hover:border-accent"
+            >
+              <GoogleMark />
+              Войти через Google
+            </a>
+            {showPassword && (
+              <p className="my-4 text-center text-xs uppercase tracking-wide text-muted-foreground">
+                или паролем
+              </p>
             )}
-          </Button>
-        </div>
+          </>
+        )}
+
+        {!showPassword && !googleReady && (
+          <p className="mt-5 rounded-sm bg-amber-500/10 p-3 text-sm text-amber-800">
+            Владелец входит через Google, но вход через Google на сервере сейчас не настроен.
+            Задайте GOOGLE_OAUTH_CLIENT_ID и GOOGLE_OAUTH_CLIENT_SECRET либо запасной пароль в
+            ECOCUB_ADMIN_SECRET.
+          </p>
+        )}
+
+        {showPassword && (
+          <>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {claiming
+                ? `Пароль задаётся один раз, не короче ${minLength} символов. Хранится хешем, восстановить нельзя — запишите.`
+                : "Пароль хранится на сервере хешем и в браузер не передаётся."}
+            </p>
+            <div className="mt-5 flex gap-2">
+              <Input
+                type="password"
+                value={secret}
+                autoComplete={claiming ? "new-password" : "current-password"}
+                placeholder={claiming ? "Новый пароль" : "Пароль"}
+                onChange={(e) => setSecret(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void doLogin(claiming)}
+              />
+              <Button
+                disabled={loggingIn || secret.length < (claiming ? minLength : 1)}
+                onClick={() => void doLogin(claiming)}
+              >
+                {loggingIn ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : claiming ? (
+                  "Задать"
+                ) : (
+                  "Войти"
+                )}
+              </Button>
+            </div>
+          </>
+        )}
         {claiming && (
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-            Пока пароль не задан, задать его может любой, кто откроет эту страницу. Сделайте это
-            сейчас — второй раз занять место уже нельзя. Если пароль потеряется, запасной задаётся
-            переменной <code>ECOCUB_ADMIN_SECRET</code> на сервере: она перебивает этот.
+            Пока владелец не назначен, занять место может любой, кто откроет эту страницу. Сделайте
+            это сейчас — второй раз место не занять. Запасной вход задаётся переменной{" "}
+            <code>ECOCUB_ADMIN_SECRET</code> на сервере: она перебивает и пароль, и Google.
           </p>
         )}
         {!storage.writable && (

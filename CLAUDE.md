@@ -86,10 +86,12 @@ CAD Light и каталог домов — `src/lib/house-project` (канони
 `house-project/catalog.ts` берёт их из `src/lib/standards`. Два конструктора
 живут параллельно намеренно — публичный работает с упрощённым кубиком 3 × 3 м,
 CAD Light с заводским модулем 3200 × 3420; мост между ними в
-`house-project/adapters.ts`. Мутации закрыты паролем: он задаётся при первом
-открытии `/design` в браузере и хранится хешем в базе; запасной вход —
-переменная `ECOCUB_ADMIN_SECRET`, которую деплой берёт из секрета репозитория
-(см. `src/lib/design-auth.server.ts`). Тесты — `npm run test:house-project`.
+`house-project/adapters.ts`. Мутации закрыты входом владельца: вход через
+Google (`design-google.server.ts`, ключи `GOOGLE_OAUTH_CLIENT_ID` и
+`GOOGLE_OAUTH_CLIENT_SECRET`) либо пароль, заданный при первом открытии
+`/design`. Место владельца одно на оба способа и занимается один раз;
+запасной вход — `ECOCUB_ADMIN_SECRET`, которую деплой берёт из секрета
+репозитория (см. `design-auth.server.ts`). Тесты — `npm run test:house-project`.
 
 Практическое правило: если облачному агенту нужен ассет с ПК пользователя
 (фавикон, изображения из Тильды, локальный env и пр.) — это добывает
