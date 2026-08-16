@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "note": "Аггрегированные данные без персональных сведений (без ФИО владельцев, без кадастровых номеров). Источник сырых данных — приватный репозиторий ecocub-data, туда персональные поля НЕ выгружать никогда.",
+  "directions": [
+    {
+      "id": "south",
+      "label": "Южное направление",
+      "highways": ["М2 «Крым»", "А108 ЦКАД (южный участок)"],
+      "status": "active",
+      "villageIds": ["river-park"]
+    },
+    { "id": "southwest", "label": "Юго-Западное направление", "highways": ["А101"], "status": "in_development", "villageIds": [] },
+    { "id": "west", "label": "Западное направление", "highways": ["М1 «Беларусь»", "Минское шоссе"], "status": "in_development", "villageIds": [] },
+    { "id": "northwest", "label": "Северо-Западное направление", "highways": ["Новорижское шоссе", "Пятницкое шоссе"], "status": "in_development", "villageIds": [] },
+    { "id": "north", "label": "Северное направление", "highways": ["М10 «Россия», М11"], "status": "in_development", "villageIds": [] },
+    { "id": "northeast", "label": "Северо-Восточное направление", "highways": ["М7 «Волга», Щёлковское шоссе"], "status": "in_development", "villageIds": [] },
+    { "id": "east", "label": "Восточное направление", "highways": ["Горьковское шоссе"], "status": "in_development", "villageIds": [] },
+    { "id": "southeast", "label": "Юго-Восточное направление", "highways": ["М4 «Дон» (восточная часть), Новорязанское шоссе"], "status": "in_development", "villageIds": [] }
+  ],
+  "villages": {
+    "river-park": {
+      "name": "River Park",
+      "directionId": "south",
+      "district": "Ступинский район",
+      "developer": null,
+      "developerNote": "Не подтверждено — уточнить у владельца перед публикацией.",
+      "trackingMethod": "dgtime.ru-виджет (карта участков встроена iframe-ом с zemlyamo.ru), полный список участков одним JSON внутри HTML — обычный HTTP-запрос раз в сутки, без браузера",
+      "dataSourceUrl": "https://dgtime.ru/riverpark/",
+      "lastUpdated": "2026-08-16T11:27:00+03:00",
+      "stats": {
+        "totalPlots": 583,
+        "available": 237,
+        "sold": 66,
+        "reserved": 15,
+        "withdrawn": 265,
+        "withdrawnNote": "«Снят с продажи» — не значит продан: часть придержана застройщиком под вторую, более дорогую очередь (подтверждено на прибрежных участках).",
+        "medianPricePerSotka": 349900,
+        "meanPricePerSotka": 354541,
+        "minPricePerSotka": 289900,
+        "maxPricePerSotka": 429900,
+        "medianPricePer10Sotok": 3499000,
+        "currency": "RUB"
+      },
+      "promotions": [
+        { "plotId": "C3", "status": "available", "note": "по акции" },
+        { "plotId": "C23", "status": "available", "note": "по акции" },
+        { "plotId": "G67", "status": "available", "note": "по акции" },
+        { "plotId": "B79", "status": "sold", "pricePerSotka": 291571, "note": "продан со скидкой по акции" }
+      ],
+      "history": {
+        "note": "Тренд-CSV копится ежедневно в приватном репозитории ecocub-data (api_data/land_prices_trend_riverpark.csv), начиная с 2026-08-16 — это не архив за прошлые годы, а точка отсчёта на будущее.",
+        "trendCsvPath": "api_data/land_prices_trend_riverpark.csv (репозиторий ecocub-data, не в этом репозитории)"
+      }
+    }
+  }
+}
