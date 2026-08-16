@@ -13,6 +13,16 @@ const TRACKED_TOWNS: Record<string, { villageLabel: string; directionId: string 
   Ступино: { villageLabel: "River Park", directionId: "south" },
 };
 
+/**
+ * Кольцевые зоны по удалённости от Москвы — по референсу владельца
+ * (жёлтый центр/оранжевое/зелёное/синее кольцо), но в монохромной палитре
+ * сайта вместо буквальных цветов. Радиусы — реальные километры, переведённые
+ * в проекционные единицы (масштаб см. lib/barometer/moscow-map.ts):
+ * ~25 км и ~55 км (примерно по ЦКАД) от центра Москвы.
+ */
+const ZONE_NEAR_R = 2500;
+const ZONE_MID_R = 5533;
+
 export function RealMoscowMap({
   activeId,
   onSelectDirection,
@@ -21,12 +31,26 @@ export function RealMoscowMap({
   onSelectDirection: (id: string) => void;
 }) {
   const activeHighways = new Set(highwaysForDirection(activeId));
-  const { viewBox, boundaryPath, mkadPath, ringHighways, radialHighways, towns } = moscowMapData;
+  const { viewBox, boundaryPath, mkadPath, ringHighways, radialHighways, cities } = moscowMapData;
+  const activeHighwayKey = Object.keys(radialHighways).find((k) => activeHighways.has(k));
 
   return (
     <div className="flex flex-col items-center gap-4">
       <svg viewBox={viewBox} className="w-full max-w-[560px]" role="img" aria-label="Карта Московской области">
-        <path d={boundaryPath} className="fill-muted" stroke="var(--border)" strokeWidth={12} fillRule="evenodd" />
+        <defs>
+          <clipPath id="oblast-clip">
+            <path d={boundaryPath} fillRule="evenodd" />
+          </clipPath>
+        </defs>
+
+        {/* дальняя зона — база */}
+        <path d={boundaryPath} className="fill-muted" fillRule="evenodd" />
+        {/* средняя и ближняя зоны — кольца по реальному расстоянию от Москвы, обрезаны по границе области */}
+        <g clipPath="url(#oblast-clip)">
+          <circle cx={0} cy={0} r={ZONE_MID_R} className="fill-accent/20" />
+          <circle cx={0} cy={0} r={ZONE_NEAR_R} className="fill-accent/40" />
+        </g>
+        <path d={boundaryPath} fill="none" stroke="var(--border)" strokeWidth={12} fillRule="evenodd" />
 
         {Object.entries(ringHighways).map(([key, hw]) => (
           <path
@@ -45,6 +69,7 @@ export function RealMoscowMap({
           return (
             <path
               key={key}
+              id={`hw-${key}`}
               d={hw.path}
               fill="none"
               stroke={isActive ? "var(--accent)" : "var(--foreground)"}
@@ -64,8 +89,22 @@ export function RealMoscowMap({
           strokeOpacity={0.9}
           strokeLinejoin="round"
         />
+        <text x={0} y={-1950} textAnchor="middle" className="fill-foreground text-[95px] font-semibold uppercase">
+          МКАД
+        </text>
+        <text x={0} y={-5750} textAnchor="middle" className="fill-accent text-[90px] font-semibold uppercase">
+          ЦКАД
+        </text>
 
-        {Object.entries(towns).map(([name, pt]) => {
+        {activeHighwayKey && (
+          <text className="fill-accent text-[95px] font-medium uppercase" dy={-24}>
+            <textPath href={`#hw-${activeHighwayKey}`} startOffset="38%">
+              {radialHighways[activeHighwayKey].label}
+            </textPath>
+          </text>
+        )}
+
+        {Object.entries(cities).map(([name, pt]) => {
           const tracked = TRACKED_TOWNS[name];
           const isActive = tracked && tracked.directionId === activeId;
           return (
@@ -82,18 +121,18 @@ export function RealMoscowMap({
               <circle
                 cx={pt.x}
                 cy={pt.y}
-                r={tracked ? 95 : 55}
-                className={tracked ? (isActive ? "fill-accent" : "fill-accent/70") : "fill-foreground/50"}
+                r={tracked ? 95 : 45}
+                className={tracked ? (isActive ? "fill-accent" : "fill-accent/70") : "fill-foreground/55"}
                 stroke="var(--background)"
-                strokeWidth={tracked ? 14 : 8}
+                strokeWidth={tracked ? 14 : 7}
               />
               <text
                 x={pt.x}
-                y={pt.y - (tracked ? 130 : 85)}
+                y={pt.y - (tracked ? 130 : 75)}
                 textAnchor="middle"
                 className={cn(
-                  "select-none text-[130px]",
-                  tracked ? "fill-foreground font-semibold" : "fill-muted-foreground",
+                  "select-none text-[110px]",
+                  tracked ? "fill-foreground text-[130px] font-semibold" : "fill-muted-foreground",
                 )}
               >
                 {name}
@@ -114,8 +153,9 @@ export function RealMoscowMap({
       </svg>
 
       <p className="max-w-md text-center text-xs text-muted-foreground">
-        Реальная граница области, МКАД, ЦКАД и федеральные трассы (данные
-        OpenStreetMap). Мелкая дорожная сеть не показана.
+        Реальная граница области, МКАД, ЦКАД, федеральные трассы и крупнейшие
+        города по населению (данные OpenStreetMap). Зоны — по расстоянию от
+        Москвы. Мелкая дорожная сеть не показана.
       </p>
     </div>
   );
