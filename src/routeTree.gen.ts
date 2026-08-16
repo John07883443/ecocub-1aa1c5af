@@ -19,6 +19,7 @@ import { Route as DesignRouteImport } from './routes/design'
 import { Route as ContactsRouteImport } from './routes/contacts'
 import { Route as ConstructorRouteImport } from './routes/constructor'
 import { Route as ConcreteRouteImport } from './routes/concrete'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HousesIndexRouteImport } from './routes/houses.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
@@ -87,6 +88,11 @@ const ConstructorRoute = ConstructorRouteImport.update({
 const ConcreteRoute = ConcreteRouteImport.update({
   id: '/concrete',
   path: '/concrete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -187,6 +193,7 @@ const ApiDesignCoverIdRoute = ApiDesignCoverIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
@@ -250,6 +258,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/concrete': typeof ConcreteRoute
   '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/concrete'
     | '/constructor'
     | '/contacts'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/concrete'
     | '/constructor'
     | '/contacts'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/concrete'
     | '/constructor'
     | '/contacts'
@@ -377,6 +389,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   ConcreteRoute: typeof ConcreteRoute
   ConstructorRoute: typeof ConstructorRoute
   ContactsRoute: typeof ContactsRoute
@@ -474,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/concrete'
       fullPath: '/concrete'
       preLoaderRoute: typeof ConcreteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -639,6 +659,7 @@ const ApiDesignProjectsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
   ConcreteRoute: ConcreteRoute,
   ConstructorRoute: ConstructorRoute,
   ContactsRoute: ContactsRoute,
