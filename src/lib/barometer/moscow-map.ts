@@ -24,6 +24,8 @@ export type HighwayData = {
   label: string;
 };
 
+export type CityPoint = Point & { population: number };
+
 type MoscowMapData = {
   viewBox: string;
   moscow: Point;
@@ -33,6 +35,8 @@ type MoscowMapData = {
   radialHighways: Record<string, HighwayData>;
   directionHighways: Record<string, string[]>;
   towns: Record<string, Point>;
+  /** Настоящие крупнейшие города области по населению (OSM population=). */
+  cities: Record<string, CityPoint>;
 };
 
 export const moscowMapData = raw as MoscowMapData;
