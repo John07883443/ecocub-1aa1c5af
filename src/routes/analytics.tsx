@@ -6,7 +6,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
-import { SouthDirectionMap } from "@/components/analytics/SouthDirectionMap";
+import { RealMoscowMap } from "@/components/analytics/RealMoscowMap";
 import { cn } from "@/lib/utils";
 import {
   directions,
@@ -160,16 +160,9 @@ function AnalyticsPage() {
             </div>
           </Reveal>
 
-          <div className="grid gap-10 lg:grid-cols-[420px_1fr] lg:items-start">
+          <div className="grid gap-10 lg:grid-cols-[560px_1fr] lg:items-start">
             <Reveal variant="up">
-              {activeId === "south" ? (
-                <SouthDirectionMap selectedId="stupino" onSelect={() => {}} />
-              ) : (
-                <div className="flex aspect-square max-w-[360px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center text-sm text-muted-foreground">
-                  <span className="text-3xl">🚧</span>
-                  Схема направления в разработке
-                </div>
-              )}
+              <RealMoscowMap activeId={activeId} onSelectDirection={setActiveId} />
             </Reveal>
 
             <Reveal variant="up" delay={90}>
