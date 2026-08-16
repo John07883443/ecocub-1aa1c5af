@@ -6,7 +6,8 @@ import { Reveal } from "@/components/motion/Reveal";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
-import { MoscowRegionMap } from "@/components/analytics/MoscowRegionMap";
+import { SouthDirectionMap } from "@/components/analytics/SouthDirectionMap";
+import { cn } from "@/lib/utils";
 import {
   directions,
   villagesForDirection,
@@ -139,9 +140,36 @@ function AnalyticsPage() {
 
       <Section>
         <Container>
+          <Reveal>
+            <div className="mb-8 flex flex-wrap gap-2">
+              {directions.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setActiveId(d.id)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors",
+                    d.id === activeId
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : "border-border text-muted-foreground hover:border-accent/50 hover:text-foreground",
+                  )}
+                >
+                  {d.label.replace(" направление", "")}
+                </button>
+              ))}
+            </div>
+          </Reveal>
+
           <div className="grid gap-10 lg:grid-cols-[420px_1fr] lg:items-start">
             <Reveal variant="up">
-              <MoscowRegionMap directions={directions} activeId={activeId} onSelect={setActiveId} />
+              {activeId === "south" ? (
+                <SouthDirectionMap selectedId="stupino" onSelect={() => {}} />
+              ) : (
+                <div className="flex aspect-square max-w-[360px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center text-sm text-muted-foreground">
+                  <span className="text-3xl">🚧</span>
+                  Схема направления в разработке
+                </div>
+              )}
             </Reveal>
 
             <Reveal variant="up" delay={90}>
