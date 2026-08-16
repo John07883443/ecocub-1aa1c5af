@@ -28,6 +28,7 @@ export const mainNav: NavItem[] = [
   { label: "Конструктор", to: "/constructor" },
   { label: "Портфолио", to: "/portfolio" },
   { label: "Блог", to: "/blog" },
+  { label: "Аналитика", to: "/analytics" },
   { label: "Контакты", to: "/contacts" },
   // Служебный раздел в общем меню — решение владельца: инструмент нужен под
   // рукой. Посетителю он не вредит: страница закрыта от индексации (noindex),
