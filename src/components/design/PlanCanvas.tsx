@@ -119,6 +119,17 @@ export function PlanCanvas({
   const [view, setView] = useState<View>(() => ({ x: -2000, y: 10000, scale: 0.03 }));
   const [fitted, setFitted] = useState(false);
 
+  // Всегда свежий view для нативных обработчиков щипка (эффект ниже не должен
+  // пересоздавать слушатели на каждое изменение view — иначе жест дёргается).
+  const viewRef = useRef(view);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+  // Пока активен щипок двумя пальцами, одиночные жесты (перетаскивание модуля,
+  // рамка выделения) не должны стартовать от второго пальца — иначе второе
+  // касание одновременно и масштабирует, и тащит объект под собой.
+  const pinchActiveRef = useRef(false);
+
   const [drag, setDrag] = useState<{
     ids: string[];
     startModel: { x: number; y: number };
@@ -262,6 +273,93 @@ export function PlanCanvas({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  /* --- Масштаб щипком (тачскрин) ---------------------------------------
+   *
+   * На тачскрине колеса мыши нет — без этого эффекта отдалить план вообще
+   * нечем. Слушатели нативные (не React onPointer*), потому что должны
+   * видеть оба пальца независимо от того, на что именно попал второй —
+   * хоть на модуль, хоть на пустое место, — а React-обработчики на
+   * элементах глушат всплытие через stopPropagation.
+   */
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+
+    const pts = new Map<number, { x: number; y: number }>();
+    let start: { dist: number; midPx: { x: number; y: number }; view: View } | null = null;
+
+    const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+      Math.hypot(a.x - b.x, a.y - b.y);
+    const midOf = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    });
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size !== 2) return;
+
+      pinchActiveRef.current = true;
+      // Второй палец мог начать одиночный жест первым касанием — гасим его,
+      // иначе модуль одновременно и двигается, и участвует в масштабировании.
+      setDrag(null);
+      setMarquee(null);
+      setPan(null);
+      setOpeningDrag(null);
+
+      const [a, b] = Array.from(pts.values());
+      const rect = el.getBoundingClientRect();
+      const m = midOf(a, b);
+      start = {
+        dist: dist(a, b),
+        midPx: { x: m.x - rect.left, y: m.y - rect.top },
+        view: viewRef.current,
+      };
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size !== 2 || !start) return;
+      e.preventDefault();
+
+      const [a, b] = Array.from(pts.values());
+      const rect = el.getBoundingClientRect();
+      const factor = dist(a, b) / start.dist;
+      const sv = start.view;
+      const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, sv.scale * factor));
+      // Та же логика привязки, что у колеса: модельная точка под НАЧАЛЬНОЙ
+      // серединой пальцев следует за текущей серединой — так жест одновременно
+      // и масштабирует, и панорамирует, как в любом карточном приложении.
+      const mx = sv.x + start.midPx.x / sv.scale;
+      const my = sv.y - start.midPx.y / sv.scale;
+      const m = midOf(a, b);
+      const curPx = { x: m.x - rect.left, y: m.y - rect.top };
+      setView({ scale, x: mx - curPx.x / scale, y: my + curPx.y / scale });
+    };
+
+    const onPointerEnd = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      // Пересчитываем щипок заново, если останется/появится вторая точка —
+      // иначе следующий кадр использует расстояние от уже отпущенного пальца.
+      start = null;
+      if (pts.size < 2) pinchActiveRef.current = false;
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerEnd);
+    el.addEventListener("pointercancel", onPointerEnd);
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerEnd);
+      el.removeEventListener("pointercancel", onPointerEnd);
+    };
+  }, []);
+
   /* --- Перетаскивание -------------------------------------------------- */
 
   const movingModules = useMemo(
@@ -386,6 +484,9 @@ export function PlanCanvas({
   );
 
   const onPointerDownModule = (e: React.PointerEvent, m: ModuleInstance) => {
+    // Второй палец щипка мог попасть прямо на модуль — это не начало
+    // перетаскивания, а часть жеста масштабирования.
+    if (pinchActiveRef.current) return;
     // Пока в руке проём, модуль под курсором — это стена, в которую целятся,
     // а не объект, который двигают. Событие уходит наверх, к постановке.
     if (placingPresetId) return;
@@ -574,6 +675,7 @@ export function PlanCanvas({
   );
 
   const onBackgroundPointerDown = (e: React.PointerEvent) => {
+    if (pinchActiveRef.current) return;
     setMenu(null);
     const p = pointerModel(e);
 
