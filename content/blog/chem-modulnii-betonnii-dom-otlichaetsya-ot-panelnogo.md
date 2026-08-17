@@ -5,7 +5,7 @@ date: 2025-12-01
 category: comparison
 tags: ["железобетон", "монолит"]
 excerpt: "'Чем отличается модульный"
-cover: https://static.tildacdn.com/tild3037-3266-4730-b364-333735393930/DALLE_2025-11-18_160.webp
+cover: /images/blog/chem-modulnii-betonnii-dom-otlichaetsya-ot-panelnogo.webp
 readingTime: 5
 seoTitle: "Модульный бетонный дом и панельный: ключевые отличия"
 seoDescription: "Чем отличается модульный бетонный дом от панельного? Разбираем ключевые различия технологий, долговечность, комфорт и преимущества подхода EcoCub."

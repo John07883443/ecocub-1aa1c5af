@@ -5,7 +5,7 @@ date: 2025-06-01
 category: comparison
 tags: ["тепло и отопление", "архитектура"]
 excerpt: "Как на стыке эпох и культур в России 2025 начал набирать популярность стиль современный минимализм или в простонародии хайтек"
-cover: https://static.tildacdn.com/tild6334-6164-4464-b564-316263383639/6-1536x960jpg.webp
+cover: /images/blog/sovremennii-minimalizm-zahvatil-novuyu-rigu.webp
 readingTime: 3
 seoTitle: "Современный дом минимализм"
 seoDescription: "Современные дома в стиле минимализм в Подмосковье"

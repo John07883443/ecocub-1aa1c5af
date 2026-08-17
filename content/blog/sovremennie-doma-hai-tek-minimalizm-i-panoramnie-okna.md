@@ -5,7 +5,7 @@ date: 2025-10-31
 category: cases
 tags: ["монолит", "участок"]
 excerpt: "Хай-тек дома — гармония технологий, минимализма и света. Панорамные окна, монолитная основа, энергоэффективность и архитектура будущего."
-cover: https://static.tildacdn.com/tild6164-6130-4664-b035-373131383638/Flux_Dev_highresolut.jpg
+cover: /images/blog/sovremennie-doma-hai-tek-minimalizm-i-panoramnie-okna.jpg
 readingTime: 4
 seoTitle: "Современные дома хай-тек: стиль минимализм и панорамы"
 seoDescription: "Хай-тек дома — гармония технологий, минимализма и света. Панорамные окна, монолитная основа, энергоэффективность и архитектура будущего."

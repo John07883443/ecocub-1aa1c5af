@@ -5,7 +5,7 @@ date: 2025-09-16
 category: cases
 tags: ["кирпич", "участок"]
 excerpt: "<strong>SkyRiver — стильный модульный дом от EcoCub, который объединил идеи архитекторов с трёх континентов и обрёл собственный характер в премиальных пейзажах Подмосковья.</strong>"
-cover: https://static.tildacdn.com/tild6163-6466-4735-b639-333362326661/R_Photo_-_1.jpg
+cover: /images/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri.jpg
 readingTime: 8
 seoTitle: "SkyRiver: уникальный дом в Подмосковье — архитектура, выросшая из ландшафта"
 seoDescription: "SkyRiver — загородный дом в Подмосковье, созданный из идей мировой архитектуры и вдохновлённый природным ландшафтом. История проекта, философия и дизайн."
