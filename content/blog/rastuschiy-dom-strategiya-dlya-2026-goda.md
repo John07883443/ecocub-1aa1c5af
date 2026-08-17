@@ -53,6 +53,8 @@ seoDescription: "Что такое растущий жилой дом и поч�
 
 Идея простая и по сути инженерная, а не только маркетинговая:
 
+<div data-block="roadmap"><div data-block="roadmap-step"><span data-step-n>Шаг 1</span><span data-step-label>Участок</span></div><div data-block="roadmap-arrow">→</div><div data-block="roadmap-step"><span data-step-n>Шаг 2</span><span data-step-label>Проект на 150–200 м²</span></div><div data-block="roadmap-arrow">→</div><div data-block="roadmap-step"><span data-step-n>Шаг 3</span><span data-step-label>Очередь 1 — 70 м²</span></div><div data-block="roadmap-arrow">→</div><div data-block="roadmap-step"><span data-step-n>Шаг 4</span><span data-step-label>Очередь 2 — полный дом</span></div></div>
+
 <div data-block="feature-list"><div data-block="feature-item"><span data-label>Проект</span><strong>Делается сразу на итоговую площадь</strong><p data-body>Например, 150–200 м², с продуманной планировкой второго этажа или нижнего уровня.</p></div><div data-block="feature-item"><span data-label>Очередь&nbsp;1</span><strong>Строится первая очередь</strong><p data-body>Компактные 60–70 м², которых достаточно для комфортной жизни здесь и сейчас.</p></div><div data-block="feature-item"><span data-label>Запас</span><strong>Инженерия и конструктив закладываются с запасом</strong><p data-body>Коммуникации, фундамент и несущие узлы проектируются под финальный объём, а не только под первую очередь.</p></div></div>
 
 Разница с обычной пристройкой «на глазок» принципиальная.
@@ -64,6 +66,8 @@ seoDescription: "Что такое растущий жилой дом и поч�
 <div data-block="section-divider"></div>
 
 ## Дом на холме, который знает, кем станет
+
+<figure data-block="editorial-figure"><img src="/images/blog/rastuschiy-dom-koncept-cokol.webp" alt="Концептуальный рендер: дом на монолитном цоколе, нижний уровень пока обозначен как незавершённый объём" /><figcaption>Расчёт на будущее спрятан прямо в конструкции — нижний уровень уже стоит на месте, просто пока не обжит</figcaption></figure>
 
 Наглядный пример — один из домов серии Sky River, построенный именно по такому принципу. Причём холм здесь не метафора, а вполне реальный рельеф участка.
 

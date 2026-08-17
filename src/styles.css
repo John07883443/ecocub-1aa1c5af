@@ -635,3 +635,89 @@ html {
   font-size: 0.85em;
   color: var(--color-muted-foreground);
 }
+
+/* Роадмап: коротая последовательность шагов (участок → проект → очереди
+   строительства). Подписи — обычный HTML-текст, не сгенерированная
+   картинка, чтобы не рисковать искажёнными надписями от AI-генерации. */
+.prose [data-block="roadmap"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  margin-block: 2.5em;
+  padding: 1.5em 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.prose [data-block="roadmap-step"] {
+  flex: 1 1 0;
+  min-width: 7em;
+  padding-inline: 1em;
+  text-align: center;
+}
+
+.prose [data-block="roadmap-step"] [data-step-n] {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.75em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 0.4em;
+}
+
+.prose [data-block="roadmap-step"] [data-step-label] {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1em;
+  color: var(--color-foreground);
+  line-height: 1.25;
+}
+
+.prose [data-block="roadmap-arrow"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.5em;
+  color: var(--color-border);
+  font-size: 1.25em;
+}
+
+@media (max-width: 640px) {
+  .prose [data-block="roadmap"] {
+    flex-direction: column;
+  }
+  .prose [data-block="roadmap-step"] {
+    padding-block: 0.5em;
+    text-align: left;
+  }
+  .prose [data-block="roadmap-arrow"] {
+    width: auto;
+    height: 1.25em;
+    transform: rotate(90deg);
+  }
+}
+
+/* Концептуальная иллюстрация в разрыве текста — полноширинная (в рамках
+   колонки статьи), с журнальной подписью снизу. */
+.prose figure[data-block="editorial-figure"] {
+  margin-block: 3em;
+}
+
+.prose figure[data-block="editorial-figure"] img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  margin: 0;
+}
+
+.prose figure[data-block="editorial-figure"] figcaption {
+  margin-top: 0.75em;
+  font-family: var(--font-sans);
+  font-size: 0.85em;
+  color: var(--color-muted-foreground);
+  text-align: center;
+}
