@@ -5,7 +5,7 @@ date: 2025-11-12
 category: comparison
 tags: ["монолит", "цена и смета"]
 excerpt: "Сравнение квартиры и модульного дома: что входит в стоимость квадратного метра, где дешевле жить и почему модульные дома — рациональный выбор для Подмосковья."
-cover: /images/blog/ekonomika-kvadratnogo-metra-kvartira-ili-modulnii-dom.jpg
+cover: /images/blog/ekonomika-kvadratnogo-metra-kvartira-ili-modulnii-dom.webp
 readingTime: 5
 seoTitle: "Модульные дома для круглогодичного проживания: альтернатива квартире"
 seoDescription: "Сравнение квартиры и модульного дома: что входит в стоимость квадратного метра, где дешевле жить и почему модульные дома — рациональный выбор для Подмосковья."

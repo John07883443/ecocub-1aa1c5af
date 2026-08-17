@@ -5,7 +5,7 @@ date: 2026-01-28
 category: comparison
 tags: ["цена и смета", "участок", "коммуникации"]
 excerpt: "'Сколько стоит модульный дом в"
-cover: /images/blog/skolko-stoit-modulnii-dom-v-podmoskove.png
+cover: /images/blog/skolko-stoit-modulnii-dom-v-podmoskove.webp
 readingTime: 4
 seoTitle: "Сколько стоит модульный дом в Подмосковье?"
 seoDescription: "Сколько стоит модульный дом в Подмосковье в 2025 году: реальные цены от 78 тыс. ₽/м², что входит в «дом под ключ», скрытые расходы, сравнение комплектаций. Примеры проектов и полная структура затрат."
