@@ -762,7 +762,7 @@ export function DesignStudio() {
           прямо на стену, — и в обоих случаях до нажатия видно, где проём
           окажется и какой он будет ширины.
         */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <span className="text-xs text-muted-foreground">Проёмы</span>
           {OPENING_TOOLS.map((t) => {
             const Icon = OPENING_TOOL_ICONS[t.kind];
@@ -959,7 +959,7 @@ export function DesignStudio() {
 
       <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)_340px]">
         {/* Список проектов */}
-        <aside className="order-2 space-y-2 lg:order-1">
+        <aside className="order-2 min-w-0 space-y-2 lg:order-1">
           <div className="flex gap-1">
             <Button
               size="sm"
@@ -1095,7 +1095,10 @@ export function DesignStudio() {
         </aside>
 
         {/* Область просмотра */}
-        <div ref={viewportRef} className="order-1 h-[52vh] min-h-[360px] lg:order-2 lg:h-[70vh]">
+        <div
+          ref={viewportRef}
+          className="order-1 h-[52vh] min-h-[360px] min-w-0 lg:order-2 lg:h-[70vh]"
+        >
           <div className={cn("h-full", view === "plan" ? "block" : "hidden")}>
             <PlanCanvas
               editor={editor}
@@ -1173,7 +1176,7 @@ export function DesignStudio() {
         </div>
 
         {/* Панели */}
-        <aside className="order-3 rounded-sm border border-border bg-card p-3">
+        <aside className="order-3 min-w-0 rounded-sm border border-border bg-card p-3">
           {facePick && (
             <div className="mb-3 rounded-sm border border-accent/50 bg-accent/5 p-2.5">
               <p className="text-xs font-medium">
