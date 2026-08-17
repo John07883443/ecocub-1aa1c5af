@@ -5,7 +5,7 @@ date: 2025-07-11
 category: comparison
 tags: ["железобетон", "монолит"]
 excerpt: "Как построить белоснежную виллу хай-тек по цене каркасного дома"
-cover: https://static.tildacdn.com/tild3630-3261-4364-b763-386562306530/33dcbf0bca0c60e9bdd2.jpg
+cover: /images/blog/villa-iz-monolitnogo-betona-pod-klyuch-deshevle-rinka-preimu.jpg
 readingTime: 3
 seoTitle: "Вилла из монолитного бетона под ключ дешевле рынка – преимущества prefab EcoCub"
 seoDescription: "Постройте белоснежную виллу хай-тек из монолитного бетона по prefab-технологии — под ключ, быстро и дешевле рынка. Эксплуатируемая кровля, панорамные окна, энергоэффективность, максимальная безопасность и индивидуальный проект. EcoCub: ваш дом-куб — ваша "
