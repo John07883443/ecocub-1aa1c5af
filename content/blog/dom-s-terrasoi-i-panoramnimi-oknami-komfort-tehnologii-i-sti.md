@@ -5,7 +5,7 @@ date: 2025-10-09
 category: comparison
 tags: ["монолит", "кирпич"]
 excerpt: "Дом с террасой и панорамными окнами — символ загородного комфорта. Он объединяет природу, уют и современный стиль жизни."
-cover: /images/blog/dom-s-terrasoi-i-panoramnimi-oknami-komfort-tehnologii-i-sti.jpg
+cover: /images/blog/dom-s-terrasoi-i-panoramnimi-oknami-komfort-tehnologii-i-sti.webp
 readingTime: 3
 seoTitle: "Дом с террасой и панорамными окнами: идеи и преимущества современного загородного жилья"
 seoDescription: "Почему дом с террасой и панорамными окнами стал архитектурным трендом? Комфорт, стиль и технологии в домах EcoCub — обзор преимуществ."

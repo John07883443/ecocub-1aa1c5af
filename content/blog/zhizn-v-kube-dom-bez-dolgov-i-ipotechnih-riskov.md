@@ -5,7 +5,7 @@ date: 2026-02-05
 category: cases
 tags: ["монолит", "цена и смета", "участок"]
 excerpt: "'Жизнь в кубе —"
-cover: /images/blog/zhizn-v-kube-dom-bez-dolgov-i-ipotechnih-riskov.png
+cover: /images/blog/zhizn-v-kube-dom-bez-dolgov-i-ipotechnih-riskov.webp
 readingTime: 4
 seoTitle: "Модульные дома под ключ: жизнь без долгов"
 seoDescription: "Жизнь в кубе — современный дом без ипотечных рисков. Разбираем, как модульные дома под ключ позволяют построить дом без ипотеки, сократить сроки строительства, контролировать бюджет и получить свободу загородной жизни без долгов."

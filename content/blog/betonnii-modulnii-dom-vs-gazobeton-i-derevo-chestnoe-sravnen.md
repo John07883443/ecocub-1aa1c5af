@@ -5,7 +5,7 @@ date: 2025-10-20
 category: comparison
 tags: ["железобетон", "монолит"]
 excerpt: "Сравнение технологий строительства: бетонный модульный дом, газобетон и дерево. Что лучше по цене, теплу, срокам, архитектуре и долговечности. Плюсы и минусы."
-cover: /images/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen.png
+cover: /images/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen.webp
 readingTime: 7
 seoTitle: "Бетонный модульный дом, газобетон или дерево — честное сравнение технологий в 2025 году"
 seoDescription: "Сравнение технологий строительства: бетонный модульный дом, газобетон и дерево. Что лучше по цене, теплу, срокам, архитектуре и долговечности. Плюсы и минусы."
