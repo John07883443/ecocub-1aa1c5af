@@ -143,7 +143,15 @@ async function main() {
       continue;
     }
 
+    // Без обложки в блог не берём (владелец 24.09.2026: «эту статью удали,
+    // она без фото»). Обложка не скачалась — тоже пропуск: следующий
+    // ежечасный прогон попробует снова.
     const cover = article.cover ? await downloadImage(article.cover, article.slug, 0) : null;
+    if (!cover) {
+      console.log(`  пропускаю (нет обложки): ${article.title}`);
+      skipped += 1;
+      continue;
+    }
     const inline = [];
     for (const [index, image] of (article.images ?? []).entries()) {
       if (image === article.cover) continue;
