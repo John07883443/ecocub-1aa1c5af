@@ -27,6 +27,11 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!loaderData) return { meta: [{ title: "Статья — EcoCub" }] };
     const { post } = loaderData;
     const url = `${SITE_URL}/blog/${post.slug}`;
+    // Абсолютный адрес обложки (владелец 28.09.2026: в превью ссылки в
+    // Telegram была общая картинка сайта, а не из статьи). Относительный
+    // og:image Telegram и соцсети игнорируют и берут twitter:image из
+    // __root — там общая заглавная вилла.
+    const cover = post.cover ? (post.cover.startsWith("http") ? post.cover : `${SITE_URL}${post.cover.startsWith("/") ? "" : "/"}${post.cover}`) : null;
 
     return {
       meta: [
@@ -36,7 +41,9 @@ export const Route = createFileRoute("/blog/$slug")({
         { property: "og:type", content: "article" },
         { property: "og:title", content: post.title },
         { property: "og:description", content: post.excerpt },
-        ...(post.cover ? [{ property: "og:image", content: post.cover }] : []),
+        ...(cover ? [{ property: "og:image", content: cover }, { name: "twitter:image", content: cover }] : []),
+        { name: "twitter:title", content: post.title },
+        { name: "twitter:description", content: post.seoDescription || post.excerpt || post.title },
         { property: "article:published_time", content: post.date },
         { property: "article:section", content: BLOG_CATEGORIES[post.category] },
         ...post.tags.map((tag) => ({ property: "article:tag", content: tag })),
@@ -52,7 +59,7 @@ export const Route = createFileRoute("/blog/$slug")({
             mainEntityOfPage: { "@type": "WebPage", "@id": url },
             headline: post.title,
             description: post.seoDescription || post.excerpt,
-            ...(post.cover ? { image: [post.cover] } : {}),
+            ...(cover ? { image: [cover] } : {}),
             datePublished: post.date,
             dateModified: post.date,
             articleSection: BLOG_CATEGORIES[post.category],
