@@ -63,6 +63,8 @@ export interface Grammar {
     heightsMm: number[];
     door: { widthMm: number; heightMm: number };
     commonDoorWidthsMm: number[];
+    /** Межкомнатная дверь между помещениями (владелец 01.10: 900). */
+    internalDoorWidthMm: number;
     slotWidthMm: number;
     cornerPierMm: number;
   };

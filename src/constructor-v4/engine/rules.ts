@@ -23,6 +23,7 @@ import {
 } from "./geometry.ts";
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
 import { canPair, factoryModules } from "./factory.ts";
+import { checkRoutes } from "./graph.ts";
 import { HARMONY, aspectRatio, facadeProfile, fillRatio, outlineCorners } from "./patterns.ts";
 import { PILOT } from "../pilot.config.ts";
 
@@ -662,6 +663,43 @@ const roomDoors: Check = (p) => {
       ];
 };
 
+/** Маршрут: от входа через проёмы доходим до каждой комнаты, в спальню — не через другую спальню. */
+const routes: Check = (p) => {
+  const r = checkRoutes(p);
+  const out: RuleResult[] = [];
+  if (!r.entranceRooms.length) return out; // нет входа — ловит правило openings
+  for (const id of r.unreachable)
+    out.push(
+      fail(
+        "routes",
+        "hard",
+        `До помещения ${id} не дойти от входа — нет проёма в стыке.`,
+        "Планировочные правила (владелец 01.10.2026)",
+        id,
+      ),
+    );
+  for (const id of r.throughBedroom)
+    out.push(
+      fail(
+        "routes",
+        "hard",
+        `В спальню ${id} можно попасть только через другую спальню.`,
+        "Планировочные правила",
+        id,
+      ),
+    );
+  return out.length
+    ? out
+    : [
+        pass(
+          "routes",
+          "hard",
+          "От входа через двери доходим до каждой комнаты.",
+          "Планировочные правила",
+        ),
+      ];
+};
+
 /** Ночная зона собрана: спальни первого яруса по одну сторону общей комнаты (на больших домах — крылья). */
 /** Компактность и пропорции (мировая практика): заполнение ≥ 75 % (≥ 80 % до 6 кубиков) — жёстко, пропорции до 1:2,2 — мягко. */
 const footprintCompact: Check = (p) => {
@@ -1077,6 +1115,7 @@ export const HARD_CHECKS: Check[] = [
   kitchenWidth,
   roomDoors,
   footprintCompact,
+  routes,
 ];
 export const SOFT_CHECKS: Check[] = [
   bedroomsInCorners,

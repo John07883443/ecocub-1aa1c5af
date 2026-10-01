@@ -73,11 +73,12 @@
       "widthMm": 800,
       "heightMm": 2100
     },
-    "commonDoorWidthsMm": [1000, 1200],
+    "commonDoorWidthsMm": [900, 1000, 1200],
     "slotWidthMm": 500,
     "cornerPierMm": 210,
-    "source": "Развёртки Р-1…Р-4 листов 12–15; планы Family One/Two (800, 1000, 1200)",
-    "confidence": "album"
+    "source": "Развёртки Р-1…Р-4 листов 12–15; планы Family One/Two (800, 1000, 1200); межкомнатная дверь 900 — решение владельца 01.10.2026",
+    "confidence": "album",
+    "internalDoorWidthMm": 900
   },
   "partitionsMm": {
     "betweenRooms": 190,

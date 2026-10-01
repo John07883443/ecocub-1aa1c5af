@@ -7,6 +7,7 @@
 import { GRAMMAR, roomSpec } from "../grammar/index.ts";
 import { SIDES, contact, footprint, type Rect } from "./geometry.ts";
 import { roomClearAreaM2 } from "./rules.ts";
+import { moduleBehind, openingSpan } from "./graph.ts";
 import type { ModulePlacement, Opening, Project, Room, Side } from "./types.ts";
 
 export type WallKind = "exterior" | "joint-b2b" | "partition";
@@ -15,9 +16,32 @@ export interface PlanWall {
   id: string;
   tier: number;
   moduleId: string;
+  /** Полоса стены модуля (210) — для расчётов. */
   rect: Rect;
+  /** Как рисовать: стык — тонкая стена 120 у линии стыка, чтобы две стены читались парой с зазором. */
+  drawRect: Rect;
   thicknessMm: number;
   kind: WallKind;
+}
+
+/** Проём в стыке: дверь между помещениями или широкий портал внутри одного помещения. */
+export interface PlanPortal {
+  id: string;
+  tier: number;
+  kind: "open" | "door";
+  /** Отрезок по линии стыка. */
+  a: { x: number; y: number };
+  b: { x: number; y: number };
+  rooms: [string, string];
+}
+
+export interface PlanEntrance {
+  tier: number;
+  doorId: string;
+  label: string;
+  at: { x: number; y: number };
+  /** Крыльцо снаружи у входной двери. */
+  porch: Rect;
 }
 
 export interface PlanRoom {
@@ -77,6 +101,8 @@ export interface PlanModel {
   doors: PlanDoor[];
   windows: PlanWindow[];
   furniture: PlanFurniture[];
+  portals: PlanPortal[];
+  entrances: PlanEntrance[];
   notes: string[];
 }
 
@@ -107,6 +133,88 @@ function inward(face: Side): { x: number; y: number } {
   return { N: { x: 0, y: -1 }, S: { x: 0, y: 1 }, E: { x: -1, y: 0 }, W: { x: 1, y: 0 } }[face];
 }
 
+const JOINT_DRAW = 120;
+
+/** Тонкая полоса у линии стыка — так рисуется каждая из двух стен стыка. */
+function jointDraw(r: Rect, face: Side, a: number, b: number): Rect {
+  const t = JOINT_DRAW;
+  switch (face) {
+    case "N":
+      return { x0: a, x1: b, y0: r.y1 - t, y1: r.y1 };
+    case "S":
+      return { x0: a, x1: b, y0: r.y0, y1: r.y0 + t };
+    case "E":
+      return { x0: r.x1 - t, x1: r.x1, y0: a, y1: b };
+    case "W":
+      return { x0: r.x0, x1: r.x0 + t, y0: a, y1: b };
+  }
+}
+
+/** Где в стене грани проёмы-двери: свои и соседа за стыком (дверь режет обе стены). */
+function doorCuts(p: Project, m: ModulePlacement, face: Side): [number, number][] {
+  const out: [number, number][] = [];
+  for (const o of p.openings)
+    if (o.kind !== "window" && o.moduleId === m.id && o.face === face) out.push(openingSpan(m, o));
+  for (const o of p.openings) {
+    if (o.kind !== "internal-door" || o.moduleId === m.id) continue;
+    const om = p.modules.find((x) => x.id === o.moduleId);
+    if (!om || om.tier !== m.tier) continue;
+    const opposite = { N: "S", S: "N", E: "W", W: "E" }[o.face];
+    if (face === opposite && moduleBehind(p, om, o)?.id === m.id) out.push(openingSpan(om, o));
+  }
+  return out.sort((x, y) => x[0] - y[0]);
+}
+
+function subtract(a: number, b: number, cuts: [number, number][]): [number, number][] {
+  let segs: [number, number][] = [[a, b]];
+  for (const [c0, c1] of cuts)
+    segs = segs.flatMap(([s0, s1]) => {
+      if (c1 <= s0 || c0 >= s1) return [[s0, s1] as [number, number]];
+      const r: [number, number][] = [];
+      if (c0 > s0) r.push([s0, c0]);
+      if (c1 < s1) r.push([c1, s1]);
+      return r;
+    });
+  return segs;
+}
+
+/** Зоны мокрого модуля: тамбур (проход между дверями) и санузел за перегородкой. */
+export function wetZones(
+  p: Project,
+  m: ModulePlacement,
+): { bath: Rect; tambour: Rect | null; partitions: Rect[] } {
+  const c = clearRect(m);
+  const doors = p.openings.filter((o) => o.moduleId === m.id && o.kind !== "window");
+  const t = GRAMMAR.partitionsMm.wet;
+  if (doors.length < 2 && !doors.some((o) => o.kind === "entrance"))
+    return { bath: c, tambour: null, partitions: [] };
+  const band = 1100;
+  const gap = 700;
+  // Двери ставятся у начала грани, поэтому полоса — у младшей стороны по x (или по y, если дверь на восточной грани).
+  if (!doors.some((o) => o.face === "E")) {
+    const x = c.x0 + band;
+    const mid = (c.y0 + c.y1) / 2;
+    return {
+      tambour: { x0: c.x0, x1: x, y0: c.y0, y1: c.y1 },
+      bath: { x0: x + t, x1: c.x1, y0: c.y0, y1: c.y1 },
+      partitions: [
+        { x0: x, x1: x + t, y0: c.y0, y1: mid - gap / 2 },
+        { x0: x, x1: x + t, y0: mid + gap / 2, y1: c.y1 },
+      ],
+    };
+  }
+  const y = c.y0 + band;
+  const mid = (c.x0 + c.x1) / 2;
+  return {
+    tambour: { x0: c.x0, x1: c.x1, y0: c.y0, y1: y },
+    bath: { x0: c.x0, x1: c.x1, y0: y + t, y1: c.y1 },
+    partitions: [
+      { x0: c.x0, x1: mid - gap / 2, y0: y, y1: y + t },
+      { x0: mid + gap / 2, x1: c.x1, y0: y, y1: y + t },
+    ],
+  };
+}
+
 function walls(p: Project): PlanWall[] {
   const out: PlanWall[] = [];
   let n = 0;
@@ -115,50 +223,132 @@ function walls(p: Project): PlanWall[] {
     const room = p.rooms.find((x) => x.moduleIds.includes(m.id));
     for (const face of SIDES) {
       const [s0, s1] = face === "N" || face === "S" ? [r.x0, r.x1] : [r.y0, r.y1];
-      const cuts: { a: number; b: number; kind: WallKind | null }[] = [];
+      const joints: { a: number; b: number; same: boolean }[] = [];
       for (const o of p.modules) {
         if (o.id === m.id || o.tier !== m.tier) continue;
         const c = contact(r, footprint(o));
         if (!c || c.faceA !== face) continue;
-        const same = room?.moduleIds.includes(o.id);
-        // Внутри одного помещения стык раскрыт — стены нет; между помещениями — две стены по 210 = 420.
-        cuts.push({ a: c.from, b: c.to, kind: same ? null : "joint-b2b" });
+        joints.push({ a: c.from, b: c.to, same: !!room?.moduleIds.includes(o.id) });
       }
-      cuts.sort((x, y) => x.a - y.a);
-      let cur = s0;
+      joints.sort((x, y) => x.a - y.a);
+      const cuts = doorCuts(p, m, face);
       const push = (a: number, b: number, kind: WallKind) => {
-        if (b > a)
-          out.push({
-            id: `w${++n}`,
-            tier: m.tier,
-            moduleId: m.id,
-            rect: wallStrip(r, face, a, b),
-            thicknessMm: W(),
-            kind,
-          });
+        for (const [x0, x1] of subtract(a, b, cuts))
+          if (x1 > x0)
+            out.push({
+              id: `w${++n}`,
+              tier: m.tier,
+              moduleId: m.id,
+              rect: wallStrip(r, face, x0, x1),
+              drawRect:
+                kind === "joint-b2b" ? jointDraw(r, face, x0, x1) : wallStrip(r, face, x0, x1),
+              thicknessMm: W(),
+              kind,
+            });
       };
-      for (const c of cuts) {
-        push(cur, c.a, "exterior");
-        if (c.kind) push(c.a, c.b, c.kind);
-        cur = Math.max(cur, c.b);
+      let cur = s0;
+      for (const j of joints) {
+        push(cur, j.a, "exterior");
+        // Внутри одного помещения стык раскрыт (портал), между помещениями — две стены.
+        if (!j.same) push(j.a, j.b, "joint-b2b");
+        cur = Math.max(cur, j.b);
       }
       push(cur, s1, "exterior");
     }
-    // Мокрый модуль: перегородка 125 между санузлом и техчастью (тамбуром).
+    // Мокрый модуль: если в нём вход (тамбур) или две двери — тамбур полосой вдоль дверей,
+    // санузел за перегородкой 125 с дверью 700. Проход идёт через тамбур, а не через санузел.
     if (room?.type === "wet-core") {
-      const c = clearRect(m);
-      const y = Math.round(c.y0 + (c.y1 - c.y0) * 0.62);
-      out.push({
-        id: `w${++n}`,
-        tier: m.tier,
-        moduleId: m.id,
-        rect: { x0: c.x0, x1: c.x1, y0: y, y1: y + GRAMMAR.partitionsMm.wet },
-        thicknessMm: GRAMMAR.partitionsMm.wet,
-        kind: "partition",
-      });
+      const z = wetZones(p, m);
+      for (const rect of z.partitions)
+        out.push({
+          id: `w${++n}`,
+          tier: m.tier,
+          moduleId: m.id,
+          rect,
+          drawRect: rect,
+          thicknessMm: GRAMMAR.partitionsMm.wet,
+          kind: "partition",
+        });
     }
   }
   return out;
+}
+
+/** Порталы: раскрытые стыки внутри помещения и двери в стыках между помещениями. */
+function portals(p: Project): PlanPortal[] {
+  const out: PlanPortal[] = [];
+  let n = 0;
+  for (const r of p.rooms) {
+    const mods = p.modules.filter((m) => r.moduleIds.includes(m.id));
+    for (let i = 0; i < mods.length; i++)
+      for (let j = i + 1; j < mods.length; j++) {
+        const fa = footprint(mods[i]);
+        const c = contact(fa, footprint(mods[j]));
+        if (!c) continue;
+        const line =
+          c.faceA === "E" ? fa.x1 : c.faceA === "W" ? fa.x0 : c.faceA === "N" ? fa.y1 : fa.y0;
+        const vertical = c.faceA === "E" || c.faceA === "W";
+        out.push({
+          id: `portal-${++n}`,
+          tier: r.tier,
+          kind: "open",
+          a: vertical ? { x: line, y: c.from } : { x: c.from, y: line },
+          b: vertical ? { x: line, y: c.to } : { x: c.to, y: line },
+          rooms: [r.id, r.id],
+        });
+      }
+  }
+  for (const o of p.openings.filter((x) => x.kind === "internal-door")) {
+    const m = p.modules.find((x) => x.id === o.moduleId);
+    if (!m) continue;
+    const behind = moduleBehind(p, m, o);
+    const other = behind ? p.rooms.find((r) => r.moduleIds.includes(behind.id)) : undefined;
+    if (!other) continue;
+    const fr = footprint(m);
+    const [s0, s1] = openingSpan(m, o);
+    const line = o.face === "E" ? fr.x1 : o.face === "W" ? fr.x0 : o.face === "N" ? fr.y1 : fr.y0;
+    const vertical = o.face === "E" || o.face === "W";
+    out.push({
+      id: `portal-${++n}`,
+      tier: m.tier,
+      kind: "door",
+      a: vertical ? { x: line, y: s0 } : { x: s0, y: line },
+      b: vertical ? { x: line, y: s1 } : { x: s1, y: line },
+      rooms: [o.roomId, other.id],
+    });
+  }
+  return out;
+}
+
+function entrances(p: Project): PlanEntrance[] {
+  return p.openings
+    .filter((o) => o.kind === "entrance")
+    .flatMap((o) => {
+      const m = p.modules.find((x) => x.id === o.moduleId);
+      if (!m) return [];
+      const r = footprint(m);
+      const [s0, s1] = openingSpan(m, o);
+      const depth = 1500;
+      const pad = 600;
+      const porch: Rect =
+        o.face === "S"
+          ? { x0: s0 - pad, x1: s1 + pad, y0: r.y0 - depth, y1: r.y0 }
+          : o.face === "N"
+            ? { x0: s0 - pad, x1: s1 + pad, y0: r.y1, y1: r.y1 + depth }
+            : o.face === "E"
+              ? { x0: r.x1, x1: r.x1 + depth, y0: s0 - pad, y1: s1 + pad }
+              : { x0: r.x0 - depth, x1: r.x0, y0: s0 - pad, y1: s1 + pad };
+      const room = p.rooms.find((x) => x.id === o.roomId);
+      return [
+        {
+          tier: m.tier,
+          doorId: o.id,
+          label: room?.type === "wet-core" ? "Вход · тамбур" : "Вход",
+          at: { x: (porch.x0 + porch.x1) / 2, y: (porch.y0 + porch.y1) / 2 },
+          porch,
+        },
+      ];
+    });
 }
 
 function openingLine(
@@ -213,11 +403,20 @@ function furnitureFor(p: Project, room: Room): PlanFurniture[] {
           add("sofa", { x0: cx - 1100, x1: cx + 1100, y0: c.y0 + 300, y1: c.y0 + 1200 }, m);
         break;
       case "wet-core": {
-        const split = Math.round(c.y0 + (c.y1 - c.y0) * 0.62);
-        add("shower", { x0: c.x1 - 900, x1: c.x1, y0: c.y0, y1: c.y0 + 900 }, m);
-        add("wc", { x0: c.x0, x1: c.x0 + 400, y0: c.y0 + 200, y1: c.y0 + 850 }, m);
-        add("sink", { x0: c.x0 + 700, x1: c.x0 + 1300, y0: c.y0, y1: c.y0 + 450 }, m);
-        add("boiler", { x0: c.x1 - 500, x1: c.x1, y0: split + 200, y1: split + 700 }, m);
+        const z = wetZones(p, m).bath;
+        add("shower", { x0: z.x1 - 900, x1: z.x1, y0: z.y1 - 900, y1: z.y1 }, m);
+        add("wc", { x0: z.x1 - 400, x1: z.x1, y0: z.y0 + 300, y1: z.y0 + 950 }, m);
+        add(
+          "sink",
+          {
+            x0: z.x1 - 1100 > z.x0 ? z.x1 - 1100 : z.x0,
+            x1: (z.x1 - 1100 > z.x0 ? z.x1 - 1100 : z.x0) + 500,
+            y0: z.y0,
+            y1: z.y0 + 450,
+          },
+          m,
+        );
+        add("boiler", { x0: z.x0, x1: z.x0 + 500, y0: z.y1 - 500, y1: z.y1 }, m);
         break;
       }
       case "study":
@@ -242,7 +441,8 @@ export function planFromProject(p: Project): PlanModel {
       id: r.id,
       tier: r.tier,
       type: r.type,
-      label: roomSpec(r.type).label,
+      // На плане коротко: подпись должна влезать в кубик.
+      label: r.type === "hall" ? "Холл · лестница" : roomSpec(r.type).label,
       areaM2: roomClearAreaM2(p, r),
       clearRects: rects,
       labelAt: { x: Math.round(cx), y: Math.round(cy) },
@@ -284,8 +484,10 @@ export function planFromProject(p: Project): PlanModel {
     doors,
     windows,
     furniture: p.rooms.flatMap((r) => furnitureFor(p, r)),
+    portals: portals(p),
+    entrances: entrances(p),
     notes: [
-      "Наружные стены 210, стык разных помещений — спина к спине 420, внутри помещения стык раскрыт.",
+      "Наружные стены 210; стык разных помещений — две стены модулей с зазором, двери прорезают обе; внутри помещения стык раскрыт порталом.",
       "Мебель — для понимания масштаба, не рабочая документация.",
       ...(p.modules.some((m) => m.tier === 2)
         ? ["Лестница показана условно: тип и габарит уточняет проектировщик."]

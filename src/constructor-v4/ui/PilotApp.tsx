@@ -205,8 +205,17 @@ export function PilotApp() {
 
   // ?demo — сразу собрать варианты по анкете по умолчанию (быстрый показ и проверка).
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("demo")) build(DEFAULT_SCENARIO);
-  }, [build]);
+    const q = new URLSearchParams(window.location.search);
+    if (!q.has("demo")) return;
+    // ?demo&tiers=2&variant=2 — для показа и скриншотов.
+    const tiers = q.get("tiers");
+    const { r } = build({
+      ...DEFAULT_SCENARIO,
+      ...(tiers === "1" || tiers === "2" ? { tiers: Number(tiers) as 1 | 2 } : {}),
+    });
+    const v = r.variants[Number(q.get("variant") ?? 1) - 1];
+    if (v) setCurrent(v.project, false);
+  }, [build, setCurrent]);
 
   /** Применить команду редактора с проверкой правил; вернуть текст для архитектора. */
   const run = useCallback(

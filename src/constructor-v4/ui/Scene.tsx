@@ -10,6 +10,7 @@ import { footprint, bbox, supportOf } from "../engine/geometry.ts";
 import { GRAMMAR, FINISHES } from "../grammar/index.ts";
 import { columnsFor, modulesOnTier } from "../engine/rules.ts";
 import type { ModulePlacement, Opening, Project, Side } from "../engine/types.ts";
+import { planFromProject } from "../engine/plan.ts";
 
 export interface WallPick {
   moduleId: string;
@@ -247,6 +248,23 @@ export function HouseScene({
       />
       {plotGroup}
       {terrace}
+      {planFromProject(project).entrances.map((e) => (
+        <mesh
+          key={e.doorId}
+          position={[
+            (e.porch.x0 + e.porch.x1) / 2000 - ox,
+            0.1,
+            -(e.porch.y0 + e.porch.y1) / 2000 + oz,
+          ]}
+          raycast={() => null}
+          receiveShadow
+        >
+          <boxGeometry
+            args={[(e.porch.x1 - e.porch.x0) / 1000, 0.2, (e.porch.y1 - e.porch.y0) / 1000]}
+          />
+          <meshStandardMaterial color="#8d6a48" />
+        </mesh>
+      ))}
       {columns}
       {project.modules.map((m) => {
         const r = footprint(m);
