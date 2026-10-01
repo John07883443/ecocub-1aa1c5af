@@ -1,0 +1,215 @@
+{
+  "version": "4.0.0-draft",
+  "status": "PLACEHOLDER",
+  "note": "Каталог отделок как данные. Состав и надбавки — ЗАГЛУШКИ до списка отделок, фото и прайса от владельца. Надбавка задаётся вилкой ₽ за м² тёплого контура.",
+  "categories": {
+    "facade": [
+      {
+        "id": "planken-larch",
+        "label": "Планкен лиственница",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "planken-thermo",
+        "label": "Термодерево",
+        "surchargePerM2": {
+          "min": 2000,
+          "max": 5000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "fiber-cement",
+        "label": "Фиброцемент под бетон",
+        "surchargePerM2": {
+          "min": 1500,
+          "max": 4000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "metal-panel",
+        "label": "Металлокассеты",
+        "surchargePerM2": {
+          "min": 3000,
+          "max": 7000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "plaster-white",
+        "label": "Штукатурка белая",
+        "surchargePerM2": {
+          "min": 500,
+          "max": 2500
+        },
+        "placeholder": true
+      }
+    ],
+    "roof": [
+      {
+        "id": "flat-membrane",
+        "label": "Плоская, мембрана",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "flat-exploitable-deck",
+        "label": "Эксплуатируемая с настилом",
+        "surchargePerM2": {
+          "min": 3000,
+          "max": 8000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "flat-green",
+        "label": "Зелёная кровля",
+        "surchargePerM2": {
+          "min": 4000,
+          "max": 10000
+        },
+        "placeholder": true
+      }
+    ],
+    "windowFrames": [
+      {
+        "id": "frame-graphite",
+        "label": "Рамы графит",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "frame-black",
+        "label": "Рамы чёрные",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 1000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "frame-wood-alu",
+        "label": "Дерево-алюминий",
+        "surchargePerM2": {
+          "min": 3000,
+          "max": 8000
+        },
+        "placeholder": true
+      }
+    ],
+    "interior": [
+      {
+        "id": "interior-light-oak",
+        "label": "Светлый дуб и белый",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-warm-wood",
+        "label": "Тёплое дерево",
+        "surchargePerM2": {
+          "min": 1000,
+          "max": 4000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-concrete",
+        "label": "Микроцемент и графит",
+        "surchargePerM2": {
+          "min": 2000,
+          "max": 6000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-japandi",
+        "label": "Джапанди: бежевый, лён, дерево",
+        "surchargePerM2": {
+          "min": 1000,
+          "max": 5000
+        },
+        "placeholder": true
+      }
+    ]
+  },
+  "styles": [
+    {
+      "id": "riga-clean",
+      "label": "Рижский без планкена",
+      "aliases": ["рижский без планкена", "рижск без планкен"],
+      "facade": "plaster-white",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-black",
+      "interior": "interior-light-oak"
+    },
+    {
+      "id": "scandi",
+      "label": "Скандинавский",
+      "aliases": ["скандинавский", "сканди", "скандинав"],
+      "facade": "planken-larch",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-light-oak"
+    },
+    {
+      "id": "japandi",
+      "label": "Японский минимализм",
+      "aliases": ["японский", "японск", "джапанди", "минимализм"],
+      "facade": "planken-thermo",
+      "roof": "flat-green",
+      "windowFrames": "frame-black",
+      "interior": "interior-japandi"
+    },
+    {
+      "id": "riga-planken",
+      "label": "Рижский с планкеном",
+      "aliases": ["рижский", "рижск", "рига"],
+      "facade": "planken-thermo",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-black",
+      "interior": "interior-warm-wood"
+    },
+    {
+      "id": "wood",
+      "label": "Дерево",
+      "aliases": ["дерево", "деревянн", "эко"],
+      "facade": "planken-larch",
+      "roof": "flat-exploitable-deck",
+      "windowFrames": "frame-wood-alu",
+      "interior": "interior-warm-wood"
+    },
+    {
+      "id": "concrete",
+      "label": "Бетон",
+      "aliases": ["бетон", "лофт", "брутализм"],
+      "facade": "fiber-cement",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-concrete"
+    },
+    {
+      "id": "hi-tech",
+      "label": "Хай-тек",
+      "aliases": ["хай-тек", "хайтек", "модерн"],
+      "facade": "metal-panel",
+      "roof": "flat-exploitable-deck",
+      "windowFrames": "frame-black",
+      "interior": "interior-concrete"
+    }
+  ]
+}
