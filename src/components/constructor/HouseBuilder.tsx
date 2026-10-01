@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { openMessenger, type Messenger } from "@/lib/messengers";
 import { analytics } from "@/lib/analytics";
+import { PRICE_SCOPE } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -71,7 +72,7 @@ function buildMessengerText(
     `• Планировка: ${layout}`,
     `• Участок: ${sotki} соток`,
     `• Дизайн фасада: ${designName}`,
-    `• Цена в конструкторе: ${fmt(stats.price)} ₽ (под предчистовую отделку)`,
+    `• Цена в конструкторе: ${fmt(stats.price)} ₽ (${PRICE_SCOPE})`,
   ].join("\n");
 }
 

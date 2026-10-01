@@ -51,7 +51,7 @@ import {
   persistDreamProfile,
   type DreamAnswers,
 } from "@/lib/dreamProfile";
-import { site } from "@/lib/site";
+import { site, PRICE_SCOPE } from "@/lib/site";
 import { HoneypotField, useAntiSpam } from "@/components/Honeypot";
 
 /**
@@ -1206,8 +1206,8 @@ function ResultStep({
               </p>
               <p className="mt-1 text-3xl font-bold text-accent">от {formatRub(est.price)} ₽</p>
               <p className="text-xs text-muted-foreground">
-                ≈ {(est.price / 1_000_000).toFixed(1)}–{(est.priceMax / 1_000_000).toFixed(1)} млн ₽
-                под предчистовую отделку
+                ≈ {(est.price / 1_000_000).toFixed(1)}–{(est.priceMax / 1_000_000).toFixed(1)} млн ₽{" "}
+                {PRICE_SCOPE}
               </p>
             </div>
           </div>

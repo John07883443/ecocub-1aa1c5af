@@ -1,6 +1,7 @@
 import { Blocks, Layers, Maximize2, Ruler } from "lucide-react";
 import { MODULE_HEIGHT_M } from "@/lib/constructor/constants";
 import type { HouseStats } from "@/lib/constructor/types";
+import { PRICE_SCOPE, NO_FINISH_NOTE } from "@/lib/site";
 
 const fmt = (n: number) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 
@@ -31,8 +32,9 @@ export function StatsPanel({ stats }: { stats: HouseStats }) {
         </p>
         <p className="mt-1 text-3xl font-bold text-accent">{fmt(stats.price)} ₽</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          ≈ {priceMln} млн ₽ под предчистовую отделку
+          ≈ {priceMln} млн ₽ {PRICE_SCOPE}
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">{NO_FINISH_NOTE}</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

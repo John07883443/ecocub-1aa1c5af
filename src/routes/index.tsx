@@ -22,7 +22,8 @@ import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
 
 import { site } from "@/lib/site";
-import { aiConstructorLine, homeSnippet, priceLabel } from "@/lib/seo";
+import { formatRubSpaced, homeSnippet, priceLabel } from "@/lib/seo";
+import { NO_FINISH_NOTE, PRICE_SCOPE } from "@/lib/site";
 import { QuickQuiz } from "@/components/QuickQuiz";
 import { getAllPosts } from "@/lib/blog";
 import { fetchProjects } from "@/lib/projects";
@@ -156,13 +157,6 @@ function HomePage() {
                 <p className="max-w-md text-sm text-white/85 md:text-base">
                   Дома из бетона с заводским качеством. Сборка на участке за 10 дней.
                 </p>
-                <Link
-                  to="/constructor"
-                  onClick={() => analytics.ctaClick("hero", "ai-constructor")}
-                  className="pointer-events-auto mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline md:text-base"
-                >
-                  {aiConstructorLine} <ArrowRight className="size-4" />
-                </Link>
                 <div className="pointer-events-auto mt-6 flex flex-wrap gap-3">
                   <Button
                     asChild
@@ -197,10 +191,10 @@ function HomePage() {
           <div className="grid items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-                Быстрый расчёт
+                Короткий квиз
               </p>
               <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
-                Три вопроса — и цена вашего дома
+                Быстрый расчёт за 3 вопроса
               </h2>
               <p className="mt-4 text-muted-foreground">
                 Модульный дом из бетона под ключ — {priceLabel}, с отделкой, доставкой и
@@ -323,10 +317,10 @@ function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-                Подбор проекта
+                Квиз · 6 вопросов
               </p>
               <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
-                Каким будет ваш EcoCub?
+                Подобрать готовый проект
               </h2>
               <p className="mt-4 text-muted-foreground">
                 6 вопросов — и вы увидите ориентировочную площадь, стоимость под ключ и получите
@@ -344,7 +338,8 @@ function HomePage() {
                   <Layers className="mt-0.5 size-5 shrink-0 text-accent" />
                   <span className="text-sm text-muted-foreground">
                     <span className="font-semibold text-foreground">Расчёт сразу.</span> В конце —
-                    ориентир по площади и цене под ключ по ставке 105 000 ₽/м².
+                    ориентир по площади и цене под ключ по ставке{" "}
+                    {formatRubSpaced(site.basePricePerM2)} ₽/м².
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -436,8 +431,9 @@ function HomePage() {
               Посчитайте свой дом за минуту
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Базовая цена 105 000 ₽ за м² в комплектации под предчистовую отделку — одна ставка для
-              всех проектов. Никаких «доплатите ещё» по ходу стройки.
+              Базовая цена {formatRubSpaced(site.basePricePerM2)} ₽ за м² {PRICE_SCOPE} (
+              {NO_FINISH_NOTE}) — одна ставка для всех проектов. Никаких «доплатите ещё» по ходу
+              стройки.
             </p>
           </Reveal>
           <Reveal variant="up" delay={80}>

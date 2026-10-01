@@ -26,12 +26,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
 import { seedFromQuiz } from "@/lib/dreamProfile";
-import { site } from "@/lib/site";
+import { site, PRICE_SCOPE } from "@/lib/site";
 import { HoneypotField, useAntiSpam } from "@/components/Honeypot";
 
 /**
@@ -232,9 +233,7 @@ export function HouseQuiz() {
         return `${label}: ${answers[q.id] ?? "—"}`;
       });
       summaryLines.push(`Удобная связь: ${channel}`);
-      summaryLines.push(
-        `Ориентир: ≈ ${estArea} м², от ${formatRub(estPrice)} ₽ под предчистовую отделку`,
-      );
+      summaryLines.push(`Ориентир: ≈ ${estArea} м², от ${formatRub(estPrice)} ₽ ${PRICE_SCOPE}`);
       const message = summaryLines.join("\n");
 
       const attribution = await buildAttribution();
@@ -536,8 +535,8 @@ function ResultStep({
             </p>
             <p className="mt-1 text-3xl font-bold text-accent">от {formatRub(estPrice)} ₽</p>
             <p className="text-xs text-muted-foreground">
-              ≈ {(estPrice / 1_000_000).toFixed(1)}–{(estPriceMax / 1_000_000).toFixed(1)} млн ₽ под
-              предчистовую отделку
+              ≈ {(estPrice / 1_000_000).toFixed(1)}–{(estPriceMax / 1_000_000).toFixed(1)} млн ₽{" "}
+              {PRICE_SCOPE}
             </p>
           </div>
         </div>
@@ -645,8 +644,26 @@ function ResultStep({
         >
           <ArrowLeft className="size-4" /> Назад
         </button>
+        <ConstructorLink className="sm:ml-auto" />
       </div>
     </div>
+  );
+}
+
+/**
+ * Вторичный выход из квиза — в конструктор, для тех, кто хочет собрать дом
+ * сам, а не ждать подборку. Цель CTA_CLICK с place=quiz, чтобы сравнивать
+ * с коротким квизом (QUICK_QUIZ_*).
+ */
+function ConstructorLink({ className = "" }: { className?: string }) {
+  return (
+    <Link
+      to="/constructor"
+      onClick={() => analytics.ctaClick("quiz", "constructor")}
+      className={`inline-flex items-center gap-1.5 text-sm font-medium text-accent underline-offset-2 hover:underline ${className}`}
+    >
+      <Blocks className="size-4" /> Собрать свой дом в конструкторе
+    </Link>
   );
 }
 
@@ -700,6 +717,9 @@ function SuccessState({
         <Button asChild size="lg" variant="outline" className="border-border hover:border-accent">
           <a href={site.phoneHref}>{site.phone}</a>
         </Button>
+      </div>
+      <div className="mt-4">
+        <ConstructorLink />
       </div>
     </div>
   );

@@ -4,7 +4,11 @@ import assert from "node:assert/strict";
 import { checkSpam, MIN_FILL_MS } from "../antispam.ts";
 import { concreteSnippet, homeSnippet, DESCRIPTION_MAX, TITLE_MAX } from "../seo.ts";
 import { messengerHref } from "../messengers.ts";
-import { START_PRICE_PER_M2_RUB } from "../site.ts";
+import { START_PRICE_PER_M2_RUB, site } from "../site.ts";
+
+test("цена одна на сайт: калькулятор и конструктор считают по START_PRICE_PER_M2_RUB", () => {
+  assert.equal(site.basePricePerM2, START_PRICE_PER_M2_RUB);
+});
 
 test("антиспам: honeypot", () => {
   assert.deepEqual(checkSpam({ honeypot: "http://x" }), { spam: true, reason: "honeypot" });
@@ -36,6 +40,8 @@ for (const [name, s] of Object.entries({ home: homeSnippet, concrete: concreteSn
     }
     assert.ok(s.description.includes("с отделкой, доставкой и фундаментом"));
     assert.ok(s.description.includes("Московская область"));
+    // «ИИ-конструктор» выходит вместе с новым конструктором (PR #34).
+    for (const text of Object.values(s)) assert.ok(!text.includes("ИИ"), `ИИ в «${text}»`);
   });
 }
 

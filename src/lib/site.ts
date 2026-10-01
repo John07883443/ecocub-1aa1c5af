@@ -6,11 +6,20 @@
  * Это ЕДИНСТВЕННАЯ точка правки цены: title/description/OG главной и
  * /concrete и ориентир короткого квиза собираются из неё (lib/seo.ts).
  *
- * Не путать с basePricePerM2 ниже — это ставка конструктора/калькулятора/квиза
- * «под предчистовую отделку» без доставки и фундамента. Формулы расчёта на неё
- * завязаны и сознательно не тронуты.
+ * С 01.10.2026 по решению владельца эта же ставка — site.basePricePerM2:
+ * конструктор, калькулятор и квизы считают по ней (раньше было 105 000
+ * «под предчистовую отделку» без доставки и фундамента).
  */
 export const START_PRICE_PER_M2_RUB = 150_000;
+
+/** Ориентир без чистовой отделки — вторичная подпись под ценой. */
+export const NO_FINISH_PRICE_PER_M2_RUB = 130_000;
+
+/** Что входит в цену — одна формулировка для всех подписей. */
+export const PRICE_SCOPE = "под ключ с чистовой отделкой, доставкой и фундаментом";
+
+/** «без чистовой — около 130 тыс. ₽/м²» */
+export const NO_FINISH_NOTE = `без чистовой — около ${Math.round(NO_FINISH_PRICE_PER_M2_RUB / 1000)} тыс. ₽/м²`;
 
 export const site = {
   name: "EcoCub",
@@ -26,7 +35,7 @@ export const site = {
   whatsappHref: "https://wa.me/79808758643",
   telegramHref: "https://t.me/agregator_john",
   url: "https://eco-cub.ru",
-  basePricePerM2: 105000,
+  basePricePerM2: START_PRICE_PER_M2_RUB,
   warrantyYears: 50,
   lifespanYears: 120,
   productionDays: 90,

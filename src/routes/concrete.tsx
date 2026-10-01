@@ -8,7 +8,8 @@ import { CheckCircle2 } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
-import { concreteSnippet } from "@/lib/seo";
+import { concreteSnippet, formatRubSpaced } from "@/lib/seo";
+import { START_PRICE_PER_M2_RUB, PRICE_SCOPE } from "@/lib/site";
 
 export const Route = createFileRoute("/concrete")({
   head: () => ({
@@ -75,7 +76,7 @@ function ConcretePage() {
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-white/85">
               Hi-tech модули из бетона М400. Заводское качество, сборка на участке за 10 дней,
-              гарантия 50 лет. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
+              гарантия 50 лет. {formatRubSpaced(START_PRICE_PER_M2_RUB)} ₽ за м² {PRICE_SCOPE}.
             </p>
           </Reveal>
         </Container>
