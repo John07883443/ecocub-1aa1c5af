@@ -27,6 +27,7 @@ import { Route as ApiLeadRouteImport } from './routes/api.lead'
 import { Route as ApiPlannerTrainingRouteImport } from './routes/api.planner-training'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as ConstructorClassicRouteImport } from './routes/constructor_.classic'
 import { Route as HousesIndexRouteImport } from './routes/houses.index'
 import { Route as HousesSlugRouteImport } from './routes/houses.$slug'
 import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
@@ -34,6 +35,10 @@ import { Route as ApiAiLayoutFootprintRouteImport } from './routes/api.ai-layout
 import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.result'
 import { Route as ApiDesignProjectsRouteImport } from './routes/api.design.projects'
 import { Route as ApiDesignSessionRouteImport } from './routes/api.design.session'
+import { Route as ApiPilotChatRouteImport } from './routes/api.pilot.chat'
+import { Route as ApiPilotHealthRouteImport } from './routes/api.pilot.health'
+import { Route as ApiPilotLeadRouteImport } from './routes/api.pilot.lead'
+import { Route as ApiPilotRenderRouteImport } from './routes/api.pilot.render'
 import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as ApiDesignCoverIdRouteImport } from './routes/api.design.cover.$id'
@@ -131,6 +136,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConstructorClassicRoute = ConstructorClassicRouteImport.update({
+  id: '/constructor_/classic',
+  path: '/constructor/classic',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HousesIndexRoute = HousesIndexRouteImport.update({
   id: '/houses/',
   path: '/houses/',
@@ -164,6 +174,26 @@ const ApiDesignProjectsRoute = ApiDesignProjectsRouteImport.update({
 const ApiDesignSessionRoute = ApiDesignSessionRouteImport.update({
   id: '/api/design/session',
   path: '/api/design/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPilotChatRoute = ApiPilotChatRouteImport.update({
+  id: '/api/pilot/chat',
+  path: '/api/pilot/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPilotHealthRoute = ApiPilotHealthRouteImport.update({
+  id: '/api/pilot/health',
+  path: '/api/pilot/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPilotLeadRoute = ApiPilotLeadRouteImport.update({
+  id: '/api/pilot/lead',
+  path: '/api/pilot/lead',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPilotRenderRoute = ApiPilotRenderRouteImport.update({
+  id: '/api/pilot/render',
+  path: '/api/pilot/render',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
@@ -215,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/api/lead': typeof ApiLeadRoute
   '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/constructor/classic': typeof ConstructorClassicRoute
   '/houses/$slug': typeof HousesSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -223,6 +254,10 @@ export interface FileRoutesByFullPath {
   '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
+  '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/health': typeof ApiPilotHealthRoute
+  '/api/pilot/lead': typeof ApiPilotLeadRoute
+  '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
@@ -248,6 +283,7 @@ export interface FileRoutesByTo {
   '/api/lead': typeof ApiLeadRoute
   '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/constructor/classic': typeof ConstructorClassicRoute
   '/houses/$slug': typeof HousesSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
@@ -256,6 +292,10 @@ export interface FileRoutesByTo {
   '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
+  '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/health': typeof ApiPilotHealthRoute
+  '/api/pilot/lead': typeof ApiPilotLeadRoute
+  '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
@@ -282,6 +322,7 @@ export interface FileRoutesById {
   '/api/lead': typeof ApiLeadRoute
   '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/constructor_/classic': typeof ConstructorClassicRoute
   '/houses/$slug': typeof HousesSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -290,6 +331,10 @@ export interface FileRoutesById {
   '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
+  '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/health': typeof ApiPilotHealthRoute
+  '/api/pilot/lead': typeof ApiPilotLeadRoute
+  '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
@@ -317,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/lead'
     | '/api/planner-training'
     | '/blog/$slug'
+    | '/constructor/classic'
     | '/houses/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -325,6 +371,10 @@ export interface FileRouteTypes {
     | '/api/ai-layout/result'
     | '/api/design/projects'
     | '/api/design/session'
+    | '/api/pilot/chat'
+    | '/api/pilot/health'
+    | '/api/pilot/lead'
+    | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
@@ -350,6 +400,7 @@ export interface FileRouteTypes {
     | '/api/lead'
     | '/api/planner-training'
     | '/blog/$slug'
+    | '/constructor/classic'
     | '/houses/$slug'
     | '/projects/$slug'
     | '/blog'
@@ -358,6 +409,10 @@ export interface FileRouteTypes {
     | '/api/ai-layout/result'
     | '/api/design/projects'
     | '/api/design/session'
+    | '/api/pilot/chat'
+    | '/api/pilot/health'
+    | '/api/pilot/lead'
+    | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
@@ -383,6 +438,7 @@ export interface FileRouteTypes {
     | '/api/lead'
     | '/api/planner-training'
     | '/blog/$slug'
+    | '/constructor_/classic'
     | '/houses/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -391,6 +447,10 @@ export interface FileRouteTypes {
     | '/api/ai-layout/result'
     | '/api/design/projects'
     | '/api/design/session'
+    | '/api/pilot/chat'
+    | '/api/pilot/health'
+    | '/api/pilot/lead'
+    | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
@@ -417,12 +477,17 @@ export interface RootRouteChildren {
   ApiLeadRoute: typeof ApiLeadRoute
   ApiPlannerTrainingRoute: typeof ApiPlannerTrainingRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  ConstructorClassicRoute: typeof ConstructorClassicRoute
   HousesSlugRoute: typeof HousesSlugRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   HousesIndexRoute: typeof HousesIndexRoute
   ApiDesignProjectsRoute: typeof ApiDesignProjectsRouteWithChildren
   ApiDesignSessionRoute: typeof ApiDesignSessionRoute
+  ApiPilotChatRoute: typeof ApiPilotChatRoute
+  ApiPilotHealthRoute: typeof ApiPilotHealthRoute
+  ApiPilotLeadRoute: typeof ApiPilotLeadRoute
+  ApiPilotRenderRoute: typeof ApiPilotRenderRoute
   BlogCategoryCategoryRoute: typeof BlogCategoryCategoryRoute
   BlogTagTagRoute: typeof BlogTagTagRoute
   ApiDesignCoverIdRoute: typeof ApiDesignCoverIdRoute
@@ -558,6 +623,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/constructor_/classic': {
+      id: '/constructor_/classic'
+      path: '/constructor/classic'
+      fullPath: '/constructor/classic'
+      preLoaderRoute: typeof ConstructorClassicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/houses/': {
       id: '/houses/'
       path: '/houses'
@@ -605,6 +677,34 @@ declare module '@tanstack/react-router' {
       path: '/api/design/session'
       fullPath: '/api/design/session'
       preLoaderRoute: typeof ApiDesignSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pilot/chat': {
+      id: '/api/pilot/chat'
+      path: '/api/pilot/chat'
+      fullPath: '/api/pilot/chat'
+      preLoaderRoute: typeof ApiPilotChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pilot/health': {
+      id: '/api/pilot/health'
+      path: '/api/pilot/health'
+      fullPath: '/api/pilot/health'
+      preLoaderRoute: typeof ApiPilotHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pilot/lead': {
+      id: '/api/pilot/lead'
+      path: '/api/pilot/lead'
+      fullPath: '/api/pilot/lead'
+      preLoaderRoute: typeof ApiPilotLeadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pilot/render': {
+      id: '/api/pilot/render'
+      path: '/api/pilot/render'
+      fullPath: '/api/pilot/render'
+      preLoaderRoute: typeof ApiPilotRenderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/category/$category': {
@@ -695,12 +795,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLeadRoute: ApiLeadRoute,
   ApiPlannerTrainingRoute: ApiPlannerTrainingRoute,
   BlogSlugRoute: BlogSlugRoute,
+  ConstructorClassicRoute: ConstructorClassicRoute,
   HousesSlugRoute: HousesSlugRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   HousesIndexRoute: HousesIndexRoute,
   ApiDesignProjectsRoute: ApiDesignProjectsRouteWithChildren,
   ApiDesignSessionRoute: ApiDesignSessionRoute,
+  ApiPilotChatRoute: ApiPilotChatRoute,
+  ApiPilotHealthRoute: ApiPilotHealthRoute,
+  ApiPilotLeadRoute: ApiPilotLeadRoute,
+  ApiPilotRenderRoute: ApiPilotRenderRoute,
   BlogCategoryCategoryRoute: BlogCategoryCategoryRoute,
   BlogTagTagRoute: BlogTagTagRoute,
   ApiDesignCoverIdRoute: ApiDesignCoverIdRoute,

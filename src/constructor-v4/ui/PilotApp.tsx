@@ -33,7 +33,10 @@ import { PlanSvg } from "./PlanSvg.tsx";
 import type { WallPick } from "./Scene.tsx";
 
 const HouseScene = lazy(() => import("./Scene.tsx"));
-const API = (import.meta.env.VITE_PILOT_API as string | undefined) ?? "http://localhost:8790";
+/** Серверная часть пилота — маршруты сайта /api/pilot/* (тот же домен, https на бою). */
+const API = (import.meta.env.VITE_PILOT_API as string | undefined) ?? "/api/pilot";
+/** Голос: адрес релея из /api/pilot/health; локально — scripts/pilot-server.mjs. */
+const LOCAL_VOICE = "ws://localhost:8790/voice";
 const SESSION = Math.random().toString(36).slice(2);
 const SIDE_RU: Record<Side, string> = { N: "север", E: "восток", S: "юг", W: "запад" };
 const mln = (n: number) => (n / 1e6).toLocaleString("ru-RU", { maximumFractionDigits: 1 });
@@ -296,7 +299,7 @@ export function PilotApp() {
       for (let round = 0; round < 4; round++) {
         const r = await fetch(`${API}/chat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Pilot-Session": SESSION },
           body: JSON.stringify({
             system: systemPrompt(context()),
             messages: llm.current,
@@ -327,7 +330,7 @@ export function PilotApp() {
     } catch (e) {
       say(
         "system",
-        `Чат недоступен: ${(e as Error).message}. Запущен ли npm run pilot и есть ли ключ rgrouter?`,
+        `Чат недоступен: ${(e as Error).message}. Редактор, план и бюджет работают и без чата.`,
       );
     } finally {
       setBusy(false);
@@ -353,20 +356,27 @@ export function PilotApp() {
       setVoiceState("closed");
       return;
     }
+    let voiceUrl = LOCAL_VOICE;
     try {
       const h = await fetch(`${API}/health`).then((r) => r.json());
       if (!h.inworld) {
-        setVoiceInfo("Голос не настроен: нет ключа InWorld (.env.pilot.local).");
+        setVoiceInfo("Голос не настроен: нет ключа InWorld на сервере.");
         setVoiceState("closed");
         return;
       }
+      if (!h.voice) {
+        setVoiceInfo(h.voiceReason ?? "Голосовой релей не запущен.");
+        setVoiceState("closed");
+        return;
+      }
+      voiceUrl = h.voiceUrl ?? LOCAL_VOICE;
     } catch {
-      setVoiceInfo("Сервер пилота не отвечает — запущен ли npm run pilot?");
+      setVoiceInfo("Сервер не отвечает. Текстовый чат и редактор работают без голоса.");
       setVoiceState("closed");
       return;
     }
     const v = new VoiceSession(
-      API.replace(/^http/, "ws") + "/voice",
+      voiceUrl,
       {
         onState: (s, d) => {
           setVoiceState(s);
@@ -498,7 +508,7 @@ export function PilotApp() {
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b bg-white px-4 py-3">
         <div>
-          <h1 className="text-lg font-semibold">ЭкоКуб · конструктор v4 · пилот</h1>
+          <h1 className="text-lg font-semibold">Конструктор дома ЭкоКуб · бета</h1>
           <p className="text-xs text-neutral-500">
             Тестовая версия, цены и отделки — черновик. Сервер пилота:{" "}
             {health?.ok ? (
@@ -508,7 +518,7 @@ export function PilotApp() {
                 )
               </span>
             ) : (
-              <span className="text-red-600">не запущен — npm run pilot</span>
+              <span className="text-red-600">не отвечает — работают 3D, план и бюджет</span>
             )}
           </p>
         </div>

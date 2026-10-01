@@ -10,6 +10,7 @@ import { fetchPublishedHouse } from "@/lib/house-projects";
 import { seedsFromModel } from "@/lib/house-project/adapters";
 import { CELL_M } from "@/lib/constructor/constants";
 import type { HouseProject } from "@/lib/house-project/types";
+import { ConstructorBeta } from "@/constructor-v4/ui/ConstructorBeta";
 
 /**
  * `?house=<slug>` открывает конструктор на копии опубликованного дома —
@@ -24,11 +25,16 @@ import type { HouseProject } from "@/lib/house-project/types";
  * параметр обязательным и требует `search` у каждой ссылки на конструктор —
  * включая те, что стояли на сайте до появления каталога.
  */
-type ConstructorSearch = { house?: string };
+type ConstructorSearch = { house?: string; classic?: boolean };
 
 export const Route = createFileRoute("/constructor")({
-  validateSearch: (search: Record<string, unknown>): ConstructorSearch =>
-    typeof search.house === "string" && search.house ? { house: search.house } : {},
+  validateSearch: (search: Record<string, unknown>): ConstructorSearch => ({
+    ...(typeof search.house === "string" && search.house ? { house: search.house } : {}),
+    // Старый конструктор: /constructor/classic перенаправляет сюда с ?classic=1.
+    ...(search.classic === true || search.classic === "1" || search.classic === 1
+      ? { classic: true }
+      : {}),
+  }),
   loaderDeps: ({ search }) => ({ house: search.house }),
   loader: async ({ deps }) => {
     if (!deps.house) return { source: null };
@@ -62,8 +68,17 @@ export const Route = createFileRoute("/constructor")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru/constructor" }],
   }),
-  component: ConstructorPage,
+  component: ConstructorEntry,
 });
+
+/**
+ * /constructor — конструктор v4 (бета). Старый конструктор открывается по
+ * /constructor/classic (?classic=1) и по ссылке «Открыть в конструкторе» из каталога (?house=).
+ */
+function ConstructorEntry() {
+  const { classic, house } = Route.useSearch();
+  return classic || house ? <ConstructorPage /> : <ConstructorBeta />;
+}
 
 function ConstructorPage() {
   usePageEngagement("constructor");
