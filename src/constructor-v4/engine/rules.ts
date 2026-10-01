@@ -22,6 +22,7 @@ import {
   uncoveredSegments,
 } from "./geometry.ts";
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
+import { factoryModules } from "./factory.ts";
 
 const SRC_ALBUM = "Альбом Weekend One";
 const SRC_OWNER = "Решение владельца 01.10.2026";
@@ -704,6 +705,27 @@ const compactFootprint: Check = (p) => {
 
 // ── Info / review ───────────────────────────────────────────────────────
 
+const cubesPairIntoModules: Check = (p) => {
+  const fm = factoryModules(p);
+  return [
+    fm.unpairedCubeIds.length === 0
+      ? pass(
+          "cubes-pair-into-modules",
+          "soft",
+          `${fm.cubes} кубиков собираются в ${fm.modules.length} заводских модулей по 2.`,
+          SRC_OWNER,
+        )
+      : fail(
+          "cubes-pair-into-modules",
+          "soft",
+          `Кубик ${fm.unpairedCubeIds.join(", ")} без пары: завод делает модули по 2 кубика — требует проверки проектировщиком; в цене считаем как полмодуля (допущение).`,
+          SRC_OWNER,
+          fm.unpairedCubeIds[0],
+          true,
+        ),
+  ];
+};
+
 const reviewItems: Check = (p) => {
   const out: RuleResult[] = [];
   if (modulesOnTier(p, 2).length) {
@@ -752,6 +774,7 @@ export const SOFT_CHECKS: Check[] = [
   preferredOffsets,
   livingFacesSouth,
   compactFootprint,
+  cubesPairIntoModules,
   reviewItems,
 ];
 

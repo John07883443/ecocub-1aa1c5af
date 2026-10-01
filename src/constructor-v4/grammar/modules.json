@@ -5,10 +5,21 @@
   "note": "Грамматика конструктора v4. Только конструктив, подтверждённый альбомом Weekend One, планами 7 построенных проектов и решениями владельца 01.10.2026. Всё, в чём нет уверенности, — hard-запрет или пометка «требует проверки проектировщиком».",
   "module": {
     "id": "ecocub-3200x3420",
-    "externalMm": { "w": 3200, "d": 3420, "h": 3750 },
+    "externalMm": {
+      "w": 3200,
+      "d": 3420,
+      "h": 3750
+    },
     "wallMm": 210,
-    "clearMm": { "w": 2780, "d": 3000, "h": 3150 },
-    "slabsMm": { "floor": 300, "roof": 300 },
+    "clearMm": {
+      "w": 2780,
+      "d": 3000,
+      "h": 3150
+    },
+    "slabsMm": {
+      "floor": 300,
+      "roof": 300
+    },
     "clearAreaM2": 8.34,
     "warmContourAreaM2": 10.944,
     "rotations": [0, 90, 180, 270],
@@ -49,20 +60,29 @@
     "maxOverhangMm": 1500,
     "overhangWithColumnMm": null,
     "minSupportFraction": 0.5,
-    "column": { "sizeMm": null, "priceRub": null },
+    "column": {
+      "sizeMm": null,
+      "priceRub": null
+    },
     "source": "Решение владельца 01.10.2026: ярусов ≤ 2, сдвиг свободный, свес ≤ ~1,5 м без колонны. Предел с колонной не назван — больше 1,5 м не предлагаем. Доля опоры ≥ 50 % — допущение до подтверждения заводом.",
     "confidence": "owner"
   },
   "openings": {
     "heightsMm": [2100, 2500, 2800, 3150],
-    "door": { "widthMm": 800, "heightMm": 2100 },
+    "door": {
+      "widthMm": 800,
+      "heightMm": 2100
+    },
     "commonDoorWidthsMm": [1000, 1200],
     "slotWidthMm": 500,
     "cornerPierMm": 210,
     "source": "Развёртки Р-1…Р-4 листов 12–15; планы Family One/Two (800, 1000, 1200)",
     "confidence": "album"
   },
-  "partitionsMm": { "betweenRooms": 190, "wet": 125 },
+  "partitionsMm": {
+    "betweenRooms": 190,
+    "wet": 125
+  },
   "site": {
     "setbackMm": 3000,
     "source": "Предварительно, уточнить по ПЗЗ участка",
@@ -72,7 +92,10 @@
     {
       "id": "bedroom",
       "label": "Спальня",
-      "modules": { "min": 1, "max": 1 },
+      "modules": {
+        "min": 1,
+        "max": 1
+      },
       "needs": {
         "window": true,
         "windowHeightsMm": [2500, 2800],
@@ -91,8 +114,16 @@
     {
       "id": "kitchen-living",
       "label": "Кухня-гостиная",
-      "modules": { "min": 2, "max": 5 },
-      "needs": { "window": true, "windowHeightsMm": [3150], "minExteriorFaces": 1, "tier": 1 },
+      "modules": {
+        "min": 2,
+        "max": 5
+      },
+      "needs": {
+        "window": true,
+        "windowHeightsMm": [3150],
+        "minExteriorFaces": 1,
+        "tier": 1
+      },
       "evidence": [
         "living-spans-two-modules",
         "common-room-is-the-core",
@@ -103,9 +134,15 @@
     {
       "id": "wet-core",
       "label": "Санузел и техблок",
-      "modules": { "min": 1, "max": 1 },
+      "modules": {
+        "min": 1,
+        "max": 1
+      },
       "partitionsMm": [125],
-      "needs": { "riser": true, "adjacentTo": ["kitchen-living", "hall"] },
+      "needs": {
+        "riser": true,
+        "adjacentTo": ["kitchen-living", "hall"]
+      },
       "evidence": [
         "wet-zone-single-module",
         "service-rooms-share-a-module",
@@ -116,7 +153,10 @@
     {
       "id": "study",
       "label": "Кабинет",
-      "modules": { "min": 1, "max": 1 },
+      "modules": {
+        "min": 1,
+        "max": 1
+      },
       "needs": {
         "window": true,
         "windowHeightsMm": [2500, 2800],
@@ -128,19 +168,75 @@
     {
       "id": "hall",
       "label": "Холл второго яруса с лестницей",
-      "modules": { "min": 1, "max": 1 },
-      "needs": { "tier": 2, "aboveRoom": "kitchen-living" },
+      "modules": {
+        "min": 1,
+        "max": 1
+      },
+      "needs": {
+        "tier": 2,
+        "aboveRoom": "kitchen-living"
+      },
       "evidence": ["no-dedicated-corridor"],
       "reviewNote": "Лестница: тип и габарит не заданы заводом — требует проверки проектировщиком"
     }
   ],
   "softRules": [
-    { "id": "bedrooms-in-corners", "weight": 3 },
-    { "id": "bathrooms-scale-with-size", "weight": 2 },
-    { "id": "terrace-is-large", "weight": 1 },
-    { "id": "preferred-offsets", "weight": 1 },
-    { "id": "living-faces-south", "weight": 2 },
-    { "id": "wings-separate-generations", "weight": 1 },
-    { "id": "compact-footprint", "weight": 1 }
-  ]
+    {
+      "id": "bedrooms-in-corners",
+      "weight": 3
+    },
+    {
+      "id": "bathrooms-scale-with-size",
+      "weight": 2
+    },
+    {
+      "id": "terrace-is-large",
+      "weight": 1
+    },
+    {
+      "id": "preferred-offsets",
+      "weight": 1
+    },
+    {
+      "id": "living-faces-south",
+      "weight": 2
+    },
+    {
+      "id": "wings-separate-generations",
+      "weight": 1
+    },
+    {
+      "id": "compact-footprint",
+      "weight": 1
+    },
+    {
+      "id": "cubes-pair-into-modules",
+      "weight": 2
+    }
+  ],
+  "terminology": {
+    "cube": "Кубик — одна ячейка 3200 × 3420, единица проектирования и привязки (поле module в грамматике)",
+    "factoryModule": "Модуль на языке завода — два кубика по длинной грани, ≈ 6400 × 3420: единица производства и перевозки",
+    "source": "Владелец, голос 01.10.2026"
+  },
+  "factoryModule": {
+    "cubes": 2,
+    "externalMm": {
+      "w": 6400,
+      "d": 3420
+    },
+    "joinFaceMm": 3420,
+    "unpairedPolicy": "review",
+    "unpairedPriceFactor": 0.5,
+    "source": "Владелец 01.10.2026: «модуль — два кубика, примерно шесть на три, чуть больше». Цена одиночного кубика как половины модуля — допущение.",
+    "confidence": "owner"
+  },
+  "transport": {
+    "cubesPerTruck": 4,
+    "truckLengthsM": [18, 21, 24],
+    "defaultTruckLengthM": 18,
+    "note": "Трал 18 м везёт 4 кубика = 2 модуля; бывают тралы 21 и 24 м — возможная опция, вместимость не подтверждена.",
+    "source": "Владелец 01.10.2026",
+    "confidence": "owner"
+  }
 }

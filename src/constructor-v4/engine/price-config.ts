@@ -23,8 +23,8 @@ export interface PriceConfig {
   warmContourPerM2: Rate;
   /** ₽ за м² настила террасы. */
   terracePerM2: Rate;
-  /** Модулей на один трал. */
-  modulesPerTruck: Rate;
+  /** Кубиков на один трал (4 кубика = 2 заводских модуля на трал 18 м). */
+  cubesPerTruck: Rate;
   /** ₽ за один рейс трала. */
   truckRub: Rate;
   installPerModule: Rate;
@@ -56,11 +56,11 @@ export const PRICE_CONFIG: PriceConfig = {
     placeholder: true,
     source: "Коэффициент 0,3–0,4 от ставки дома — допущение",
   },
-  modulesPerTruck: {
-    min: 1,
-    max: 2,
-    placeholder: true,
-    source: "Не подтверждено: трал 30 т, проезд ≥ 4,5 м",
+  cubesPerTruck: {
+    min: 4,
+    max: 4,
+    placeholder: false,
+    source: "Владелец 01.10.2026: трал 18 м везёт 4 кубика = 2 модуля; тралы 21 и 24 м — опция",
   },
   truckRub: {
     min: 300_000,

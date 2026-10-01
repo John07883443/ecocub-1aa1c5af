@@ -14,6 +14,7 @@ import { buildProject, defaultFinishes } from "./derive.ts";
 import { evaluate, expectedBathrooms, type Evaluation } from "./rules.ts";
 import type { Brief, ModulePlacement, Project, Room } from "./types.ts";
 import { findStyle } from "../grammar/index.ts";
+import { factoryModules, trucksForCubes } from "./factory.ts";
 import { explainRanks, rankAll, type Rank } from "./ranking.ts";
 
 export function mulberry32(seed: number): () => number {
@@ -342,7 +343,8 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
   picked.forEach((v, i) => {
     v.project = { ...v.project, id: `variant-${i + 1}` };
     const b = bbox(v.project.modules.filter((m) => m.tier === 1).map(footprint));
-    v.summary = `${v.project.modules.length} модулей, ${v.tiers === 2 ? "два яруса" : "один ярус"}, пятно ${(b.x1 - b.x0) / 1000} × ${(b.y1 - b.y0) / 1000} м, терраса ${v.project.terrace.totalM2} м²`;
+    const fm = factoryModules(v.project);
+    v.summary = `${v.project.modules.length} кубиков (${fm.modules.length} модулей${fm.unpairedCubeIds.length ? ` + ${fm.unpairedCubeIds.length} без пары` : ""}), ${trucksForCubes(v.project.modules.length)} трала, ${v.tiers === 2 ? "два яруса" : "один ярус"}, пятно ${(b.x1 - b.x0) / 1000} × ${(b.y1 - b.y0) / 1000} м, терраса ${v.project.terrace.totalM2} м²`;
   });
   if (picked.length < max)
     notes.push(`Нашлось только ${picked.length} вариантов без нарушений конструктива.`);

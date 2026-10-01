@@ -13,13 +13,23 @@
     "partitionsMm",
     "site",
     "roomTypes",
-    "softRules"
+    "softRules",
+    "factoryModule",
+    "transport"
   ],
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "type": "string" },
-    "updated": { "type": "string" },
-    "note": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "updated": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    },
     "module": {
       "type": "object",
       "required": [
@@ -34,16 +44,40 @@
         "confidence"
       ],
       "properties": {
-        "id": { "type": "string" },
-        "externalMm": { "$ref": "#/$defs/whd" },
-        "wallMm": { "type": "integer", "minimum": 1 },
-        "clearMm": { "$ref": "#/$defs/whd" },
-        "slabsMm": { "type": "object" },
-        "clearAreaM2": { "type": "number" },
-        "warmContourAreaM2": { "type": "number" },
-        "rotations": { "type": "array", "items": { "enum": [0, 90, 180, 270] } },
-        "source": { "type": "string" },
-        "confidence": { "$ref": "#/$defs/confidence" }
+        "id": {
+          "type": "string"
+        },
+        "externalMm": {
+          "$ref": "#/$defs/whd"
+        },
+        "wallMm": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "clearMm": {
+          "$ref": "#/$defs/whd"
+        },
+        "slabsMm": {
+          "type": "object"
+        },
+        "clearAreaM2": {
+          "type": "number"
+        },
+        "warmContourAreaM2": {
+          "type": "number"
+        },
+        "rotations": {
+          "type": "array",
+          "items": {
+            "enum": [0, 90, 180, 270]
+          }
+        },
+        "source": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
       }
     },
     "joints": {
@@ -60,13 +94,27 @@
           "confidence"
         ],
         "properties": {
-          "id": { "enum": ["shared-wall-210", "back-to-back-420"] },
-          "wallMm": { "type": "integer" },
-          "merges": { "type": "boolean" },
-          "areaGainM2": { "type": "number" },
-          "minContactMm": { "type": "integer" },
-          "source": { "type": "string" },
-          "confidence": { "$ref": "#/$defs/confidence" }
+          "id": {
+            "enum": ["shared-wall-210", "back-to-back-420"]
+          },
+          "wallMm": {
+            "type": "integer"
+          },
+          "merges": {
+            "type": "boolean"
+          },
+          "areaGainM2": {
+            "type": "number"
+          },
+          "minContactMm": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "confidence": {
+            "$ref": "#/$defs/confidence"
+          }
         }
       }
     },
@@ -74,9 +122,18 @@
       "type": "object",
       "required": ["snapMm", "preferredOffsetsMm", "minContactMm"],
       "properties": {
-        "snapMm": { "type": "integer" },
-        "preferredOffsetsMm": { "type": "array", "items": { "type": "integer" } },
-        "minContactMm": { "type": "integer" }
+        "snapMm": {
+          "type": "integer"
+        },
+        "preferredOffsetsMm": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "minContactMm": {
+          "type": "integer"
+        }
       }
     },
     "tiers": {
@@ -90,47 +147,130 @@
         "minSupportFraction"
       ],
       "properties": {
-        "maxTiers": { "const": 2 },
-        "upperShift": { "enum": ["free"] },
-        "upperSnapMm": { "type": "integer" },
-        "maxOverhangMm": { "type": "integer", "maximum": 1500 },
-        "overhangWithColumnMm": { "type": ["integer", "null"] },
-        "minSupportFraction": { "type": "number", "minimum": 0, "maximum": 1 },
-        "column": { "type": "object" }
+        "maxTiers": {
+          "const": 2
+        },
+        "upperShift": {
+          "enum": ["free"]
+        },
+        "upperSnapMm": {
+          "type": "integer"
+        },
+        "maxOverhangMm": {
+          "type": "integer",
+          "maximum": 1500
+        },
+        "overhangWithColumnMm": {
+          "type": ["integer", "null"]
+        },
+        "minSupportFraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "column": {
+          "type": "object"
+        }
       }
     },
     "openings": {
       "type": "object",
       "required": ["heightsMm", "door", "cornerPierMm"],
       "properties": {
-        "heightsMm": { "type": "array", "items": { "enum": [2100, 2500, 2800, 3150] } },
-        "door": { "type": "object", "required": ["widthMm", "heightMm"] },
-        "commonDoorWidthsMm": { "type": "array", "items": { "type": "integer" } },
-        "slotWidthMm": { "type": "integer" },
-        "cornerPierMm": { "type": "integer" }
+        "heightsMm": {
+          "type": "array",
+          "items": {
+            "enum": [2100, 2500, 2800, 3150]
+          }
+        },
+        "door": {
+          "type": "object",
+          "required": ["widthMm", "heightMm"]
+        },
+        "commonDoorWidthsMm": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "slotWidthMm": {
+          "type": "integer"
+        },
+        "cornerPierMm": {
+          "type": "integer"
+        }
       }
     },
-    "partitionsMm": { "type": "object", "required": ["betweenRooms", "wet"] },
-    "site": { "type": "object", "required": ["setbackMm"] },
+    "partitionsMm": {
+      "type": "object",
+      "required": ["betweenRooms", "wet"]
+    },
+    "site": {
+      "type": "object",
+      "required": ["setbackMm"]
+    },
     "roomTypes": {
       "type": "array",
       "items": {
         "type": "object",
         "required": ["id", "label", "modules", "needs", "evidence"],
         "properties": {
-          "id": { "enum": ["bedroom", "kitchen-living", "wet-core", "study", "hall"] },
-          "label": { "type": "string" },
-          "modules": { "type": "object", "required": ["min", "max"] },
-          "partitionsMm": { "type": "array", "items": { "enum": [125, 190] } },
-          "needs": { "type": "object" },
-          "evidence": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-          "reviewNote": { "type": "string" }
+          "id": {
+            "enum": ["bedroom", "kitchen-living", "wet-core", "study", "hall"]
+          },
+          "label": {
+            "type": "string"
+          },
+          "modules": {
+            "type": "object",
+            "required": ["min", "max"]
+          },
+          "partitionsMm": {
+            "type": "array",
+            "items": {
+              "enum": [125, 190]
+            }
+          },
+          "needs": {
+            "type": "object"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "reviewNote": {
+            "type": "string"
+          }
         }
       }
     },
     "softRules": {
       "type": "array",
-      "items": { "type": "object", "required": ["id", "weight"] }
+      "items": {
+        "type": "object",
+        "required": ["id", "weight"]
+      }
+    },
+    "terminology": {
+      "type": "object"
+    },
+    "factoryModule": {
+      "type": "object",
+      "required": [
+        "cubes",
+        "externalMm",
+        "joinFaceMm",
+        "unpairedPolicy",
+        "unpairedPriceFactor",
+        "source"
+      ]
+    },
+    "transport": {
+      "type": "object",
+      "required": ["cubesPerTruck", "truckLengthsM", "defaultTruckLengthM"]
     }
   },
   "$defs": {
@@ -138,11 +278,19 @@
       "type": "object",
       "required": ["w", "d", "h"],
       "properties": {
-        "w": { "type": "integer" },
-        "d": { "type": "integer" },
-        "h": { "type": "integer" }
+        "w": {
+          "type": "integer"
+        },
+        "d": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        }
       }
     },
-    "confidence": { "enum": ["album", "owner", "derived", "assumption"] }
+    "confidence": {
+      "enum": ["album", "owner", "derived", "assumption"]
+    }
   }
 }

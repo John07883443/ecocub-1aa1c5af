@@ -64,7 +64,8 @@ test("цены — заглушки, пока владелец не подтве
   for (const [k, v] of Object.entries(PRICE_CONFIG)) {
     if (v && typeof v === "object" && "min" in v) {
       assert.ok(v.max >= v.min, k);
-      if (PRICE_CONFIG.status === "PLACEHOLDER") assert.equal(v.placeholder, true, k);
+      if (PRICE_CONFIG.status === "PLACEHOLDER" && !String(v.source).startsWith("Владелец"))
+        assert.equal(v.placeholder, true, k);
     }
   }
 });

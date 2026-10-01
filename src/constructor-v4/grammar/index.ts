@@ -67,6 +67,21 @@ export interface Grammar {
     cornerPierMm: number;
   };
   partitionsMm: { betweenRooms: number; wet: number };
+  /** Заводской модуль = 2 кубика по длинной грани. */
+  factoryModule: {
+    cubes: number;
+    externalMm: { w: number; d: number };
+    joinFaceMm: number;
+    unpairedPolicy: "review";
+    unpairedPriceFactor: number;
+    source: string;
+  };
+  transport: {
+    cubesPerTruck: number;
+    truckLengthsM: number[];
+    defaultTruckLengthM: number;
+    note: string;
+  };
   site: { setbackMm: number };
   roomTypes: RoomTypeSpec[];
   softRules: { id: string; weight: number }[];

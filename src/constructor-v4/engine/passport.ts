@@ -6,6 +6,7 @@
 import { FINISHES, GRAMMAR, findFinish, roomSpec } from "../grammar/index.ts";
 import type { FinishCategory } from "../grammar/index.ts";
 import { bbox, footprint, supportOf } from "./geometry.ts";
+import { factoryModules, trucksForCubes } from "./factory.ts";
 import { budgetFor, type Budget, type BudgetOptions } from "./price.ts";
 import { PRICE_CONFIG } from "./price-config.ts";
 import {
@@ -47,7 +48,12 @@ export interface ProjectPassport {
   projectId: string;
   module: { externalMm: string; clearMm: string; source: string };
   summary: {
+    /** Кубиков 3200 × 3420 (единица проектирования). */
     modules: number;
+    /** Заводских модулей (2 кубика) и кубиков без пары. */
+    factoryModules: number;
+    unpairedCubes: number;
+    trucks: number;
     tiers: number;
     warmContourM2: number;
     clearAreaM2: number;
@@ -79,6 +85,7 @@ export function buildPassport(
   ev: Evaluation = evaluate(p),
   budgetOpts: BudgetOptions = {},
 ): ProjectPassport {
+  const fm = factoryModules(p);
   const t1 = modulesOnTier(p, 1);
   const tiers = Math.max(...p.modules.map((m) => m.tier));
   const fp = bbox(p.modules.map(footprint));
@@ -121,7 +128,9 @@ export function buildPassport(
   const assumptions = [
     `Модуль ${GRAMMAR.module.externalMm.w} × ${GRAMMAR.module.externalMm.d} × ${GRAMMAR.module.externalMm.h}, в чистоте ${GRAMMAR.module.clearMm.w} × ${GRAMMAR.module.clearMm.d}`,
     "Слитые помещения — через общую стену 210 (+0,63 м² на стык), раздельные — спина к спине 420",
-    "Площадь для клиента — по тёплому контуру 10,944 м² на модуль",
+    "Площадь для клиента — по тёплому контуру 10,944 м² на кубик",
+    "Заводской модуль = 2 кубика по длинной грани (≈ 6400 × 3420); кубик без пары — как полмодуля",
+    "Трал 18 м везёт 4 кубика = 2 модуля; 21 и 24 м — опция",
     `Отступ от границ участка ${GRAMMAR.site.setbackMm / 1000} м — предварительно`,
     "Ширины окон — пресеты до привязки к пролётам каркаса",
     "Высоты проёмов только 2100 / 2500 / 2800 / 3150",
@@ -147,6 +156,9 @@ export function buildPassport(
     },
     summary: {
       modules: p.modules.length,
+      factoryModules: fm.modules.length,
+      unpairedCubes: fm.unpairedCubeIds.length,
+      trucks: trucksForCubes(p.modules.length),
       tiers,
       warmContourM2: Math.round(warmContourM2(p) * 10) / 10,
       clearAreaM2: Math.round(rooms.reduce((s, r) => s + r.clearAreaM2, 0) * 10) / 10,

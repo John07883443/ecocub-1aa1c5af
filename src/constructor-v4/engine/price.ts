@@ -5,6 +5,7 @@
 import { FINISHES, findFinish } from "../grammar/index.ts";
 import type { FinishCategory } from "../grammar/index.ts";
 import { MM2_PER_M2, area, footprint } from "./geometry.ts";
+import { factoryModules } from "./factory.ts";
 import { PRICE_CONFIG, type PriceConfig, type Rate } from "./price-config.ts";
 import { modulesOnTier, warmContourM2 } from "./rules.ts";
 import type { Project, Range } from "./types.ts";
@@ -39,10 +40,11 @@ export interface BudgetOptions {
   config?: PriceConfig;
 }
 
-export function trucksFor(modules: number, cfg: PriceConfig = PRICE_CONFIG): Range {
+/** Рейсов трала по числу кубиков: ceil(кубики / 4) на трале 18 м. */
+export function trucksFor(cubes: number, cfg: PriceConfig = PRICE_CONFIG): Range {
   return {
-    min: Math.ceil(modules / cfg.modulesPerTruck.max),
-    max: Math.ceil(modules / cfg.modulesPerTruck.min),
+    min: Math.ceil(cubes / cfg.cubesPerTruck.max),
+    max: Math.ceil(cubes / cfg.cubesPerTruck.min),
   };
 }
 
@@ -65,6 +67,7 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
   const cfg = opts.config ?? PRICE_CONFIG;
   const n = p.modules.length;
   const warm = warmContourM2(p);
+  const fm = factoryModules(p);
   const lines: BudgetLine[] = [];
   const add = (id: BudgetLineId, label: string, r: Range, basis: string, rates: Rate[]) =>
     lines.push({
@@ -80,7 +83,7 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
     "modules",
     "Модули заводской готовности",
     mul(cfg.warmContourPerM2, warm),
-    `${n} модулей × 10,944 м² = ${warm.toFixed(1)} м² × ${cfg.warmContourPerM2.min.toLocaleString("ru-RU")}–${cfg.warmContourPerM2.max.toLocaleString("ru-RU")} ₽/м²`,
+    `${n} кубиков (${fm.modules.length} модулей${fm.unpairedCubeIds.length ? ` + ${fm.unpairedCubeIds.length} кубик без пары — как полмодуля, допущение` : ""}) × 10,944 м² = ${warm.toFixed(1)} м² × ${cfg.warmContourPerM2.min.toLocaleString("ru-RU")}–${cfg.warmContourPerM2.max.toLocaleString("ru-RU")} ₽/м²`,
     [cfg.warmContourPerM2],
   );
 
@@ -108,8 +111,8 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
     "transport",
     "Доставка тралами",
     { min: trucks.min * cfg.truckRub.min, max: trucks.max * cfg.truckRub.max },
-    `${trucks.min}–${trucks.max} рейсов трала (модулей на трал не подтверждено) × ${cfg.truckRub.min / 1000}–${cfg.truckRub.max / 1000} тыс. ₽`,
-    [cfg.modulesPerTruck, cfg.truckRub],
+    `${trucks.min === trucks.max ? trucks.min : `${trucks.min}–${trucks.max}`} рейс. трала 18 м (4 кубика = 2 модуля на трал) × ${cfg.truckRub.min / 1000}–${cfg.truckRub.max / 1000} тыс. ₽`,
+    [cfg.cubesPerTruck, cfg.truckRub],
   );
 
   add(
@@ -182,7 +185,10 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
         : "Расчёт по прайсу; точную сумму даст проектировщик после проверки проекта и участка.",
     whatCanChangePrice: [
       "Прайс 2026: ставка за м² тёплого контура ещё не подтверждена",
-      "Сколько модулей везёт один трал и расстояние до участка",
+      "Цена рейса трала и расстояние до участка; тралы 21 и 24 м могут сократить число рейсов",
+      ...(fm.unpairedCubeIds.length
+        ? ["Кубик без пары: завод может считать его как целый модуль — цена выше"]
+        : []),
       "Подъезд для трала и крана (дорога от 4,5 м, площадка под кран)",
       "Тип фундамента по геологии участка: сваи или плита",
       "Окончательный выбор отделки фасада, кровли, окон и интерьера",
