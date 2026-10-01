@@ -90,6 +90,8 @@ export interface Project {
   placementLocked?: boolean;
   finishes: Finishes;
   yearRound: boolean;
+  /** Материалы чистовой отделки: включить в расчёт (≈15 тыс./м²) или свои. По умолчанию — включены. */
+  finishingMaterials?: "included" | "own";
   /** Профиль стиля из слов и референсов человека (см. style.ts). */
   styleProfile?: import("./style.ts").StyleProfile;
 }

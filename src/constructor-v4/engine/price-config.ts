@@ -21,6 +21,12 @@ export interface PriceConfig {
   confirmedAt: string | null;
   /** Ориентир владельца: ₽/м² всё включено (модули, отделка, доставка, кран, фундамент). */
   benchmarkAllInPerM2: Rate;
+  /** Ориентир «тёплый контур без чистовой» для сравнения. */
+  benchmarkWarmShellPerM2: Rate;
+  /** Чистовая отделка: работы. */
+  finishingWorksPerM2: Rate;
+  /** Чистовая отделка: материалы (отдельная строка, можно «свои»). */
+  finishingMaterialsPerM2: Rate;
   /** ₽ за м² тёплого контура (10,944 м² на модуль). */
   warmContourPerM2: Rate;
   /** ₽ за м² настила террасы. */

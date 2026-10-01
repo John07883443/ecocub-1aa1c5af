@@ -13,7 +13,15 @@ import { modulesOnTier, warmContourM2 } from "./rules.ts";
 import type { Project, Range } from "./types.ts";
 
 export type BudgetLineId =
-  "modules" | "finishes" | "transport" | "crane-montage" | "foundation" | "terrace" | "options";
+  | "modules"
+  | "finishes"
+  | "finishing-works"
+  | "finishing-materials"
+  | "transport"
+  | "crane-montage"
+  | "foundation"
+  | "terrace"
+  | "options";
 
 export interface BudgetLine {
   id: BudgetLineId;
@@ -33,12 +41,30 @@ export interface Budget {
   disclaimer: string;
   whatCanChangePrice: string[];
   /** Сверка с ориентиром владельца: середина вилки по статьям «всё включено» на м². */
-  benchmark: { perM2: number; allInMidPerM2: number; articles: BudgetLineId[]; note: string };
+  benchmark: {
+    /** Ориентир «под ключ» (≈150 тыс.) и середина вилки по его статьям. */
+    perM2: number;
+    allInMidPerM2: number;
+    /** Ориентир «тёплый контур без чистовой» (≈130 тыс.) и середина вилки по его статьям. */
+    warmShellPerM2: number;
+    warmShellMidPerM2: number;
+    articles: BudgetLineId[];
+    note: string;
+  };
 }
 
+/** Статьи ориентира «под ключ»: материалы чистовой, терраса и опции — сверху. */
 export const BENCHMARK_ARTICLES: BudgetLineId[] = [
   "modules",
   "finishes",
+  "finishing-works",
+  "transport",
+  "crane-montage",
+  "foundation",
+];
+/** Статьи уровня «тёплый контур без чистовой». */
+export const WARM_SHELL_ARTICLES: BudgetLineId[] = [
+  "modules",
   "transport",
   "crane-montage",
   "foundation",
@@ -50,6 +76,8 @@ const mul = (r: Range, k: number): Range => ({ min: r.min * k, max: r.max * k })
 export interface BudgetOptions {
   foundation?: "piles" | "slab" | "screw-piles";
   config?: PriceConfig;
+  /** Перекрывает project.finishingMaterials. */
+  finishingMaterials?: "included" | "own";
 }
 
 /** Рейсов трала по числу кубиков: ceil(кубики / 4) на трале 18 м. */
@@ -71,6 +99,8 @@ export function quickBudgetRange(modules: number, cfg: PriceConfig = PRICE_CONFI
     modules * cfg.installPerModule[k] +
     cfg.craneRub[k] +
     built * cfg.foundationPerM2[PILOT.structure.defaultFoundation][k] +
+    warm * cfg.finishingWorksPerM2[k] +
+    warm * cfg.finishingMaterialsPerM2[k] +
     0.6 * warm * cfg.terracePerM2[k];
   return { min: round(r("min")), max: round(r("max")) };
 }
@@ -116,6 +146,25 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
     mul(fin, warm),
     `Надбавки выбранных отделок × ${warm.toFixed(1)} м²`,
     [{ min: 0, max: 0, placeholder: FINISHES.status === "PLACEHOLDER", source: "finishes.json" }],
+  );
+
+  add(
+    "finishing-works",
+    "Чистовая отделка: работы",
+    mul(cfg.finishingWorksPerM2, warm),
+    `${warm.toFixed(1)} м² × ${cfg.finishingWorksPerM2.min / 1000}–${cfg.finishingWorksPerM2.max / 1000} тыс. ₽/м²`,
+    [cfg.finishingWorksPerM2],
+  );
+
+  const materials = opts.finishingMaterials ?? p.finishingMaterials ?? "included";
+  add(
+    "finishing-materials",
+    materials === "included" ? "Материалы чистовой отделки" : "Материалы чистовой отделки: свои",
+    materials === "included" ? mul(cfg.finishingMaterialsPerM2, warm) : { min: 0, max: 0 },
+    materials === "included"
+      ? `${warm.toFixed(1)} м² × ${cfg.finishingMaterialsPerM2.min / 1000}–${cfg.finishingMaterialsPerM2.max / 1000} тыс. ₽/м² (по рынку ≈15 тыс.)`
+      : "Клиент покупает материалы сам — в расчёт не входят",
+    [cfg.finishingMaterialsPerM2],
   );
 
   const trucks = trucksFor(n, cfg);
@@ -201,13 +250,19 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
     currency: "RUB",
     benchmark: {
       perM2: cfg.benchmarkAllInPerM2.min,
+      warmShellPerM2: cfg.benchmarkWarmShellPerM2.min,
+      warmShellMidPerM2: Math.round(
+        lines
+          .filter((l) => WARM_SHELL_ARTICLES.includes(l.id))
+          .reduce((s, l) => s + (l.min + l.max) / 2, 0) / warm,
+      ),
       allInMidPerM2: Math.round(
         lines
           .filter((l) => BENCHMARK_ARTICLES.includes(l.id))
           .reduce((s, l) => s + (l.min + l.max) / 2, 0) / warm,
       ),
       articles: BENCHMARK_ARTICLES,
-      note: "Ориентир владельца ≈130 тыс. ₽/м² всё включено; терраса и опции — сверху.",
+      note: "Ориентир владельца ≈150 тыс. ₽/м² под ключ (модули, чистовая отделка работы, доставка, кран, фундамент), тёплый контур без чистовой ≈130 тыс.; материалы чистовой (≈15 тыс./м²), терраса и опции — сверху.",
     },
     lines,
     total,

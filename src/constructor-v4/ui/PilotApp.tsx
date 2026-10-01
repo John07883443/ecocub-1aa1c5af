@@ -742,11 +742,28 @@ export function PilotApp() {
                     </tbody>
                   </table>
                   <p className="mt-2 text-xs text-neutral-500">{passport.budget.disclaimer}</p>
+                  <label className="mt-2 flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={(current?.finishingMaterials ?? "included") === "included"}
+                      onChange={(e) =>
+                        current &&
+                        setCurrent({
+                          ...current,
+                          finishingMaterials: e.target.checked ? "included" : "own",
+                        })
+                      }
+                    />
+                    Материалы чистовой отделки: включить (≈15 тыс. ₽/м²) — иначе «свои»
+                  </label>
                   <p className="mt-1 text-xs">
-                    Сверка с ориентиром: модули, отделка, доставка, кран и фундамент — в середине
+                    Под ключ (модули, чистовая отделка работы, доставка, кран, фундамент): середина
                     вилки {Math.round(passport.budget.benchmark.allInMidPerM2 / 1000)} тыс. ₽/м²
-                    (ориентир владельца {passport.budget.benchmark.perM2 / 1000} тыс.); терраса и
-                    опции — сверху.
+                    (ориентир владельца {passport.budget.benchmark.perM2 / 1000} тыс.). Тёплый
+                    контур без чистовой:{" "}
+                    {Math.round(passport.budget.benchmark.warmShellMidPerM2 / 1000)} тыс. ₽/м²
+                    (ориентир {passport.budget.benchmark.warmShellPerM2 / 1000} тыс.). Материалы
+                    чистовой, терраса и опции — сверху.
                   </p>
                   <h4 className="mt-3 font-semibold">Что может изменить цену</h4>
                   <ul className="list-disc pl-5 text-xs">
