@@ -1,0 +1,13 @@
+{
+  "name": "ecocub-qa",
+  "private": true,
+  "type": "module",
+  "description": "QA-стенд конструктора: Playwright-прогон диалогов со Львом + судья GPT-6 Astra (rgrouter).",
+  "scripts": {
+    "e2e": "node --experimental-strip-types constructor-e2e.ts",
+    "judge": "node --experimental-strip-types judge.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
