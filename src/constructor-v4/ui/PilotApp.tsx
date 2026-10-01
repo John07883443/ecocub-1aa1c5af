@@ -6,6 +6,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyCommand,
+  removeRoomGuard,
   toolCallToCommand,
   DOOR_PRESETS,
   type EditorCommand,
@@ -27,8 +28,17 @@ import { rederive } from "../engine/derive.ts";
 import type { Project, Side } from "../engine/types.ts";
 import { FINISHES, roomSpec } from "../grammar/index.ts";
 import { PILOT } from "../pilot.config.ts";
-import { chatTools, commentOn, projectContext, realtimeTools, systemPrompt } from "./architect.ts";
-import { VoiceSession, type VoiceState } from "./voice.ts";
+import {
+  chatTools,
+  commentOn,
+  mergeScenario,
+  projectContext,
+  realtimeTools,
+  systemPrompt,
+  whatIf,
+} from "./architect.ts";
+import { VOICE_STATE_RU, VoiceSession, type VoiceState } from "./voice.ts";
+import { readJson, runRenderJob } from "./render-client.ts";
 import { PlanSvg } from "./PlanSvg.tsx";
 import type { WallPick } from "./Scene.tsx";
 
@@ -142,7 +152,9 @@ export function PilotApp() {
   const [current, setCurrentState] = useState<Project | null>(null);
   const currentRef = useRef<Project | null>(null);
   const [history, setHistory] = useState<Project[]>([]);
-  const [selected, setSelected] = useState<WallPick | null>(null);
+  const [selected, setSelectedWall] = useState<WallPick | null>(null);
+  /** Выбранная комната: клик по кубику на плане или по стене в 3D. */
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [tab, setTab] = useState<"3d" | "plan1" | "plan2" | "passport">(() => {
     const t =
       typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
@@ -163,6 +175,7 @@ export function PilotApp() {
     { id: string; label: string; src?: string; error?: string }[]
   >([]);
   const [renderBusy, setRenderBusy] = useState(false);
+  const [renderStatus, setRenderStatus] = useState("");
   const [lead, setLead] = useState({ name: "", phone: "", comment: "" });
   const [leadState, setLeadState] = useState("");
   const [health, setHealth] = useState<Record<string, unknown> | null>(null);
@@ -172,8 +185,8 @@ export function PilotApp() {
 
   useEffect(() => {
     fetch(`${API}/health`)
-      .then((r) => r.json())
-      .then(setHealth)
+      .then((r) => readJson<Record<string, unknown>>(r))
+      .then((j) => setHealth(j.ok ? j.data : { ok: false }))
       .catch(() => setHealth({ ok: false }));
   }, []);
 
@@ -185,6 +198,23 @@ export function PilotApp() {
   }, []);
 
   const say = (role: ChatMsg["role"], text: string) => setChat((c) => [...c, { role, text }]);
+
+  /** Выбор стены в 3D выбирает и комнату — для «Удалить комнату». */
+  const setSelected = useCallback((w: WallPick | null) => {
+    setSelectedWall(w);
+    const p = currentRef.current;
+    setSelectedRoomId(
+      w && p ? (p.rooms.find((r) => r.moduleIds.includes(w.moduleId))?.id ?? null) : null,
+    );
+  }, []);
+
+  // Для голоса: инструкции собираются в момент запроса, а не по старому замыканию.
+  const scenarioRef = useRef(scenario);
+  scenarioRef.current = scenario;
+  const variantsRef = useRef<Variant[]>([]);
+  variantsRef.current = variants;
+  const selectedRef = useRef<WallPick | null>(null);
+  selectedRef.current = selected;
 
   const build = useCallback(
     (s: LifeScenario) => {
@@ -242,43 +272,17 @@ export function PilotApp() {
     async (name: string, args: unknown): Promise<string> => {
       const a = (args ?? {}) as Record<string, unknown>;
       if (name === "set_scenario") {
-        const s: LifeScenario = {
-          ...scenario,
-          adults: Number(a.adults ?? scenario.adults),
-          kids: Number(a.kids ?? scenario.kids),
-          kidsShareRoom: Boolean(a.kidsShareRoom ?? scenario.kidsShareRoom),
-          pets: {
-            dogs: Number(a.dogs ?? scenario.pets?.dogs ?? 0),
-            cats: Number(a.cats ?? scenario.pets?.cats ?? 0),
-            other: Number(a.otherPets ?? scenario.pets?.other ?? 0),
-          },
-          elderly:
-            a.elderly === "live" || a.elderly === "visit"
-              ? { mode: a.elderly, count: Number(a.elderlyCount ?? 1) === 2 ? 2 : 1 }
-              : a.elderly === "none"
-                ? undefined
-                : scenario.elderly,
-          workFromHome: Number(a.workFromHome ?? scenario.workFromHome ?? 0),
-          guestsOften: Boolean(a.guestsOften ?? scenario.guestsOften),
-          sauna: Boolean(a.sauna ?? scenario.sauna),
-          storage: a.storageLots ? "lots" : scenario.storage,
-          car: Boolean(a.car ?? scenario.car),
-          tiers:
-            a.tiers === "1" ? 1 : a.tiers === "2" ? 2 : a.tiers === "any" ? "any" : scenario.tiers,
-          desiredAreaM2: a.desiredAreaMaxM2
-            ? { min: 0, max: Number(a.desiredAreaMaxM2) }
-            : scenario.desiredAreaM2,
-          budgetRub: a.budgetMaxRub ? { min: 0, max: Number(a.budgetMaxRub) } : scenario.budgetRub,
-          styleHints: a.style ? [String(a.style)] : scenario.styleHints,
-        };
+        const s = mergeScenario(scenarioRef.current, a);
+        scenarioRef.current = s;
         setScenario(s);
         const { check, r } = build(s);
         return `${check.message} Собрано вариантов: ${r.variants.length}. ${r.variants
           .map((v, i) => `${i + 1}) ${v.summary}; ${v.rank?.why ?? ""}`)
           .join(" ")} Опции: ${check.options.map((o) => `${o.label} — ${o.reason}`).join("; ")}`;
       }
+      if (name === "what_if") return whatIf(currentRef.current, a);
       if (name === "select_variant") {
-        const v = variants[Number(a.index) - 1];
+        const v = variantsRef.current[Number(a.index) - 1];
         if (!v) return "Такого варианта нет.";
         setCurrent(v.project);
         return `Выбран вариант ${a.index}: ${v.summary}`;
@@ -287,16 +291,22 @@ export function PilotApp() {
       if (!parsed.ok) return `Команда не распознана: ${parsed.error}`;
       return run(parsed.command);
     },
-    [scenario, variants, build, run, setCurrent],
+    [build, run, setCurrent],
   );
 
-  const context = () =>
-    projectContext(currentRef.current, {
-      selectedWall: selected
-        ? `кубик ${selected.moduleId}, сторона ${selected.side} (${SIDE_RU[selected.side]})`
-        : undefined,
-      variants: variants.map((v, i) => `${i + 1}) ${v.summary}`),
+  const context = () => {
+    const w = selectedRef.current;
+    return projectContext(currentRef.current, {
+      selectedWall: w ? `кубик ${w.moduleId}, сторона ${w.side} (${SIDE_RU[w.side]})` : undefined,
+      variants: variantsRef.current.map((v, i) => `${i + 1}) ${v.summary}`),
+      scenario: scenarioRef.current,
     });
+  };
+
+  // Голос слышит актуальную анкету и дом: обновляем инструкции сессии при каждом изменении.
+  useEffect(() => {
+    voice?.updateInstructions();
+  }, [voice, scenario, current, variants, selected]);
 
   const sendChat = async (text: string) => {
     if (!text.trim() || busy) return;
@@ -315,9 +325,10 @@ export function PilotApp() {
             tools: chatTools(),
           }),
         });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error ?? r.statusText);
-        const m = j.message as {
+        const jr = await readJson<{ message?: unknown }>(r);
+        if (!jr.ok) throw new Error(jr.error);
+        const j = jr.data;
+        const m = (j.message ?? {}) as {
           content?: string;
           tool_calls?: { id: string; function: { name: string; arguments: string } }[];
         };
@@ -346,12 +357,15 @@ export function PilotApp() {
     }
   };
 
-  const toggleVoice = async () => {
+  const toggleVoice = async (mode: "dialog" | "ptt" = "dialog") => {
     if (voice) {
       voice.stop();
       setVoice(null);
+      setVoiceState("closed");
       return;
     }
+    const hands = mode === "dialog";
+    setContinuous(hands);
     // Никакой тишины: каждая причина, почему голос не стартует, — словами.
     if (!window.isSecureContext) {
       setVoiceInfo(
@@ -366,8 +380,17 @@ export function PilotApp() {
       return;
     }
     let voiceUrl = LOCAL_VOICE;
+    let model: string | undefined;
     try {
-      const h = await fetch(`${API}/health`).then((r) => r.json());
+      const hr = await readJson<Record<string, unknown>>(await fetch(`${API}/health`));
+      if (!hr.ok) throw new Error(hr.error);
+      const h = hr.data as {
+        inworld?: boolean;
+        voice?: boolean;
+        voiceReason?: string;
+        voiceUrl?: string;
+        realtimeModel?: string;
+      };
       if (!h.inworld) {
         setVoiceInfo("Голос не настроен: нет ключа InWorld на сервере.");
         setVoiceState("closed");
@@ -379,6 +402,7 @@ export function PilotApp() {
         return;
       }
       voiceUrl = h.voiceUrl ?? LOCAL_VOICE;
+      model = h.realtimeModel ?? undefined;
     } catch {
       setVoiceInfo("Сервер не отвечает. Текстовый чат и редактор работают без голоса.");
       setVoiceState("closed");
@@ -400,7 +424,14 @@ export function PilotApp() {
           return out;
         },
       },
-      { instructions: () => systemPrompt(context()), tools: realtimeTools(), continuous },
+      {
+        instructions: () => systemPrompt(context()),
+        tools: realtimeTools(),
+        continuous: hands,
+        model,
+        greeting: () =>
+          "[служебное] Поздоровайся одной фразой. Коротко подтверди, что уже знаешь из анкеты (не переспрашивай), и задай один вопрос о том, чего не хватает: бюджет, участок или стиль.",
+      },
     );
     setVoice(v);
     setVoiceInfo("");
@@ -423,29 +454,44 @@ export function PilotApp() {
     ].filter(Boolean) as typeof vs.views;
     setRenderBusy(true);
     setRenders(pick.map((v) => ({ id: v.id, label: v.label })));
-    try {
-      const r = await fetch(`${API}/render`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Pilot-Session": SESSION },
-        body: JSON.stringify({ shots: pick.map((v) => ({ id: v.id, prompt: promptFor(p, v) })) }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error);
+    setRenderStatus(`Рисуем 1 из ${pick.length}…`);
+    const apply = (
+      results: { id: string; url?: string | null; b64?: string | null; error?: string }[],
+    ) =>
       setRenders(
         pick.map((v) => {
-          const res = (
-            j.results as { id: string; url?: string; b64?: string; error?: string }[]
-          ).find((x) => x.id === v.id);
+          const res = results.find((x) => x.id === v.id);
           return {
             id: v.id,
             label: v.label,
-            src: res?.b64 ? `data:image/png;base64,${res.b64}` : res?.url,
+            src: res?.b64 ? `data:image/png;base64,${res.b64}` : (res?.url ?? undefined),
             error: res?.error,
           };
         }),
       );
+    try {
+      const out = await runRenderJob(
+        API,
+        pick.map((v) => ({ id: v.id, prompt: promptFor(p, v) })),
+        {
+          session: SESSION,
+          onProgress: (pr) => {
+            apply(pr.results);
+            setRenderStatus(
+              pr.done < pr.total ? `Рисуем ${pr.done + 1} из ${pr.total}…` : "Готово",
+            );
+          },
+        },
+      );
+      apply(out.results);
+      setRenderStatus(
+        out.results.some((r) => r.error)
+          ? "Часть кадров не получилась — можно попробовать ещё раз."
+          : "",
+      );
     } catch (e) {
-      setRenders([{ id: "err", label: "Ошибка", error: (e as Error).message }]);
+      setRenders([{ id: "err", label: "Не получилось", error: (e as Error).message }]);
+      setRenderStatus("");
     } finally {
       setRenderBusy(false);
     }
@@ -484,8 +530,8 @@ export function PilotApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...lead, summary, passport }),
       });
-      const j = await r.json();
-      setLeadState(r.ok ? "Заявка ушла в Telegram ✓" : `Ошибка: ${j.error}`);
+      const j = await readJson(r);
+      setLeadState(j.ok ? "Заявка ушла в Telegram ✓" : `Ошибка: ${j.error}`);
     } catch (e) {
       setLeadState(`Ошибка: ${(e as Error).message}`);
     }
@@ -510,11 +556,30 @@ export function PilotApp() {
 
   const s = scenario;
   const sel = selected && current ? current.modules.find((m) => m.id === selected.moduleId) : null;
-  const selRoom = sel ? current!.rooms.find((r) => r.moduleIds.includes(sel.id)) : null;
+  const selRoom =
+    current && selectedRoomId ? (current.rooms.find((r) => r.id === selectedRoomId) ?? null) : null;
+  const removeBlock = current && selRoom ? removeRoomGuard(current, selRoom.id) : null;
+  const undo = () => {
+    const prev = history[history.length - 1];
+    if (!prev) return;
+    setHistory((h) => h.slice(0, -1));
+    setCurrent(prev, false);
+  };
+  const removeSelectedRoom = () => {
+    if (!selRoom) return;
+    const label = roomSpec(selRoom.type).label;
+    const before = currentRef.current;
+    const text = run({ op: "remove_room", roomId: selRoom.id });
+    if (currentRef.current !== before) {
+      setSelectedWall(null);
+      setSelectedRoomId(null);
+      setComments([`«${label}» убрана. Передумали — «↶ Отменить».`, text]);
+    }
+  };
   const hasUpper = current ? modulesOnTier(current, 2).length > 0 : false;
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900">
+    <div className="min-h-screen bg-neutral-50 pb-20 text-neutral-900 lg:pb-0">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b bg-white px-4 py-3">
         <div>
           <h1 className="text-lg font-semibold">Конструктор дома ЭкоКуб · бета</h1>
@@ -746,6 +811,7 @@ export function PilotApp() {
                     onClick={() => {
                       setCurrent(v.project);
                       setSelected(null);
+                      setSelectedRoomId(null);
                       setComments([v.rank?.why ?? ""]);
                     }}
                     className={`rounded-lg border p-3 text-left text-sm ${active ? "border-neutral-900 bg-white shadow" : "bg-white/70"}`}
@@ -783,17 +849,7 @@ export function PilotApp() {
                 {l}
               </Btn>
             ))}
-            {current && history.length > 0 && (
-              <Btn
-                onClick={() => {
-                  const prev = history[history.length - 1];
-                  setHistory((h) => h.slice(0, -1));
-                  setCurrent(prev, false);
-                }}
-              >
-                ↶ Отменить
-              </Btn>
-            )}
+            {current && history.length > 0 && <Btn onClick={undo}>↶ Отменить</Btn>}
           </div>
 
           <div id="pilot-3d" className="h-[520px] overflow-hidden rounded-lg border bg-white">
@@ -806,7 +862,15 @@ export function PilotApp() {
                 <HouseScene project={current} selected={selected} onPick={setSelected} shot />
               </Suspense>
             ) : tab === "plan1" || tab === "plan2" ? (
-              <PlanSvg project={current} tier={tab === "plan1" ? 1 : 2} />
+              <PlanSvg
+                project={current}
+                tier={tab === "plan1" ? 1 : 2}
+                selectedRoomId={selectedRoomId}
+                onPickRoom={(id) => {
+                  setSelectedWall(null);
+                  setSelectedRoomId((cur) => (cur === id ? null : id));
+                }}
+              />
             ) : (
               passport && (
                 <div className="h-full overflow-auto p-4 text-sm">
@@ -914,6 +978,38 @@ export function PilotApp() {
             )}
           </div>
 
+          {current && selRoom && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <span>
+                Выбрана комната: <b>{roomSpec(selRoom.type).label}</b> · ярус {selRoom.tier} ·{" "}
+                {selRoom.moduleIds.length} куб.
+              </span>
+              <button
+                type="button"
+                disabled={!!removeBlock}
+                onClick={removeSelectedRoom}
+                className="rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-40"
+              >
+                Удалить комнату
+              </button>
+              {history.length > 0 && <Btn onClick={undo}>↶ Отменить</Btn>}
+              <Btn
+                onClick={() => {
+                  setSelectedWall(null);
+                  setSelectedRoomId(null);
+                }}
+              >
+                снять выбор
+              </Btn>
+              {removeBlock && (
+                <p className="w-full text-xs text-neutral-700">
+                  Удалить нельзя: {removeBlock.reason}.
+                  {removeBlock.suggestion ? ` ${removeBlock.suggestion}` : ""}
+                </p>
+              )}
+            </div>
+          )}
+
           {comments.filter(Boolean).length > 0 && (
             <div className="rounded-lg border bg-white p-3 text-sm">
               <b>{PILOT.architect.name}:</b>
@@ -932,7 +1028,9 @@ export function PilotApp() {
                 <span className="text-neutral-600">
                   {sel
                     ? `стена «${SIDE_RU[selected!.side]}» · ${selRoom ? roomSpec(selRoom.type).label : ""} · ярус ${sel.tier}`
-                    : "кликните по стене дома в 3D"}
+                    : selRoom
+                      ? `комната «${roomSpec(selRoom.type).label}» · ярус ${selRoom.tier}`
+                      : "кликните по стене дома в 3D или по комнате на плане"}
                 </span>
               </div>
               {sel && selRoom && (
@@ -1089,10 +1187,14 @@ export function PilotApp() {
                     </>
                   ) : null;
                 })()}
-                {selRoom && selRoom.type !== "kitchen-living" && (
-                  <Btn onClick={() => run({ op: "remove_room", roomId: selRoom.id })}>
-                    убрать «{roomSpec(selRoom.type).label}»
+                {selRoom ? (
+                  <Btn onClick={removeSelectedRoom} disabled={!!removeBlock}>
+                    − убрать «{roomSpec(selRoom.type).label}»
                   </Btn>
+                ) : (
+                  <span className="self-center text-xs text-neutral-500">
+                    − убрать комнату: выберите её на плане или в 3D
+                  </span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-1">
@@ -1132,8 +1234,11 @@ export function PilotApp() {
                 <b>Рендеры</b>
                 <Btn onClick={snapshot}>Снимок 3D (стадия 1)</Btn>
                 <Btn kind="primary" disabled={renderBusy} onClick={doRenders}>
-                  {renderBusy ? "Рисую…" : "Фото-рендеры (3 кадра, ~12 ₽)"}
+                  {renderBusy ? renderStatus || "Рисую…" : "Фото-рендеры (3 кадра, ~12 ₽)"}
                 </Btn>
+                {renderStatus && !renderBusy && (
+                  <span className="text-xs text-amber-700">{renderStatus}</span>
+                )}
                 <span className="text-xs text-neutral-500">
                   Стадия 2 по 3D-снимку:{" "}
                   {STAGE2.status === "blocked" ? "ждёт images/edits у rgrouter" : "готова"}
@@ -1162,38 +1267,8 @@ export function PilotApp() {
           <section className="flex h-[620px] flex-col rounded-lg border bg-white">
             <div className="flex items-center justify-between border-b p-3">
               <b>{PILOT.architect.name}</b>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={continuous}
-                    disabled={!!voice}
-                    onChange={(e) => setContinuous(e.target.checked)}
-                  />
-                  без кнопки
-                </label>
-                <Btn kind={voice ? "primary" : "ghost"} onClick={toggleVoice}>
-                  {voice ? "■ голос" : "🎤 голос"}
-                </Btn>
-              </div>
+              <span className="text-xs text-neutral-500">текстом или голосом</span>
             </div>
-            {voice && !continuous && (
-              <button
-                type="button"
-                className="m-2 rounded bg-red-600 py-3 text-white active:bg-red-800"
-                onPointerDown={() => voice.pressTalk()}
-                onPointerUp={() => voice.releaseTalk()}
-                onPointerLeave={() => voice.releaseTalk()}
-              >
-                Держите и говорите
-              </button>
-            )}
-            {(voice || voiceInfo) && (
-              <p className="px-3 text-xs text-neutral-500">
-                Голос: {voiceState}
-                {voiceInfo ? ` · ${voiceInfo}` : ""}
-              </p>
-            )}
             <div className="flex-1 space-y-2 overflow-auto p-3 text-sm">
               {chat.map((m, i) => (
                 <p
@@ -1228,6 +1303,67 @@ export function PilotApp() {
                 ➤
               </Btn>
             </form>
+            {/* Голос — всегда внизу панели; на телефоне — закреплённая полоса внизу экрана. */}
+            <div className="sticky bottom-0 z-30 border-t bg-white p-2 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+              {!voice ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void toggleVoice("dialog")}
+                    className="flex-1 rounded-full bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-neutral-700"
+                  >
+                    🎙 Голосовой режим
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void toggleVoice("ptt")}
+                    className="rounded-full border px-3 py-2.5 text-xs text-neutral-600 hover:bg-neutral-100"
+                    title="Рация: удерживаете кнопку, пока говорите"
+                  >
+                    рация
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-3 w-3 shrink-0 rounded-full ${
+                      voiceState === "listening"
+                        ? "animate-pulse bg-green-500"
+                        : voiceState === "speaking"
+                          ? "animate-pulse bg-blue-500"
+                          : voiceState === "thinking"
+                            ? "animate-pulse bg-amber-500"
+                            : "bg-neutral-300"
+                    }`}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {voiceState === "speaking" ? "Лев говорит" : VOICE_STATE_RU[voiceState]}
+                    {voiceInfo ? ` · ${voiceInfo}` : ""}
+                  </span>
+                  {!continuous && (
+                    <button
+                      type="button"
+                      className="select-none rounded-full bg-red-600 px-4 py-2.5 text-sm text-white active:bg-red-800"
+                      onPointerDown={() => voice.pressTalk()}
+                      onPointerUp={() => voice.releaseTalk()}
+                      onPointerLeave={() => voice.releaseTalk()}
+                    >
+                      Держите и говорите
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void toggleVoice()}
+                    className="rounded-full border border-red-300 px-4 py-2.5 text-sm text-red-700 hover:bg-red-50"
+                  >
+                    Завершить
+                  </button>
+                </div>
+              )}
+              {!voice && voiceInfo && (
+                <p className="mt-1 text-xs text-neutral-500">Голос: {voiceInfo}</p>
+              )}
+            </div>
           </section>
 
           {passport && (

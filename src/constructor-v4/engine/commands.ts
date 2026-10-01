@@ -511,6 +511,39 @@ export function rotateHouse90(p: Project): Project {
   );
 }
 
+/**
+ * Можно ли убрать помещение кнопкой «Удалить комнату»: заранее понятные запреты
+ * со словами для человека. Остальное (маршрут от входа, связность, санузел на
+ * первом ярусе) проверяет движок правил при применении команды.
+ */
+export function removeRoomGuard(
+  p: Project,
+  roomId: string,
+): { reason: string; suggestion?: string } | null {
+  const r = p.rooms.find((x) => x.id === roomId);
+  if (!r) return { reason: "Нет такого помещения." };
+  if (r.type === "kitchen-living" && p.rooms.filter((x) => x.type === "kitchen-living").length <= 1)
+    return {
+      reason: "Кухня-гостиная — ядро дома, последнюю убрать нельзя",
+      suggestion: "Её можно уменьшить кнопкой «кухня меньше» (не меньше 2 кубиков).",
+    };
+  if (r.type === "hall" && p.rooms.some((x) => x.tier === 2 && x.id !== r.id))
+    return {
+      reason: "Холл с лестницей нельзя убрать, пока на втором ярусе есть комнаты",
+      suggestion: "Сначала уберите комнаты второго яруса.",
+    };
+  if (r.type === "wet-core" && r.tier === 1) {
+    const left = p.rooms.filter((x) => x.type === "wet-core" && x.tier === 1 && x.id !== r.id);
+    if (!left.length)
+      return {
+        reason:
+          "Это единственный санузел первого яруса — в нём стояк и бойлер, без него дом не сдать",
+        suggestion: "Уберите другой санузел, если их несколько.",
+      };
+  }
+  return null;
+}
+
 export function applyCommand(p: Project, c: EditorCommand): CommandResult {
   switch (c.op) {
     case "door":
@@ -573,6 +606,8 @@ export function applyCommand(p: Project, c: EditorCommand): CommandResult {
     case "remove_room": {
       const r = p.rooms.find((x) => x.id === c.roomId);
       if (!r) return reject("Нет такого помещения.");
+      const guard = removeRoomGuard(p, r.id);
+      if (guard) return reject(guard.reason, [], guard.suggestion);
       const after = rederive(
         {
           ...p,

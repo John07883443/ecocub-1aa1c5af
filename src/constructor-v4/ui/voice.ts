@@ -5,7 +5,22 @@
  */
 import { PILOT } from "../pilot.config.ts";
 
-export type VoiceState = "idle" | "connecting" | "ready" | "listening" | "speaking" | "closed";
+export type VoiceState =
+  "idle" | "connecting" | "ready" | "listening" | "thinking" | "speaking" | "closed";
+
+/** Подпись состояния для панели голоса. */
+export const VOICE_STATE_RU: Record<VoiceState, string> = {
+  idle: "выключен",
+  connecting: "подключаюсь…",
+  ready: "готов — удерживайте кнопку и говорите",
+  listening: "слушаю",
+  thinking: "думаю…",
+  speaking: "говорит",
+  closed: "выключен",
+};
+
+/** Тишина дольше этого в голосовом режиме — сессия закрывается сама (экономим минуты). */
+export const VOICE_IDLE_MS = 60_000;
 
 export interface VoiceHandlers {
   onState: (s: VoiceState, detail?: string) => void;
@@ -33,12 +48,37 @@ export class VoiceSession {
   private nextPlay = 0;
   private sending = false;
   private handledCalls = new Set<string>();
+  private greeted = false;
+  private lastActivity = Date.now();
+  private idleTimer: ReturnType<typeof setInterval> | null = null;
+  private speaking = false;
 
   constructor(
     private url: string,
     private h: VoiceHandlers,
-    private opts: { instructions: () => string; tools: unknown[]; continuous: boolean },
+    private opts: {
+      instructions: () => string;
+      tools: unknown[];
+      continuous: boolean;
+      /** Первая служебная реплика: что сказать при подключении. */
+      greeting?: () => string;
+      /** LLM внутри InWorld Realtime (с сервера: PILOT_REALTIME_MODEL). */
+      model?: string;
+    },
   ) {}
+
+  private touch() {
+    this.lastActivity = Date.now();
+  }
+
+  /** Обновить инструкции (анкета, дом, бюджет поменялись) без переподключения. */
+  updateInstructions() {
+    if (!this.greeted) return;
+    this.send({
+      type: "session.update",
+      session: { type: "realtime", instructions: this.opts.instructions() },
+    });
+  }
 
   async start() {
     this.h.onState("connecting");
@@ -55,8 +95,24 @@ export class VoiceSession {
     };
     ws.onerror = () =>
       this.h.onState("closed", "сервер пилота недоступен — запущен ли npm run pilot?");
-    ws.onmessage = (e) => this.onMessage(JSON.parse(String(e.data)));
+    ws.onmessage = (e) => {
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(String(e.data));
+      } catch {
+        return;
+      }
+      void this.onMessage(msg);
+    };
     await this.startMic();
+    if (this.opts.continuous) {
+      this.idleTimer = setInterval(() => {
+        if (!this.speaking && Date.now() - this.lastActivity > VOICE_IDLE_MS) {
+          this.h.onState("closed", "минуту тишины — голосовой режим выключен");
+          this.stop();
+        }
+      }, 5000);
+    }
   }
 
   private send(o: unknown) {
@@ -89,6 +145,7 @@ registerProcessor('pcm',P)`;
 
   /** Нажми и говори: начать. */
   pressTalk() {
+    this.touch();
     this.stopSpeech();
     this.sending = true;
     this.h.onState("listening");
@@ -100,7 +157,7 @@ registerProcessor('pcm',P)`;
     this.sending = false;
     this.send({ type: "input_audio_buffer.commit" });
     this.send({ type: "response.create" });
-    this.h.onState("ready");
+    this.h.onState("thinking");
   }
 
   /** Служебное сообщение модели (например, «человек нажал кнопку X»). */
@@ -116,6 +173,7 @@ registerProcessor('pcm',P)`;
   }
 
   private stopSpeech() {
+    this.speaking = false;
     if (!this.playback) return;
     this.nextPlay = 0;
     void this.playback.close();
@@ -149,7 +207,7 @@ registerProcessor('pcm',P)`;
           type: "session.update",
           session: {
             type: "realtime",
-            model: PILOT.architect.realtimeModel,
+            model: this.opts.model || PILOT.architect.realtimeModel,
             instructions: this.opts.instructions(),
             output_modalities: ["audio", "text"],
             audio: {
@@ -179,6 +237,10 @@ registerProcessor('pcm',P)`;
         });
         break;
       case "session.updated":
+        // Повторный session.updated — это обновление инструкций, а не новое подключение.
+        if (this.greeted) break;
+        this.greeted = true;
+        this.touch();
         this.h.onState(this.opts.continuous ? "listening" : "ready");
         this.send({
           type: "conversation.item.create",
@@ -188,7 +250,9 @@ registerProcessor('pcm',P)`;
             content: [
               {
                 type: "input_text",
-                text: "[служебное] Поздоровайся одной фразой и спроси, кто будет жить в доме.",
+                text:
+                  this.opts.greeting?.() ??
+                  "[служебное] Поздоровайся одной фразой и спроси, кто будет жить в доме.",
               },
             ],
           },
@@ -198,7 +262,9 @@ registerProcessor('pcm',P)`;
       case "response.output_audio.delta":
       case "response.audio.delta":
         if (typeof msg.delta === "string") {
-          this.h.onState("speaking");
+          this.touch();
+          if (!this.speaking) this.h.onState("speaking");
+          this.speaking = true;
           this.play(msg.delta);
         }
         break;
@@ -207,14 +273,25 @@ registerProcessor('pcm',P)`;
         if (typeof msg.transcript === "string") this.h.onAssistantText(msg.transcript);
         break;
       case "response.done":
+        this.touch();
+        // Ответ дозвучит из буфера; сразу снова слушаем (в режиме без кнопки).
+        this.speaking = false;
         this.h.onState(this.opts.continuous ? "listening" : "ready");
+        break;
+      case "input_audio_buffer.speech_stopped":
+      case "input_audio_buffer.committed":
+        this.touch();
+        this.h.onState("thinking");
         break;
       case "conversation.item.input_audio_transcription.completed":
         if (typeof msg.transcript === "string" && msg.transcript.trim())
           this.h.onUserText(msg.transcript);
         break;
       case "input_audio_buffer.speech_started":
+        // Перебили — Лев замолкает сразу (barge-in).
+        this.touch();
         this.stopSpeech();
+        this.h.onState("listening");
         break;
       case "response.function_call_arguments.done": {
         const callId = String(msg.call_id ?? "");
@@ -241,11 +318,15 @@ registerProcessor('pcm',P)`;
   }
 
   stop() {
+    if (this.idleTimer) clearInterval(this.idleTimer);
+    this.idleTimer = null;
     this.ws?.close();
     this.cleanup();
   }
 
   private cleanup() {
+    if (this.idleTimer) clearInterval(this.idleTimer);
+    this.idleTimer = null;
     this.stream?.getTracks().forEach((t) => t.stop());
     void this.capture?.close().catch(() => {});
     void this.playback?.close().catch(() => {});

@@ -10,7 +10,8 @@
  * Переменные: RGROUTER_API_KEY, INWORLD_API_KEY_BASE64, PILOT_TELEGRAM_BOT_TOKEN,
  * PILOT_TELEGRAM_CHAT_ID (запасной вариант — TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID сайта),
  * необязательные: PILOT_VOICE_URL (wss://…/pilot-voice), PILOT_CHAT_MODEL,
- * PILOT_IMAGE_MODEL, PILOT_RENDER_RUNS, PILOT_RENDER_DAILY_CAP, PILOT_CHAT_PER_SESSION.
+ * PILOT_IMAGE_MODEL, PILOT_REALTIME_MODEL (LLM голосовой сессии InWorld), PILOT_RENDER_RUNS,
+ * PILOT_RENDER_DAILY_CAP, PILOT_CHAT_PER_SESSION.
  */
 
 type Env = Record<string, string | undefined>;
@@ -39,6 +40,7 @@ function cfg() {
     tgChat: e.PILOT_TELEGRAM_CHAT_ID || e.TELEGRAM_CHAT_ID || "",
     chatModel: e.PILOT_CHAT_MODEL ?? "rg-google-gemini-3.8-flash",
     imageModel: e.PILOT_IMAGE_MODEL ?? "rg-gpt-image-2.5",
+    realtimeModel: e.PILOT_REALTIME_MODEL ?? "",
     renderRuns: num(e.PILOT_RENDER_RUNS, 2),
     renderDailyCap: num(e.PILOT_RENDER_DAILY_CAP, 150),
     chatPerSession: num(e.PILOT_CHAT_PER_SESSION, 60),
@@ -64,6 +66,7 @@ export function pilotHealth(opts: { localVoice?: boolean } = {}): PilotResult {
       telegram: !!(c.tgToken && c.tgChat),
       chatModel: c.chatModel,
       imageModel: c.imageModel,
+      realtimeModel: c.realtimeModel || null,
     },
   };
 }
@@ -115,7 +118,11 @@ export async function pilotChat(input: unknown, session: string): Promise<PilotR
   return { status: 200, body: { message: choices?.[0]?.message ?? {}, usage: out.usage ?? null } };
 }
 
-export async function pilotRender(input: unknown, session: string): Promise<PilotResult> {
+type Shot = { id: string; prompt: string };
+type ShotResult = { id: string; url?: string | null; b64?: string | null; error?: string };
+
+/** Проверка лимитов и списание одного прогона. null — можно рисовать. */
+function takeRenderRun(session: string): PilotResult | null {
   const c = cfg();
   if (!c.rgKey)
     return { status: 503, body: { error: "Рендеры не настроены: нет ключа rgrouter на сервере." } };
@@ -134,24 +141,122 @@ export async function pilotRender(input: unknown, session: string): Promise<Pilo
     return { status: 429, body: { error: `Лимит рендеров на сессию: ${c.renderRuns}.` } };
   renderRuns.set(session, used + 1);
   renderToday++;
-  const { shots = [] } = (input ?? {}) as { shots?: { id: string; prompt: string }[] };
-  const results = await Promise.all(
-    shots.slice(0, 3).map(async (s) => {
-      try {
-        const out = await rg("/images/generations", {
-          model: c.imageModel,
-          prompt: String(s.prompt).slice(0, 4000),
-          size: "1536x1024",
-          n: 1,
-        });
-        const d = (out.data as { url?: string; b64_json?: string }[] | undefined)?.[0] ?? {};
-        return { id: s.id, url: d.url ?? null, b64: d.b64_json ?? null };
-      } catch (e) {
-        return { id: s.id, error: String((e as Error).message ?? e) };
-      }
-    }),
-  );
-  return { status: 200, body: { results, runsLeft: c.renderRuns - used - 1 } };
+  return null;
+}
+
+function parseShots(input: unknown): Shot[] {
+  const { shots = [] } = (input ?? {}) as { shots?: unknown[] };
+  return (Array.isArray(shots) ? shots : [])
+    .slice(0, 3)
+    .filter((s): s is Shot => !!s && typeof (s as Shot).id === "string")
+    .map((s) => ({ id: String(s.id).slice(0, 60), prompt: String(s.prompt ?? "").slice(0, 4000) }));
+}
+
+async function renderShot(s: Shot): Promise<ShotResult> {
+  const c = cfg();
+  try {
+    const out = await rg("/images/generations", {
+      model: c.imageModel,
+      prompt: s.prompt,
+      size: "1536x1024",
+      n: 1,
+    });
+    const d = (out.data as { url?: string; b64_json?: string }[] | undefined)?.[0] ?? {};
+    return { id: s.id, url: d.url ?? null, b64: d.b64_json ?? null };
+  } catch (e) {
+    return { id: s.id, error: String((e as Error).message ?? e) };
+  }
+}
+
+/** Синхронный рендер (старый контракт, scripts/pilot-server.mjs и обратная совместимость). */
+export async function pilotRender(input: unknown, session: string): Promise<PilotResult> {
+  const denied = takeRenderRun(session);
+  if (denied) return denied;
+  const c = cfg();
+  const results = await Promise.all(parseShots(input).map(renderShot));
+  return {
+    status: 200,
+    body: { results, runsLeft: Math.max(0, c.renderRuns - (renderRuns.get(session) ?? 0)) },
+  };
+}
+
+// ── Рендер задачей: старт → jobId сразу, клиент опрашивает. Ни один запрос не ждёт > 60 с nginx. ──
+
+export interface RenderJob {
+  id: string;
+  session: string;
+  status: "running" | "done";
+  total: number;
+  done: number;
+  results: ShotResult[];
+  createdAt: number;
+  runsLeft: number;
+}
+
+/** Задачи в памяти процесса (один инстанс pm2), живут 15 минут. */
+const renderJobs = new Map<string, RenderJob>();
+export const RENDER_JOB_TTL_MS = 15 * 60_000;
+
+function sweepJobs(now = Date.now()) {
+  for (const [id, j] of renderJobs)
+    if (now - j.createdAt > RENDER_JOB_TTL_MS) renderJobs.delete(id);
+}
+
+/** Запустить рендер задачей. render — подменяется в тестах. */
+export function pilotRenderStart(
+  input: unknown,
+  session: string,
+  render: (s: Shot) => Promise<ShotResult> = renderShot,
+): PilotResult {
+  sweepJobs();
+  const shots = parseShots(input);
+  if (!shots.length) return { status: 400, body: { error: "Нет кадров для рендера." } };
+  const denied = takeRenderRun(session);
+  if (denied) return denied;
+  const id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const job: RenderJob = {
+    id,
+    session,
+    status: "running",
+    total: shots.length,
+    done: 0,
+    results: [],
+    createdAt: Date.now(),
+    runsLeft: Math.max(0, cfg().renderRuns - (renderRuns.get(session) ?? 0)),
+  };
+  renderJobs.set(id, job);
+  // Кадры по одному: прогресс «рисуем 1 из 3…» честный, апстрим не душим параллелью.
+  void (async () => {
+    for (const s of shots) {
+      const r = await render(s).catch((e) => ({ id: s.id, error: String(e?.message ?? e) }));
+      job.results.push(r);
+      job.done++;
+    }
+    job.status = "done";
+  })();
+  return { status: 202, body: { jobId: id, total: job.total, runsLeft: job.runsLeft } };
+}
+
+/** Состояние задачи рендера. Готовые кадры отдаются сразу, не дожидаясь остальных. */
+export function pilotRenderStatus(jobId: string, session?: string): PilotResult {
+  sweepJobs();
+  const j = renderJobs.get(jobId);
+  if (!j || (session && j.session !== session && j.session !== "anon"))
+    return {
+      status: 404,
+      body: { error: "Задача рендера не найдена или устарела — запустите ещё раз." },
+    };
+  return {
+    status: 200,
+    body: {
+      jobId: j.id,
+      status: j.status,
+      done: j.done,
+      total: j.total,
+      results: j.results,
+      runsLeft: j.runsLeft,
+    },
+  };
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

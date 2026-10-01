@@ -105,6 +105,14 @@ export interface Project {
   finishingMaterials?: "included" | "own";
   /** Профиль стиля из слов и референсов человека (см. style.ts). */
   styleProfile?: import("./style.ts").StyleProfile;
+  /** Кто ещё живёт и что на участке: кошки (лоток на плане), собаки, машина (навес на участке). */
+  household?: Household;
+}
+
+export interface Household {
+  cats?: number;
+  dogs?: number;
+  car?: boolean;
 }
 
 export interface Brief {
@@ -123,6 +131,11 @@ export interface Brief {
   bedroomPurposes?: RoomPurpose[];
   /** Рекомендации из сценария (питомцы, доступность) — уходят в паспорт. */
   recommendations?: string[];
+  /** Главная спальня на 2 кубика (с гардеробной), когда площадь позволяет. */
+  masterSuite?: boolean;
+  /** Желаемая площадь «до», м² тёплого контура: гардеробная главной спальни — только если влезает. */
+  maxAreaM2?: number;
+  household?: Household;
 }
 
 export type RuleLevel = "hard" | "soft" | "info";

@@ -11,6 +11,7 @@ import { GRAMMAR, FINISHES } from "../grammar/index.ts";
 import { columnsFor, modulesOnTier } from "../engine/rules.ts";
 import type { ModulePlacement, Opening, Project, Side } from "../engine/types.ts";
 import { planFromProject } from "../engine/plan.ts";
+import { carportPlace } from "../engine/site.ts";
 
 export interface WallPick {
   moduleId: string;
@@ -187,6 +188,53 @@ export function HouseScene({
     );
   })();
 
+  // Навес для машины: кровля на четырёх стойках, место — из модели (engine/site.ts).
+  const carport = (() => {
+    const c = carportPlace(project);
+    if (!c) return null;
+    const r = c.rect;
+    const cx = (r.x0 + r.x1) / 2000 - ox;
+    const cz = -(r.y0 + r.y1) / 2000 + oz;
+    const w = (r.x1 - r.x0) / 1000;
+    const d = (r.y1 - r.y0) / 1000;
+    const h = 2.6;
+    return (
+      <group>
+        <mesh position={[cx, 0.02, cz]} rotation-x={-Math.PI / 2} raycast={() => null}>
+          <planeGeometry args={[w, d]} />
+          <meshStandardMaterial color="#bdbab3" />
+        </mesh>
+        <mesh position={[cx, h, cz]} raycast={() => null} castShadow>
+          <boxGeometry args={[w + 0.3, 0.12, d + 0.3]} />
+          <meshStandardMaterial color="#4b4b4b" />
+        </mesh>
+        {[
+          [r.x0 + 150, r.y0 + 150],
+          [r.x1 - 150, r.y0 + 150],
+          [r.x0 + 150, r.y1 - 150],
+          [r.x1 - 150, r.y1 - 150],
+        ].map(([x, y], i) => (
+          <mesh
+            key={`cp-${i}`}
+            position={[x / 1000 - ox, h / 2, -y / 1000 + oz]}
+            raycast={() => null}
+          >
+            <cylinderGeometry args={[0.06, 0.06, h, 8]} />
+            <meshStandardMaterial color="#4b4b4b" />
+          </mesh>
+        ))}
+        <Text
+          position={[cx, h + 0.08, cz]}
+          rotation-x={-Math.PI / 2}
+          fontSize={0.6}
+          color="#f2f2f2"
+        >
+          Навес · машина
+        </Text>
+      </group>
+    );
+  })();
+
   const columns = (() => {
     if (!columnsFor(project)) return null;
     const out: ReactElement[] = [];
@@ -247,6 +295,7 @@ export function HouseScene({
         shadow-mapSize={[2048, 2048]}
       />
       {plotGroup}
+      {carport}
       {terrace}
       {planFromProject(project).entrances.map((e) => (
         <mesh

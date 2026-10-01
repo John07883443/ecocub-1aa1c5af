@@ -87,7 +87,9 @@ export type FurnitureKind =
   | "boiler"
   | "desk"
   | "stairs"
-  | "tv";
+  | "tv"
+  | "wardrobe"
+  | "litter";
 
 export interface PlanFurniture {
   id: string;
@@ -387,6 +389,18 @@ function furnitureFor(p: Project, room: Room): PlanFurniture[] {
     const cy = (c.y0 + c.y1) / 2;
     switch (room.type) {
       case "bedroom": {
+        // Второй кубик главной спальни — гардеробная: шкафы вдоль глухой стены.
+        if (i > 0) {
+          const north = !doorFaces(m).has("N") && !windowFaces(m).has("N");
+          add(
+            "wardrobe",
+            north
+              ? { x0: c.x0 + 200, x1: c.x1 - 200, y0: c.y1 - 600, y1: c.y1 }
+              : { x0: c.x0 + 200, x1: c.x1 - 200, y0: c.y0, y1: c.y0 + 600 },
+            m,
+          );
+          break;
+        }
         // Изголовье к стене без двери и окна: север или юг.
         const head: "N" | "S" = !doorFaces(m).has("N") && !windowFaces(m).has("N") ? "N" : "S";
         const y0 = head === "N" ? c.y1 - 2000 : c.y0;
@@ -425,6 +439,15 @@ function furnitureFor(p: Project, room: Room): PlanFurniture[] {
           m,
         );
         add("boiler", { x0: z.x0, x1: z.x0 + 500, y0: z.y1 - 500, y1: z.y1 }, m);
+        // Кошки: ниша под лоток в техблоке (в тамбуре, если он есть) — у первого санузла 1-го яруса.
+        const firstWet = p.rooms.find((x) => x.type === "wet-core" && x.tier === 1);
+        if ((p.household?.cats ?? 0) > 0 && room.id === firstWet?.id && i === 0) {
+          const t = wetZones(p, m).tambour;
+          const at = t
+            ? { x0: t.x0, x1: t.x0 + 600, y0: t.y1 - 500, y1: t.y1 }
+            : { x0: z.x0 + 600, x1: z.x0 + 1200, y0: z.y1 - 500, y1: z.y1 };
+          add("litter", at, m);
+        }
         break;
       }
       case "study":
