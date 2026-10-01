@@ -43,6 +43,10 @@ const WEIGHTS: Record<string, number> = {
   FORM_START: 20,
   QUIZ_START: 8,
   QUIZ_COMPLETE: 25,
+  QUICK_QUIZ_START: 6,
+  QUICK_QUIZ_COMPLETE: 15,
+  QUICK_QUIZ_LEAD: 25,
+  CONSTRUCTOR_QUOTE_MESSENGER: 25,
 };
 
 /** Базовая отправка цели. Безопасна на сервере и при заблокированном счётчике. */
@@ -119,6 +123,31 @@ export const analytics = {
 
   /** Квиз пройден и заявка отправлена. */
   quizComplete: () => track("QUIZ_COMPLETE"),
+
+  /** Короткий квиз на главной (3 вопроса): первый ответ. */
+  quickQuizStart: () => track("QUICK_QUIZ_START"),
+
+  /** Ответ на шаг короткого квиза. */
+  quickQuizStep: (step: string, value: string) => track("QUICK_QUIZ_STEP", { step, value }),
+
+  /** Все три ответа даны — показан результат с CTA. */
+  quickQuizComplete: () => track("QUICK_QUIZ_COMPLETE"),
+
+  /** С результата короткого квиза ушли в мессенджер или к форме заявки. */
+  quickQuizLead: (channel: "telegram" | "whatsapp" | "form") =>
+    track("QUICK_QUIZ_LEAD", { channel }),
+
+  /**
+   * «Получить расчёт этой конфигурации» в конструкторе → мессенджер с готовым
+   * текстом. Параметры обезличены: только размеры сборки и цена с экрана.
+   */
+  constructorQuoteMessenger: (
+    channel: "telegram" | "whatsapp",
+    modules: number,
+    area: number,
+    floors: number,
+    price: number,
+  ) => track("CONSTRUCTOR_QUOTE_MESSENGER", { channel, modules, area, floors, price }),
 };
 
 /**

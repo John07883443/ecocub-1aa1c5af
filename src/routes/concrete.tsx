@@ -8,29 +8,21 @@ import { CheckCircle2 } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
+import { concreteSnippet, formatRubSpaced } from "@/lib/seo";
+import { START_PRICE_PER_M2_RUB, PRICE_SCOPE } from "@/lib/site";
 
 export const Route = createFileRoute("/concrete")({
   head: () => ({
     meta: [
       { property: "og:url", content: "https://eco-cub.ru/concrete" },
-      {
-        title: "Бетонные модульные дома от производителя в Подмосковье | EcoCub",
-      },
-      {
-        name: "description",
-        content:
-          "Каталог модульных бетонных домов EcoCub. Заводская сборка, готовность 90 дней, круглогодичное проживание. Цены, проекты, площади.",
-      },
-      {
-        property: "og:title",
-        content: "Модульные бетонные дома EcoCub",
-      },
-      {
-        property: "og:description",
-        content:
-          "Бетонные модульные дома от производителя — Weekend, Family, Double. От 4.5 млн ₽.",
-      },
-      { property: "og:image", content: "/images/section-concrete.png" },
+      // Сниппет и цена — в lib/seo.ts (цена одна на сайт: START_PRICE_PER_M2_RUB).
+      { title: concreteSnippet.title },
+      { name: "description", content: concreteSnippet.description },
+      { property: "og:title", content: concreteSnippet.ogTitle },
+      { property: "og:description", content: concreteSnippet.ogDescription },
+      { name: "twitter:title", content: concreteSnippet.ogTitle },
+      { property: "og:image", content: "https://eco-cub.ru/images/section-concrete.png" },
+      { name: "twitter:image", content: "https://eco-cub.ru/images/section-concrete.png" },
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru/concrete" }],
   }),
@@ -84,7 +76,7 @@ function ConcretePage() {
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-white/85">
               Hi-tech модули из бетона М400. Заводское качество, сборка на участке за 10 дней,
-              гарантия 50 лет. От 105 000 ₽ за м² в комплектации под предчистовую отделку.
+              гарантия 50 лет. {formatRubSpaced(START_PRICE_PER_M2_RUB)} ₽ за м² {PRICE_SCOPE}.
             </p>
           </Reveal>
         </Container>

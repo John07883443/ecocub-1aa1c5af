@@ -3,14 +3,13 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { site } from "@/lib/site";
+import { site, PRICE_SCOPE, NO_FINISH_NOTE } from "@/lib/site";
 
 interface PriceCalculatorProps {
   variant?: "light" | "dark";
 }
 
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat("ru-RU").format(Math.round(n));
+const formatPrice = (n: number) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 
 export function PriceCalculator({ variant = "light" }: PriceCalculatorProps) {
   const [area, setArea] = useState(120);
@@ -34,16 +33,14 @@ export function PriceCalculator({ variant = "light" }: PriceCalculatorProps) {
         Посчитайте свой дом
       </h3>
       <p className={`mt-3 text-sm ${subtitleClass}`}>
-        Базовая стоимость — {formatPrice(site.basePricePerM2)} ₽ за м² в комплектации
-        под предчистовую отделку. Площадь — любая, согласуем под ваш участок.
+        Базовая стоимость — {formatPrice(site.basePricePerM2)} ₽ за м² {PRICE_SCOPE};{" "}
+        {NO_FINISH_NOTE}. Площадь — любая, согласуем под ваш участок.
       </p>
 
       <div className="mt-8 space-y-6">
         <div>
           <div className="flex items-end justify-between">
-            <span className={`text-sm uppercase tracking-wide ${subtitleClass}`}>
-              Площадь дома
-            </span>
+            <span className={`text-sm uppercase tracking-wide ${subtitleClass}`}>Площадь дома</span>
             <span className={`text-3xl font-bold ${titleClass}`}>
               {area} <span className="text-base font-normal">м²</span>
             </span>
@@ -62,15 +59,15 @@ export function PriceCalculator({ variant = "light" }: PriceCalculatorProps) {
           </div>
         </div>
 
-        <div className={`rounded-sm border-l-2 border-accent p-4 ${isDark ? "bg-white/5" : "bg-secondary"}`}>
+        <div
+          className={`rounded-sm border-l-2 border-accent p-4 ${isDark ? "bg-white/5" : "bg-secondary"}`}
+        >
           <p className={`text-xs uppercase tracking-wide ${subtitleClass}`}>
             Ориентировочная стоимость
           </p>
-          <p className={`mt-2 text-4xl font-bold ${valueClass}`}>
-            {formatPrice(total)} ₽
-          </p>
+          <p className={`mt-2 text-4xl font-bold ${valueClass}`}>{formatPrice(total)} ₽</p>
           <p className={`mt-1 text-sm ${subtitleClass}`}>
-            ≈ {totalMln} млн ₽ под предчистовую отделку
+            ≈ {totalMln} млн ₽ {PRICE_SCOPE}
           </p>
         </div>
 
@@ -86,9 +83,9 @@ export function PriceCalculator({ variant = "light" }: PriceCalculatorProps) {
         </Button>
 
         <p className={`text-xs ${subtitleClass}`}>
-          В стоимость входит: фундамент, монолитные модули из бетона M400, фасад,
-          кровля, окна, черновая инженерия, тёплые полы, монтаж. Финишная отделка
-          и мебель — по индивидуальному проекту.
+          В стоимость входит: фундамент, доставка, монолитные модули из бетона M400, фасад, кровля,
+          окна, инженерия, тёплые полы, чистовая отделка, монтаж. Мебель — по индивидуальному
+          проекту.
         </p>
       </div>
     </div>

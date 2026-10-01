@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { saveLead } from "@/lib/leads.server";
+import { checkSpam, HONEYPOT_FIELD } from "@/lib/antispam";
 
 /**
  * POST /api/lead — единственная точка приёма заявок с сайта.
@@ -26,6 +27,10 @@ type LeadPayload = {
   sourcePage?: string;
   projectSlug?: string;
   payload?: unknown;
+  /** Honeypot: человек его не видит и оставляет пустым. */
+  website?: unknown;
+  /** Миллисекунды от отрисовки формы до отправки. */
+  elapsedMs?: unknown;
 };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -78,6 +83,14 @@ export const Route = createFileRoute("/api/lead")({
           p = (await request.json()) as LeadPayload;
         } catch {
           return Response.json({ ok: false, reason: "bad_json" }, { status: 400 });
+        }
+
+        // Антиспам до любой записи: бота не пишем ни в базу, ни в Telegram,
+        // но отвечаем «ok», чтобы он не понял, что пойман (см. lib/antispam.ts).
+        const verdict = checkSpam({ honeypot: p[HONEYPOT_FIELD], elapsedMs: p.elapsedMs });
+        if (verdict.spam) {
+          console.warn("Заявки: отброшен спам —", verdict.reason);
+          return Response.json({ ok: true, stored: false, notified: false });
         }
 
         const name = (p.name ?? "").toString().slice(0, 100).trim();

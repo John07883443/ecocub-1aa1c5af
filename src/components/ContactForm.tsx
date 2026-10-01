@@ -17,6 +17,7 @@ import {
 import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
 import { useEffect, useRef } from "react";
+import { HoneypotField, useAntiSpam } from "@/components/Honeypot";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Минимум 2 символа").max(100),
@@ -58,6 +59,7 @@ export function ContactForm({
   defaultMessage,
 }: ContactFormProps) {
   const [pending, setPending] = useState(false);
+  const spam = useAntiSpam();
   const isDark = variant === "dark";
 
   // Отслеживание брошенных форм: начал заполнять, но не отправил.
@@ -103,8 +105,10 @@ export function ContactForm({
   // Подставляем свежую сводку из конструктора, если пользователь ещё не правил поле.
   useEffect(() => {
     if (defaultMessage === undefined) return;
+    // Раньше здесь стояло `if (!current || …) return` — пустое поле выходило
+    // раньше подстановки, и сводка из конструктора в форму не попадала вовсе.
     const current = form.getValues("message");
-    if (!current || current === defaultMessage) return;
+    if (current === defaultMessage) return;
     if (!form.formState.dirtyFields.message) {
       form.setValue("message", defaultMessage);
     }
@@ -132,6 +136,7 @@ export function ContactForm({
             sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : undefined),
           payload: attribution,
           attributionSummary: attributionSummary(attribution),
+          ...spam.fields(),
         }),
       });
       if (!res.ok) throw new Error("Сервер не принял заявку");
@@ -158,6 +163,7 @@ export function ContactForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className={className} noValidate>
+        <HoneypotField inputRef={spam.honeypotRef} />
         <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}

@@ -1,5 +1,20 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { Box, Layers3, Trash2, Sparkles, Eraser, RefreshCw, ArrowRight, X } from "lucide-react";
+import {
+  Box,
+  Layers3,
+  Trash2,
+  Sparkles,
+  Eraser,
+  RefreshCw,
+  ArrowRight,
+  X,
+  Send,
+  MessageCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { openMessenger, type Messenger } from "@/lib/messengers";
+import { analytics } from "@/lib/analytics";
+import { PRICE_SCOPE } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -39,9 +54,39 @@ function buildSummary(stats: HouseStats, sotki: number, designName: string) {
   ].join("\n");
 }
 
+/**
+ * Текст для мессенджера: те же параметры, что видит человек на экране,
+ * плюс от какой готовой планировки он отталкивался.
+ */
+function buildMessengerText(
+  stats: HouseStats,
+  sotki: number,
+  designName: string,
+  layout: string,
+): string {
+  return [
+    "Здравствуйте! Хочу получить расчёт этой конфигурации из конструктора eco-cub.ru:",
+    `• Модулей: ${stats.moduleCount}`,
+    `• Площадь: ${fmt(stats.totalArea)} м²`,
+    `• Этажей: ${stats.floors}`,
+    `• Планировка: ${layout}`,
+    `• Участок: ${sotki} соток`,
+    `• Дизайн фасада: ${designName}`,
+    `• Цена в конструкторе: ${fmt(stats.price)} ₽ (${PRICE_SCOPE})`,
+  ].join("\n");
+}
+
+const moduleSig = (mods: { x: number; z: number; floor: number }[]) =>
+  mods
+    .map((m) => `${m.x},${m.z},${m.floor}`)
+    .sort()
+    .join(";");
+
 export interface HouseBuilderProps {
   basePricePerM2: number;
   onRequestQuote?: (summary: string) => void;
+  /** Название дома из каталога, если конструктор открыт на его копии. */
+  sourceTitle?: string;
   /**
    * Стартовая раскладка вместо шаблона по умолчанию. Приходит со страницы
    * дома из каталога: конструктор открывается на копии этой конфигурации.
@@ -49,8 +94,32 @@ export interface HouseBuilderProps {
   initialSeeds?: Seed[];
 }
 
-export function HouseBuilder({ basePricePerM2, onRequestQuote, initialSeeds }: HouseBuilderProps) {
+export function HouseBuilder({
+  basePricePerM2,
+  onRequestQuote,
+  initialSeeds,
+  sourceTitle,
+}: HouseBuilderProps) {
   const api = useHouseBuilder(basePricePerM2, initialSeeds);
+
+  // От какой планировки отталкивается сборка — для текста в мессенджер.
+  // sig фиксируется первым же набором модулей после загрузки шаблона; если
+  // потом раскладка отличается, планировка помечается как изменённая.
+  const baseLayout = useRef<{ name: string; sig: string | null } | null>(
+    initialSeeds?.length
+      ? { name: sourceTitle ?? "из каталога", sig: null }
+      : { name: TEMPLATES.find((t) => t.id === "family-one")?.name ?? "готовая", sig: null },
+  );
+  useEffect(() => {
+    if (baseLayout.current && baseLayout.current.sig === null) {
+      baseLayout.current.sig = moduleSig(api.modules);
+    }
+  }, [api.modules]);
+  const layoutLabel = () => {
+    const b = baseLayout.current;
+    if (!b) return "своя сборка";
+    return b.sig === moduleSig(api.modules) ? b.name : `на основе ${b.name}, изменена`;
+  };
   const [view, setView] = useState<"plan" | "3d">("plan");
   const [mounted, setMounted] = useState(false);
   const [opened3d, setOpened3d] = useState(false);
@@ -102,6 +171,24 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote, initialSeeds }: H
   const handleQuote = () => {
     const summary = buildSummary(api.stats, api.sotki, api.design.name);
     onRequestQuote?.(summary);
+  };
+
+  const handleMessenger = (channel: Messenger) => {
+    const text = buildMessengerText(api.stats, api.sotki, api.design.name, layoutLabel());
+    analytics.constructorQuoteMessenger(
+      channel,
+      api.stats.moduleCount,
+      Math.round(api.stats.totalArea),
+      api.stats.floors,
+      Math.round(api.stats.price),
+    );
+    void openMessenger(channel, text).then((copied) => {
+      if (copied) {
+        toast.success("Параметры сборки скопированы", {
+          description: "Если текст не подставился в чат — просто вставьте его.",
+        });
+      }
+    });
   };
 
   return (
@@ -236,7 +323,10 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote, initialSeeds }: H
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => api.loadTemplate(t.id)}
+                  onClick={() => {
+                    baseLayout.current = { name: t.name, sig: null };
+                    api.loadTemplate(t.id);
+                  }}
                   className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:border-accent"
                 >
                   <span className="font-medium">{t.name}</span>
@@ -293,8 +383,30 @@ export function HouseBuilder({ basePricePerM2, onRequestQuote, initialSeeds }: H
             <p className="mt-2 text-xs text-muted-foreground">{api.design.description}</p>
           </div>
 
-          <Button size="lg" className="w-full gap-2" onClick={handleQuote}>
-            <Sparkles className="size-4" /> Получить расчёт по этой сборке
+          {/* Главный путь — мессенджер с готовым текстом: ни полей, ни ожидания. */}
+          <div className="rounded-sm border border-accent/40 bg-accent/5 p-4">
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+              disabled={!api.modules.length}
+              onClick={() => handleMessenger("telegram")}
+            >
+              <Send className="size-4" /> Получить расчёт этой конфигурации
+            </Button>
+            <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>Откроется Telegram с параметрами сборки</span>
+              <button
+                type="button"
+                disabled={!api.modules.length}
+                onClick={() => handleMessenger("whatsapp")}
+                className="inline-flex shrink-0 items-center gap-1 font-medium text-foreground underline-offset-2 hover:text-accent hover:underline disabled:opacity-50"
+              >
+                <MessageCircle className="size-3.5" /> или WhatsApp
+              </button>
+            </div>
+          </div>
+          <Button size="lg" variant="outline" className="w-full gap-2" onClick={handleQuote}>
+            <Sparkles className="size-4" /> Заявка через форму
             <ArrowRight className="size-4" />
           </Button>
         </div>

@@ -132,6 +132,7 @@ function ProjectPage() {
             <img
               src={project.cover_image}
               alt={project.name}
+              fetchPriority="high"
               className="hero-kenburns h-full w-full object-cover"
             />
           </Parallax>

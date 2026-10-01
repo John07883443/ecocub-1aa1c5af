@@ -111,6 +111,7 @@ function ConstructorPage() {
             basePricePerM2={site.basePricePerM2}
             onRequestQuote={handleQuote}
             initialSeeds={initialSeeds}
+            sourceTitle={source?.title}
           />
         </Container>
       </Section>

@@ -22,6 +22,9 @@ import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
 
 import { site } from "@/lib/site";
+import { formatRubSpaced, homeSnippet, priceLabel } from "@/lib/seo";
+import { NO_FINISH_NOTE, PRICE_SCOPE } from "@/lib/site";
+import { QuickQuiz } from "@/components/QuickQuiz";
 import { getAllPosts } from "@/lib/blog";
 import { fetchProjects } from "@/lib/projects";
 import { analytics } from "@/lib/analytics";
@@ -31,28 +34,19 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { property: "og:url", content: "https://eco-cub.ru" },
-      {
-        title:
-          "Современные дома из бетона в Московской области — модульные дома под ключ за 90 дней | EcoCub",
-      },
-      {
-        name: "description",
-        content:
-          "Монолитно-модульные дома из бетона от производителя в Московской области. Капитальный дом за 90 дней, гарантия 50 лет. От 105 000 ₽/м². Альтернатива кирпичу, газобетону и монолиту с фиксированной сметой.",
-      },
+      // Сниппет и цена — в lib/seo.ts (цена одна на сайт: START_PRICE_PER_M2_RUB).
+      { title: homeSnippet.title },
+      { name: "description", content: homeSnippet.description },
       {
         name: "keywords",
         content:
           "модульные дома из бетона, монолитно-модульный дом, дом из бетона под ключ, капитальный дом быстро, hi-tech дом из бетона, модульный дом конструктор, энергоэффективный дом A+++, современный дом в стиле хай-тек Подмосковье, современные дома Московская область, дом для круглогодичного проживания, альтернатива газобетону",
       },
-      { property: "og:title", content: "EcoCub — монолитно-модульные дома из бетона за 90 дней" },
-      {
-        property: "og:description",
-        content:
-          "Капитальный дом из бетона под ключ от 105 000 ₽/м². Производство в Московской области. Гарантия 50 лет, срок службы более 120 лет.",
-      },
-      { property: "og:image", content: "/images/hero-villa-1600.webp" },
-      { name: "twitter:image", content: "/images/hero-villa-1600.webp" },
+      { property: "og:title", content: homeSnippet.ogTitle },
+      { property: "og:description", content: homeSnippet.ogDescription },
+      { name: "twitter:title", content: homeSnippet.ogTitle },
+      { property: "og:image", content: "https://eco-cub.ru/images/hero-villa-1600.webp" },
+      { name: "twitter:image", content: "https://eco-cub.ru/images/hero-villa-1600.webp" },
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru" }],
   }),
@@ -132,6 +126,8 @@ function HomePage() {
   usePageEngagement("home");
   const { projects, posts } = Route.useLoaderData();
   const mobileHeroHeight = useLockedMobileViewportHeight();
+  // Ответы короткого квиза переносятся в комментарий формы внизу страницы.
+  const [contactMessage, setContactMessage] = useState<string | undefined>(undefined);
 
   return (
     <PageLayout headerVariant="dark">
@@ -188,6 +184,27 @@ function HomePage() {
 
       {/* BRAND SPECS — "дом как техника" */}
       <BrandSpecs />
+
+      {/* QUICK QUIZ — 3 вопроса до мессенджера */}
+      <Section id="quick-quiz" className="bg-secondary">
+        <Container>
+          <div className="grid items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
+                Короткий квиз
+              </p>
+              <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
+                Быстрый расчёт за 3 вопроса
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Модульный дом из бетона под ключ — {priceLabel}, с отделкой, доставкой и
+                фундаментом. Ответьте на три вопроса и получите расчёт в Telegram или WhatsApp.
+              </p>
+            </div>
+            <QuickQuiz onForm={setContactMessage} />
+          </div>
+        </Container>
+      </Section>
 
       {/* COMPETITORS */}
       <Section id="comparison" className="bg-background">
@@ -300,10 +317,10 @@ function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">
-                Подбор проекта
+                Квиз · 6 вопросов
               </p>
               <h2 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
-                Каким будет ваш EcoCub?
+                Подобрать готовый проект
               </h2>
               <p className="mt-4 text-muted-foreground">
                 6 вопросов — и вы увидите ориентировочную площадь, стоимость под ключ и получите
@@ -321,7 +338,8 @@ function HomePage() {
                   <Layers className="mt-0.5 size-5 shrink-0 text-accent" />
                   <span className="text-sm text-muted-foreground">
                     <span className="font-semibold text-foreground">Расчёт сразу.</span> В конце —
-                    ориентир по площади и цене под ключ по ставке 105 000 ₽/м².
+                    ориентир по площади и цене под ключ по ставке{" "}
+                    {formatRubSpaced(site.basePricePerM2)} ₽/м².
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -413,8 +431,9 @@ function HomePage() {
               Посчитайте свой дом за минуту
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Базовая цена 105 000 ₽ за м² в комплектации под предчистовую отделку — одна ставка для
-              всех проектов. Никаких «доплатите ещё» по ходу стройки.
+              Базовая цена {formatRubSpaced(site.basePricePerM2)} ₽ за м² {PRICE_SCOPE} (
+              {NO_FINISH_NOTE}) — одна ставка для всех проектов. Никаких «доплатите ещё» по ходу
+              стройки.
             </p>
           </Reveal>
           <Reveal variant="up" delay={80}>
@@ -565,6 +584,7 @@ function HomePage() {
                 formType="contact"
                 sourcePage="/"
                 submitLabel="Получить расчёт"
+                defaultMessage={contactMessage}
               />
             </Reveal>
           </div>
