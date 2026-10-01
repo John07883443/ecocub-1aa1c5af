@@ -13,6 +13,7 @@
  * заблокирована; запасной путь — рендер по промпту с описанием геометрии из
  * паспорта и автопроверкой числа окон на кадре.
  */
+import { RENDER_STYLE_BASELINE } from "./house-style.ts";
 import { GRAMMAR, findFinish, findStyle } from "../grammar/index.ts";
 import { bbox, footprint } from "./geometry.ts";
 import type { Project, Side } from "./types.ts";
@@ -143,6 +144,8 @@ export function promptFor(
     view.kind === "interior"
       ? `Interior palette: ${fin("interior")}.`
       : `Terrace deck ${p.terrace.totalM2} m² on the ${p.terrace.side} side, garden, path to entrance, fence.`,
+    // Фирменный вектор ЭкоКуба — база; выбранный стиль и отделки выше его уточняют.
+    RENDER_STYLE_BASELINE,
     style ? `Style: ${style.label}.` : "",
     `${context.timeOfDay ?? "golden hour"}, ${context.season ?? "summer"}.`,
   ]

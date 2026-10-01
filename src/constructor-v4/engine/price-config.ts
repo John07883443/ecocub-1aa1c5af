@@ -37,6 +37,10 @@ export interface PriceConfig {
   truckRub: Rate;
   installPerModule: Rate;
   craneRub: Rate;
+  /** Проект (главный инженер), ₽ на дом — сверху ориентира «под ключ». */
+  projectRub: Rate;
+  /** Подключение к сетям, ₽ на дом — сверху ориентира. */
+  utilitiesConnectionRub: Rate;
   foundationPerM2: { piles: Rate; slab: Rate; "screw-piles": Rate };
   /** Надбавка за модуль второго яруса (усиление, монтаж на высоте). */
   upperTierPerModule: Rate;

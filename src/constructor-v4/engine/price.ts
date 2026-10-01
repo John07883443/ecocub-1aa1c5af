@@ -21,6 +21,7 @@ export type BudgetLineId =
   | "crane-montage"
   | "foundation"
   | "terrace"
+  | "project-connection"
   | "options";
 
 export interface BudgetLine {
@@ -101,7 +102,9 @@ export function quickBudgetRange(modules: number, cfg: PriceConfig = PRICE_CONFI
     built * cfg.foundationPerM2[PILOT.structure.defaultFoundation][k] +
     warm * cfg.finishingWorksPerM2[k] +
     warm * cfg.finishingMaterialsPerM2[k] +
-    0.6 * warm * cfg.terracePerM2[k];
+    0.6 * warm * cfg.terracePerM2[k] +
+    cfg.projectRub[k] +
+    cfg.utilitiesConnectionRub[k];
   return { min: round(r("min")), max: round(r("max")) };
 }
 
@@ -207,6 +210,17 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
     mul(cfg.terracePerM2, p.terrace.totalM2),
     `${p.terrace.totalM2} м² × ${cfg.terracePerM2.min / 1000}–${cfg.terracePerM2.max / 1000} тыс. ₽/м²`,
     [cfg.terracePerM2],
+  );
+
+  add(
+    "project-connection",
+    "Проект и подключение к сетям",
+    {
+      min: cfg.projectRub.min + cfg.utilitiesConnectionRub.min,
+      max: cfg.projectRub.max + cfg.utilitiesConnectionRub.max,
+    },
+    `Проект ${cfg.projectRub.min / 1000}–${cfg.projectRub.max / 1000} тыс. + подключение ${cfg.utilitiesConnectionRub.min / 1000}–${cfg.utilitiesConnectionRub.max / 1000} тыс. ₽ на дом (сметы 2025)`,
+    [cfg.projectRub, cfg.utilitiesConnectionRub],
   );
 
   const upper = modulesOnTier(p, 2).length;
