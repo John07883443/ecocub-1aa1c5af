@@ -8,6 +8,7 @@ import { GRAMMAR, roomSpec } from "../grammar/index.ts";
 import { SIDES, contact, footprint, type Rect } from "./geometry.ts";
 import { roomClearAreaM2 } from "./rules.ts";
 import { moduleBehind, openingSpan } from "./graph.ts";
+import { tvPlace } from "./tv.ts";
 import type { ModulePlacement, Opening, Project, Room, Side } from "./types.ts";
 
 export type WallKind = "exterior" | "joint-b2b" | "partition";
@@ -85,7 +86,8 @@ export type FurnitureKind =
   | "sink"
   | "boiler"
   | "desk"
-  | "stairs";
+  | "stairs"
+  | "tv";
 
 export interface PlanFurniture {
   id: string;
@@ -399,8 +401,14 @@ function furnitureFor(p: Project, room: Room): PlanFurniture[] {
           add("kitchen-run", { x0: c.x0, x1: c.x0 + 600, y0: c.y0 + 300, y1: c.y1 - 300 }, m);
         if (i === 0)
           add("dining-table", { x0: cx - 300, x1: cx + 600, y0: cy - 800, y1: cy + 800 }, m);
-        if (i === 1)
-          add("sofa", { x0: cx - 1100, x1: cx + 1100, y0: c.y0 + 300, y1: c.y0 + 1200 }, m);
+        // Диван и ТВ ставятся по месту под телевизор (engine/tv.ts), а не «на глаз».
+        if (i === 0) {
+          const t = tvPlace(p);
+          if (t) {
+            add("tv", t.tv, m);
+            add("sofa", t.sofa, m);
+          }
+        }
         break;
       case "wet-core": {
         const z = wetZones(p, m).bath;

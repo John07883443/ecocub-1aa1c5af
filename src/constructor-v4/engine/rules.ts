@@ -24,6 +24,7 @@ import {
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
 import { canPair, factoryModules } from "./factory.ts";
 import { checkRoutes } from "./graph.ts";
+import { tvPlace } from "./tv.ts";
 import { HARMONY, aspectRatio, facadeProfile, fillRatio, outlineCorners } from "./patterns.ts";
 import { PILOT } from "../pilot.config.ts";
 
@@ -700,6 +701,27 @@ const routes: Check = (p) => {
       ];
 };
 
+/** Место под телевизор в общей комнате (владелец 01.10.2026). */
+const tvWall: Check = (p) => {
+  if (!p.rooms.some((r) => r.type === "kitchen-living")) return [];
+  const t = tvPlace(p);
+  return [
+    t
+      ? pass(
+          "tv-wall",
+          "hard",
+          `Место под ТВ: глухая стена ${((t.wall[1] - t.wall[0]) / 1000).toFixed(1)} м, до дивана ${(t.viewingMm / 1000).toFixed(1)} м${t.interior ? ", внутренняя стена" : ""}.`,
+          "Владелец 01.10.2026: «без телевизора сейчас никак»",
+        )
+      : fail(
+          "tv-wall",
+          "hard",
+          "В общей комнате нет места под телевизор: нужна глухая стена от 2,4 м, диван в 2,5–3,5 м напротив и без панорамы за спиной.",
+          "Владелец 01.10.2026: «без телевизора сейчас никак»",
+        ),
+  ];
+};
+
 /** Ночная зона собрана: спальни первого яруса по одну сторону общей комнаты (на больших домах — крылья). */
 /** Компактность и пропорции (мировая практика): заполнение ≥ 75 % (≥ 80 % до 6 кубиков) — жёстко, пропорции до 1:2,2 — мягко. */
 const footprintCompact: Check = (p) => {
@@ -1116,6 +1138,7 @@ export const HARD_CHECKS: Check[] = [
   roomDoors,
   footprintCompact,
   routes,
+  tvWall,
 ];
 export const SOFT_CHECKS: Check[] = [
   bedroomsInCorners,

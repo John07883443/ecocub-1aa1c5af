@@ -17,6 +17,7 @@ import {
   type Evaluation,
 } from "./rules.ts";
 import { PURPOSE_LABEL } from "./types.ts";
+import { tvPlace } from "./tv.ts";
 import type { Opening, Project, RuleResult, Side } from "./types.ts";
 
 export interface PassportModule {
@@ -80,6 +81,8 @@ export interface ProjectPassport {
   verifyByDesigner: string[];
   /** Рекомендации из сценария жизни: питомцы, доступность, участок. */
   recommendations: string[];
+  /** Место под ТВ в общей комнате. */
+  tv: { moduleId: string; face: Side; wallMm: number; viewingMm: number; interior: boolean } | null;
   budget: Budget;
 }
 
@@ -191,6 +194,18 @@ export function buildPassport(
     assumptions,
     verifyByDesigner: [...new Set(verify)],
     recommendations: p.recommendations ?? [],
+    tv: (() => {
+      const t = tvPlace(p);
+      return t
+        ? {
+            moduleId: t.moduleId,
+            face: t.face,
+            wallMm: t.wall[1] - t.wall[0],
+            viewingMm: t.viewingMm,
+            interior: t.interior,
+          }
+        : null;
+    })(),
     budget: budgetFor(p, budgetOpts),
   };
 }

@@ -19,6 +19,7 @@ const FURN_LABEL: Record<string, string> = {
   boiler: "бойлер",
   desk: "стол",
   stairs: "лестница",
+  tv: "ТВ",
   nightstand: "",
 };
 

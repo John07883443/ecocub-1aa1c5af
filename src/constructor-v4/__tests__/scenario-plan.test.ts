@@ -10,6 +10,7 @@ import { solve } from "../engine/solver.ts";
 import { evaluate } from "../engine/rules.ts";
 import { buildPassport } from "../engine/passport.ts";
 import { planFromProject, clearRect } from "../engine/plan.ts";
+import { roomRegion } from "../engine/tv.ts";
 import { STAGE2, promptFor, viewSet } from "../engine/render-plan.ts";
 import { applyCommand, parseCommand, rotateHouse90 } from "../engine/commands.ts";
 import { FINISHES, findStyle } from "../grammar/index.ts";
@@ -126,12 +127,25 @@ test("2D-план совпадает с моделью и паспортом", (
     }
     for (const f of plan.furniture) {
       const room = p.rooms.find((r) => r.id === f.roomId)!;
-      const inside = p.modules
-        .filter((m) => room.moduleIds.includes(m.id))
-        .map(clearRect)
-        .some(
+      const clear = p.modules.filter((m) => room.moduleIds.includes(m.id)).map(clearRect);
+      // Диван и ТВ могут стоять поперёк раскрытого стыка — проверяем углы по всему помещению.
+      const corners = [
+        [f.rect.x0, f.rect.y0],
+        [f.rect.x1, f.rect.y0],
+        [f.rect.x0, f.rect.y1],
+        [f.rect.x1, f.rect.y1],
+      ];
+      const inside =
+        clear.some(
           (c) => f.rect.x0 >= c.x0 && f.rect.x1 <= c.x1 && f.rect.y0 >= c.y0 && f.rect.y1 <= c.y1,
-        );
+        ) ||
+        ((f.kind === "sofa" || f.kind === "tv") &&
+          corners.every(([x, y]) =>
+            roomRegion(
+              p,
+              p.modules.filter((m) => room.moduleIds.includes(m.id)),
+            ).some((c) => x >= c.x0 - 0.5 && x <= c.x1 + 0.5 && y >= c.y0 - 0.5 && y <= c.y1 + 0.5),
+          ));
       assert.ok(inside, `${f.kind} внутри помещения ${f.roomId}`);
     }
   }

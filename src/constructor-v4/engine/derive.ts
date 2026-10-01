@@ -3,6 +3,7 @@
  * Геометрию и помещения задают солвер или команды, остальное считается здесь —
  * одинаково для солвера, правок голосом и тестов.
  */
+import { tvPlace } from "./tv.ts";
 import { FINISHES, GRAMMAR, roomSpec } from "../grammar/index.ts";
 import {
   MM2_PER_M2,
@@ -292,8 +293,36 @@ export function buildProject(input: BuildInput): Project {
   return rederive(base, input.terraceSide);
 }
 
+/**
+ * Ремонт под ТВ: если в общей комнате нет глухой стены ≥ 2,4 м, убираем по одному
+ * авто-окну общей комнаты (сначала северные и самые узкие), пока место не найдётся.
+ * Окна, поставленные человеком, не трогаем; одно окно всегда остаётся.
+ */
+function repairTvWall(p: Project): Opening[] {
+  if (tvPlace(p)) return p.openings;
+  const k = p.rooms.find((r) => r.type === "kitchen-living");
+  if (!k) return p.openings;
+  const north = p.plot?.northDeg ?? 0;
+  const order = p.openings
+    .filter((o) => o.roomId === k.id && o.kind === "window" && !o.userSet)
+    .sort((a, b) => {
+      const ra = { N: 0, E: 1, W: 2, S: 3 }[compassOf(a.face, north)];
+      const rb = { N: 0, E: 1, W: 2, S: 3 }[compassOf(b.face, north)];
+      return ra - rb || a.widthMm - b.widthMm;
+    });
+  let openings = p.openings;
+  for (const w of order) {
+    const left = openings.filter((o) => o.roomId === k.id && o.kind === "window").length;
+    if (left <= 1) break;
+    openings = openings.filter((o) => o.id !== w.id);
+    if (tvPlace({ ...p, openings })) return openings;
+  }
+  return p.openings;
+}
+
 export function rederive(p: Project, terraceSide?: Side): Project {
-  const withOpenings = { ...p, openings: deriveOpenings(p) };
+  const derived = { ...p, openings: deriveOpenings(p) };
+  const withOpenings = { ...derived, openings: repairTvWall(derived) };
   const terrace = deriveTerrace(withOpenings, terraceSide);
   const out = { ...withOpenings, terrace };
   return { ...out, placementMm: p.placementLocked ? p.placementMm : centerOnPlot(out) };

@@ -9,6 +9,7 @@ import { budgetFor } from "../engine/price.ts";
 import { columnsFor, evaluate, roomClearAreaM2, warmContourM2 } from "../engine/rules.ts";
 import type { Project } from "../engine/types.ts";
 import { FINISHES, roomSpec } from "../grammar/index.ts";
+import { tvPlace } from "../engine/tv.ts";
 import { PILOT } from "../pilot.config.ts";
 
 export const SCENARIO_TOOL = {
@@ -138,6 +139,7 @@ export function systemPrompt(context: string): string {
 - Стороны дома: N север, E восток, S юг, W запад. «Здесь / на этой стороне» — смотри «выбранная стена» в контексте.
 - Попроси референсы или скриншоты понравившихся домов и интерьеров — «можно вставить прямо сюда» (разбор картинок появится позже).
 - Не называй точную цену — только вилку «предварительно».
+- В общей комнате всегда есть место под ТВ: глухая стена от 2,4 м, диван в 2,5–3,5 м, без панорамы за спиной зрителя (правило проверяет движок).
 - Кровля всегда плоская, ярусов не больше двух, свес второго яруса до 1,5 м без колонны и до 3 м с колонной.
 
 Архитектурные знания (проверяются движком правил — ссылайся на них, когда объясняешь отказ или совет):
@@ -210,6 +212,12 @@ export function commentOn(before: Project, after: Project): string[] {
   if (ca !== cb)
     out.push(ca > cb ? `Под свесом нужны колонны: ${ca}.` : "Колонны больше не нужны.");
   const ub = factoryModules(before).unpairedCubeIds.length;
+  const tvb = tvPlace(before);
+  const tva = tvPlace(after);
+  if (tva && (!tvb || tvb.face !== tva.face || tvb.moduleId !== tva.moduleId))
+    out.push(
+      `ТВ: глухая стена ${((tva.wall[1] - tva.wall[0]) / 1000).toFixed(1)} м${tva.interior ? " (внутренняя, без бликов)" : ""}, до дивана ${(tva.viewingMm / 1000).toFixed(1)} м.`,
+    );
   const ua = factoryModules(after).unpairedCubeIds.length;
   if (ua > ub)
     out.push("Появился кубик без пары — завод делает модули по 2 кубика, проверит проектировщик.");
