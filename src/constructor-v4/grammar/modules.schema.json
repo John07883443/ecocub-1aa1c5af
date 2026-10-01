@@ -216,7 +216,7 @@
         "required": ["id", "label", "modules", "needs", "evidence"],
         "properties": {
           "id": {
-            "enum": ["bedroom", "kitchen-living", "wet-core", "study", "hall"]
+            "enum": ["bedroom", "kitchen-living", "wet-core", "study", "hall", "corridor"]
           },
           "label": {
             "type": "string"

@@ -33,12 +33,13 @@ export function singleTier(): Project {
   });
 }
 
-/** Два яруса: внизу кухня-гостиная и санузел, наверху холл с лестницей и спальня; dx — сдвиг верхнего яруса. */
+/** Два яруса: внизу квадрат 2×2 (кухня-гостиная парой, санузел, кабинет), наверху холл с лестницей и спальня; dx — сдвиг верхнего яруса. */
 export function twoTier(dx = 0, extra: ModulePlacement[] = [], extraRooms: Room[] = []): Project {
   const modules = [
     mod("m1", 0, 0, "kitchen"),
     mod("m2", 3200, 0, "kitchen"),
-    mod("m3", 6400, 0, "wet"),
+    mod("m3", 0, 3420, "wet"),
+    mod("m4", 3200, 3420, "study"),
     mod("u1", 0 + dx, 0, "hall", 2),
     mod("u2", 3200 + dx, 0, "bed1", 2),
     ...extra,
@@ -46,6 +47,7 @@ export function twoTier(dx = 0, extra: ModulePlacement[] = [], extraRooms: Room[
   const rooms: Room[] = [
     { id: "kitchen", type: "kitchen-living", tier: 1, moduleIds: ["m1", "m2"] },
     { id: "wet", type: "wet-core", tier: 1, moduleIds: ["m3"] },
+    { id: "study", type: "study", tier: 1, moduleIds: ["m4"] },
     { id: "hall", type: "hall", tier: 2, moduleIds: ["u1"] },
     { id: "bed1", type: "bedroom", tier: 2, moduleIds: ["u2"] },
     ...extraRooms,

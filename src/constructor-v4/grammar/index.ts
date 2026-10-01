@@ -5,7 +5,7 @@
 import modulesJson from "./modules.json" with { type: "json" };
 import finishesJson from "./finishes.json" with { type: "json" };
 
-export type RoomType = "bedroom" | "kitchen-living" | "wet-core" | "study" | "hall";
+export type RoomType = "bedroom" | "kitchen-living" | "wet-core" | "study" | "hall" | "corridor";
 export type Confidence = "album" | "owner" | "derived" | "assumption";
 export type FinishCategory = "facade" | "roof" | "windowFrames" | "interior";
 

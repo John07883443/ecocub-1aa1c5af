@@ -14,7 +14,8 @@ import { buildProject, defaultFinishes } from "./derive.ts";
 import { evaluate, expectedBathrooms, type Evaluation } from "./rules.ts";
 import type { Brief, ModulePlacement, Project, Room, RoomPurpose } from "./types.ts";
 import { findStyle } from "../grammar/index.ts";
-import { factoryModules, trucksForCubes } from "./factory.ts";
+import { canPair, factoryModules, trucksForCubes } from "./factory.ts";
+import { patternShapes } from "./patterns.ts";
 import { explainRanks, rankAll, type Rank } from "./ranking.ts";
 
 export function mulberry32(seed: number): () => number {
@@ -38,13 +39,13 @@ function shuffle<T>(arr: T[], rnd: () => number): T[] {
 }
 
 export interface Program {
-  tier1: { kitchen: number; wet: number; study: number; bedrooms: number };
+  tier1: { kitchen: number; wet: number; study: number; bedrooms: number; corridor?: number };
   tier2: { hall: number; wet: number; bedrooms: number };
   bathrooms: number;
 }
 
 /** Сколько модулей и каких нужно под бриф. */
-export function programFor(brief: Brief, tiers: 1 | 2): Program {
+export function programFor(brief: Brief, tiers: 1 | 2, upperBedrooms?: number): Program {
   const kitchen = brief.kitchenLiving === "compact" ? 2 : brief.bedrooms >= 3 ? 4 : 3;
   const study = brief.study ? 1 : 0;
   let n = brief.bedrooms + kitchen + study + 1;
@@ -56,11 +57,13 @@ export function programFor(brief: Brief, tiers: 1 | 2): Program {
       tier2: { hall: 0, wet: 0, bedrooms: 0 },
       bathrooms,
     };
-  const wet2 = bathrooms >= 2 ? 1 : 0;
+  // Санузел родителей остаётся внизу рядом с их спальней — наверх уходит только «лишний».
+  const wet2 = bathrooms - (brief.bedroomPurposes?.includes("elderly") ? 1 : 0) >= 2 ? 1 : 0;
   // Комнаты пожилых родителей — только 1-й ярус: наверх уходят остальные спальни.
   let b2 = Math.max(0, brief.bedrooms - (brief.bedroomPurposes?.length ?? 0));
   const t1 = () => kitchen + (bathrooms - wet2) + study + (brief.bedrooms - b2);
   while (b2 > 0 && 1 + b2 + wet2 > t1()) b2--;
+  if (upperBedrooms !== undefined) b2 = Math.min(b2, upperBedrooms);
   return {
     tier1: { kitchen, wet: bathrooms - wet2, study, bedrooms: brief.bedrooms - b2 },
     tier2: { hall: b2 > 0 ? 1 : 0, wet: b2 > 0 ? wet2 : 0, bedrooms: b2 },
@@ -70,24 +73,6 @@ export function programFor(brief: Brief, tiers: 1 | 2): Program {
 
 const W = () => GRAMMAR.module.externalMm.w;
 const D = () => GRAMMAR.module.externalMm.d;
-const HALF = () => GRAMMAR.placement.preferredOffsetsMm.find((x) => x > 0) ?? 1710;
-
-/** Случайная (по seed) форма первого яруса: колонки по 1–2 модуля со смещением 0/1710. */
-function sampleShape(n: number, rnd: () => number): { x: number; y: number }[] {
-  const cols: number[] = [];
-  let left = n;
-  while (left > 0) {
-    const h = left >= 2 && rnd() < 0.6 ? 2 : 1;
-    cols.push(h);
-    left -= h;
-  }
-  const cells: { x: number; y: number }[] = [];
-  cols.forEach((h, c) => {
-    const off = c > 0 && rnd() < 0.4 ? HALF() : 0;
-    for (let r = 0; r < h; r++) cells.push({ x: c * W(), y: off + r * D() });
-  });
-  return cells;
-}
 
 function touches(a: ModulePlacement, b: ModulePlacement): boolean {
   const c = contact(footprint(a), footprint(b));
@@ -111,13 +96,32 @@ function assignTier1(
     while (kit.length < prog.kitchen) {
       const cand = cells.filter((c) => !kit.includes(c) && kit.some((k) => touches(k, c)));
       if (!cand.length) break;
-      const score = (c: ModulePlacement) => cells.filter((o) => o !== c && touches(o, c)).length;
-      cand.sort((a, b) => score(b) - score(a));
+      // Сначала — пара по длинной стороне: кухня-гостиная от 6,4 м, а не коридор 3,2 м.
+      const score = (c: ModulePlacement) =>
+        (kit.some((k) => canPair(k, c)) ? 10 : 0) +
+        cells.filter((o) => o !== c && touches(o, c)).length;
+      cand.sort((a, b) => score(b) - score(a) || a.xMm - b.xMm || a.yMm - b.yMm);
       kit.push(cand[0]);
     }
     if (kit.length < prog.kitchen) continue;
-    const rest = cells.filter((c) => !kit.includes(c));
-    if (!rest.every((c) => kit.some((k) => touches(k, c)))) continue;
+    // Холл-распределитель (CUBAX P05/P06): кубик у кухни-гостиной, раздающий остальные комнаты.
+    const corr: ModulePlacement[] = [];
+    if (prog.corridor) {
+      const cand = cells
+        .filter((c) => !kit.includes(c) && kit.some((k) => touches(k, c)))
+        .sort(
+          (a, b) =>
+            cells.filter((o) => !kit.includes(o) && touches(o, b)).length -
+              cells.filter((o) => !kit.includes(o) && touches(o, a)).length ||
+            a.xMm - b.xMm ||
+            a.yMm - b.yMm,
+        );
+      if (!cand.length) continue;
+      corr.push(cand[0]);
+    }
+    const hubs = [...kit, ...corr];
+    const rest = cells.filter((c) => !hubs.includes(c));
+    if (!rest.every((c) => hubs.some((k) => touches(k, c)))) continue;
     const ext = (c: ModulePlacement) => exteriorFaces(c, cells).length;
     const byExt = [...rest].sort((a, b) => ext(b) - ext(a));
     const bedrooms = byExt.slice(0, prog.bedrooms);
@@ -133,13 +137,14 @@ function assignTier1(
     const mods = cells.map((c) => ({ ...c }));
     const pick = (list: ModulePlacement[]) => list.map((l) => mods.find((m) => m.id === l.id)!);
     tag("kitchen-living", pick(kit), 0);
+    if (corr.length) tag("corridor", pick(corr), 0, ["холл", "шкаф"]);
     pick(bedrooms).forEach((m, i) => tag("bedroom", [m], i));
     pick(study).forEach((m, i) => tag("study", [m], i));
     pick(wet).forEach((m, i) =>
       tag("wet-core", [m], i, i === 0 ? ["санузел", "бойлер и техшкаф", "тамбур"] : ["санузел"]),
     );
     out.push({ rooms, modules: mods });
-    if (out.length >= 3) break;
+    if (out.length >= 6) break;
   }
   return out;
 }
@@ -157,48 +162,93 @@ function addTier2(a: Assignment, prog: Program["tier2"], rnd: () => number): Ass
     t1.filter((m) => kitchen.moduleIds.includes(m.id)),
     rnd,
   )) {
-    const chosen = [hallBase];
     const wantWet = prog.wet
       ? t1.find((m) => wet1.some((w) => w.moduleIds.includes(m.id)))
       : undefined;
-    while (chosen.length < n2) {
-      const cand = t1.filter((c) => !chosen.includes(c) && chosen.some((k) => touches(k, c)));
-      if (!cand.length) break;
-      const pref =
-        wantWet && cand.includes(wantWet) && !chosen.includes(wantWet)
-          ? wantWet
-          : shuffle(cand, rnd)[0];
-      chosen.push(pref);
-    }
-    if (chosen.length < n2) continue;
-    if (wantWet && !chosen.includes(wantWet)) continue;
-    for (const dx of shuffle(UPPER_SHIFTS, rnd).slice(0, 4)) {
-      const rooms: Room[] = a.rooms.map((r) => ({ ...r, moduleIds: [...r.moduleIds] }));
-      const mods: ModulePlacement[] = a.modules.map((m) => ({ ...m }));
-      const up = (base: ModulePlacement, type: RoomType, i: number, subRooms?: string[]) => {
-        const id = `${type}-2-${i + 1}`;
-        const m: ModulePlacement = {
-          id: `u-${base.id}`,
-          xMm: base.xMm + dx,
-          yMm: base.yMm,
-          rot: 0,
-          tier: 2,
-          roomId: id,
+    // Второй ярус — прямоугольник из позиций первого (полоса или блок), не случайная россыпь.
+    // Холл из одного кубика, а на больших ярусах — из двух (полоса-распределитель, как CUBAX P10).
+    const blocks = [
+      ...rectBlocks(t1, n2, hallBase).map((b) => ({
+        block: b,
+        hall2: null as ModulePlacement | null,
+      })),
+      ...(n2 >= 4
+        ? rectBlocks(t1, n2 + 1, hallBase).flatMap((b) =>
+            b
+              .filter((m) => m !== hallBase && touches(m, hallBase))
+              .map((h) => ({ block: b, hall2: h })),
+          )
+        : []),
+    ];
+    for (const { block, hall2 } of blocks) {
+      if (wantWet && !block.includes(wantWet)) continue;
+      if (hall2 && hall2 === wantWet) continue;
+      const chosen = [hallBase, ...block.filter((m) => m !== hallBase && m !== hall2)];
+      for (const dx of shuffle(UPPER_SHIFTS, rnd).slice(0, 3)) {
+        const rooms: Room[] = a.rooms.map((r) => ({ ...r, moduleIds: [...r.moduleIds] }));
+        const mods: ModulePlacement[] = a.modules.map((m) => ({ ...m }));
+        const up = (base: ModulePlacement, type: RoomType, i: number, subRooms?: string[]) => {
+          const id = `${type}-2-${i + 1}`;
+          const m: ModulePlacement = {
+            id: `u-${base.id}`,
+            xMm: base.xMm + dx,
+            yMm: base.yMm,
+            rot: 0,
+            tier: 2,
+            roomId: id,
+          };
+          mods.push(m);
+          rooms.push({ id, type, tier: 2, moduleIds: [m.id], subRooms });
         };
-        mods.push(m);
-        rooms.push({ id, type, tier: 2, moduleIds: [m.id], subRooms });
-      };
-      up(hallBase, "hall", 0, ["лестница", "холл"]);
-      const others = chosen.slice(1);
-      let bi = 0;
-      for (const base of others) {
-        if (prog.wet && base === wantWet) up(base, "wet-core", 0, ["санузел"]);
-        else up(base, "bedroom", bi++);
+        up(hallBase, "hall", 0, ["лестница", "холл"]);
+        if (hall2) {
+          const m: ModulePlacement = {
+            id: `u-${hall2.id}`,
+            xMm: hall2.xMm + dx,
+            yMm: hall2.yMm,
+            rot: 0,
+            tier: 2,
+            roomId: "hall-2-1",
+          };
+          mods.push(m);
+          rooms.find((r) => r.id === "hall-2-1")!.moduleIds.push(m.id);
+        }
+        const others = chosen.slice(1);
+        let bi = 0;
+        for (const base of others) {
+          if (prog.wet && base === wantWet) up(base, "wet-core", 0, ["санузел"]);
+          else up(base, "bedroom", bi++);
+        }
+        out.push({ rooms, modules: mods });
       }
-      out.push({ rooms, modules: mods });
     }
-    if (out.length >= 8) break;
+    if (out.length >= 12) break;
   }
+  return out;
+}
+
+/** Прямоугольные блоки из n кубиков первого яруса, содержащие заданный кубик. */
+function rectBlocks(t1: ModulePlacement[], n: number, must: ModulePlacement): ModulePlacement[][] {
+  const out: ModulePlacement[][] = [];
+  const seen = new Set<string>();
+  for (const a of t1)
+    for (const b of t1) {
+      const x0 = Math.min(a.xMm, b.xMm);
+      const x1 = Math.max(a.xMm, b.xMm);
+      const y0 = Math.min(a.yMm, b.yMm);
+      const y1 = Math.max(a.yMm, b.yMm);
+      const inside = t1.filter((m) => m.xMm >= x0 && m.xMm <= x1 && m.yMm >= y0 && m.yMm <= y1);
+      const cols = new Set(inside.map((m) => m.xMm)).size;
+      const rows = new Set(inside.map((m) => m.yMm)).size;
+      if (inside.length !== n || cols * rows !== n || !inside.includes(must)) continue;
+      const key = inside
+        .map((m) => m.id)
+        .sort()
+        .join(",");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(inside);
+    }
   return out;
 }
 
@@ -223,11 +273,16 @@ export interface SolveResult {
   variants: Variant[];
   rejected: number;
   notes: string[];
+  /** Почему отклонялись кандидаты: id правила → сколько раз. */
+  rejectedBy: Record<string, number>;
 }
 
 function signature(p: Project): string {
   return p.modules
-    .map((m) => `${m.tier}:${m.xMm}:${m.yMm}`)
+    .map(
+      (m) =>
+        `${m.tier}:${m.xMm}:${m.yMm}:${p.rooms.find((r) => r.moduleIds.includes(m.id))?.type ?? ""}`,
+    )
     .sort()
     .join("|");
 }
@@ -260,27 +315,54 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
   const rnd = mulberry32(seed);
   const notes: string[] = [];
   if (brief.bedrooms < 0 || brief.bedrooms > 6)
-    return { variants: [], rejected: 0, notes: ["Спален от 0 до 6."] };
+    return { variants: [], rejected: 0, rejectedBy: {}, notes: ["Спален от 0 до 6."] };
   const tierOptions: (1 | 2)[] = brief.tiers === "any" ? [1, 2] : [brief.tiers];
   const style = (brief.styleHints ?? []).map(findStyle).find(Boolean);
   const finishes = defaultFinishes(style?.id);
   const seen = new Set<string>();
   const valid: Variant[] = [];
   let rejected = 0;
+  const rejectedBy: Record<string, number> = {};
 
+  // Для двух ярусов пробуем разное число спален наверху: не каждая раскладка ложится в форму.
+  const programs: { tiers: 1 | 2; prog: Program }[] = [];
   for (const tiers of tierOptions) {
-    const prog = programFor(brief, tiers);
+    const base: Program[] = [];
+    if (tiers === 1) base.push(programFor(brief, 1));
+    else {
+      const top = programFor(brief, 2).tier2.bedrooms;
+      for (let b = top; b >= 1; b--) base.push(programFor(brief, 2, b));
+      if (top === 0) base.push(programFor(brief, 2));
+    }
+    for (const prog of base) {
+      programs.push({ tiers, prog });
+      // Большой первый ярус: вариант с холлом-распределителем (+1 кубик).
+      const n1 = prog.tier1.kitchen + prog.tier1.wet + prog.tier1.study + prog.tier1.bedrooms;
+      if (n1 >= 6)
+        programs.push({ tiers, prog: { ...prog, tier1: { ...prog.tier1, corridor: 1 } } });
+    }
+  }
+  for (const { tiers, prog } of programs) {
     if (tiers === 2 && prog.tier2.bedrooms === 0) {
       notes.push("Второй ярус под этот состав не нужен: все спальни помещаются внизу.");
       continue;
     }
-    const n1 = prog.tier1.kitchen + prog.tier1.wet + prog.tier1.study + prog.tier1.bedrooms;
+    const n1 =
+      prog.tier1.kitchen +
+      prog.tier1.wet +
+      prog.tier1.study +
+      prog.tier1.bedrooms +
+      (prog.tier1.corridor ?? 0);
     if (n1 + prog.tier2.hall + prog.tier2.wet + prog.tier2.bedrooms > 16) {
       notes.push("Больше 16 модулей — это индивидуальный проект, его делает проектировщик.");
       continue;
     }
-    for (let i = 0; i < attempts; i++) {
-      const cells: ModulePlacement[] = sampleShape(n1, rnd).map((c, k) => ({
+    const shapes = patternShapes(n1);
+    if (!shapes.length)
+      notes.push(`Для ${n1} кубиков первого яруса в библиотеке форм нет образца.`);
+    const reps = Math.max(1, Math.ceil(attempts / Math.max(1, shapes.length) / 25));
+    for (const shape of shapes.flatMap((s) => Array.from({ length: reps }, () => s))) {
+      const cells: ModulePlacement[] = shape.cells.map((c, k) => ({
         id: `m${k + 1}`,
         xMm: c.x,
         yMm: c.y,
@@ -317,6 +399,8 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
           seen.add(sig);
           if (!ev.valid) {
             rejected++;
+            for (const v of new Set(ev.hardViolations.map((x) => x.ruleId)))
+              rejectedBy[v] = (rejectedBy[v] ?? 0) + 1;
             continue;
           }
           if (brief.recommendations?.length)
@@ -368,5 +452,5 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
   });
   if (picked.length < max)
     notes.push(`Нашлось только ${picked.length} вариантов без нарушений конструктива.`);
-  return { variants: picked, rejected, notes };
+  return { variants: picked, rejected, rejectedBy, notes };
 }

@@ -11,6 +11,7 @@ import { GRAMMAR } from "../grammar/index.ts";
 import { evaluate, modulesOnTier } from "../engine/rules.ts";
 import { supportOf } from "../engine/geometry.ts";
 import { singleTier, twoTier } from "./fixtures.ts";
+import { buildProject } from "../engine/derive.ts";
 
 test("пресеты окон дают только высоты из каталога", () => {
   for (const p of Object.values(WINDOW_PRESETS))
@@ -39,10 +40,26 @@ test("третий ярус командой не добавить", () => {
 });
 
 test("«добавь спальню» пристраивает модуль к общей комнате и остаётся в правилах", () => {
-  const r = applyCommand(singleTier(), { op: "add_room", room: "bedroom" });
+  // Квадрат 2×2: кухня-гостиная парой, спальня и санузел — новая спальня встаёт Г-формой.
+  const square = buildProject({
+    id: "sq",
+    modules: [
+      { id: "a", xMm: 0, yMm: 0, rot: 0, tier: 1, roomId: "kitchen" },
+      { id: "b", xMm: 3200, yMm: 0, rot: 0, tier: 1, roomId: "kitchen" },
+      { id: "c", xMm: 0, yMm: 3420, rot: 0, tier: 1, roomId: "bed1" },
+      { id: "d", xMm: 3200, yMm: 3420, rot: 0, tier: 1, roomId: "wet" },
+    ],
+    rooms: [
+      { id: "kitchen", type: "kitchen-living", tier: 1, moduleIds: ["a", "b"] },
+      { id: "bed1", type: "bedroom", tier: 1, moduleIds: ["c"] },
+      { id: "wet", type: "wet-core", tier: 1, moduleIds: ["d"] },
+    ],
+    plot: { widthM: 30, depthM: 30 },
+  });
+  const r = applyCommand(square, { op: "add_room", room: "bedroom" });
   assert.equal(r.ok, true);
   if (r.ok) {
-    assert.equal(r.project.rooms.filter((x) => x.type === "bedroom").length, 3);
+    assert.equal(r.project.rooms.filter((x) => x.type === "bedroom").length, 2);
     assert.ok(evaluate(r.project).valid);
   }
 });

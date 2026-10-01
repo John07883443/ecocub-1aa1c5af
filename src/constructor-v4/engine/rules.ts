@@ -22,7 +22,8 @@ import {
   uncoveredSegments,
 } from "./geometry.ts";
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
-import { factoryModules } from "./factory.ts";
+import { canPair, factoryModules } from "./factory.ts";
+import { HARMONY, aspectRatio, facadeProfile, fillRatio, outlineCorners } from "./patterns.ts";
 import { PILOT } from "../pilot.config.ts";
 
 const SRC_ALBUM = "Альбом Weekend One";
@@ -543,6 +544,247 @@ const openingsValid: Check = (p) => {
       ];
 };
 
+/** Гармония пятна: компактно, без зигзагов, не больше одного уступа на фасад. */
+const footprintHarmony: Check = (p) => {
+  const out: RuleResult[] = [];
+  for (const tier of [1, 2]) {
+    const mods = modulesOnTier(p, tier);
+    if (mods.length < 2) continue;
+    const corners = outlineCorners(mods);
+    if (corners > HARMONY.maxCorners)
+      out.push(
+        fail(
+          "footprint-harmony",
+          "hard",
+          `Ярус ${tier}: контур с ${corners} углами — зигзаг. В наших домах прямоугольник, Г или П (до 8 углов).`,
+          "Библиотека форм: Family One/Two, Weekend Mini, Super Family",
+        ),
+      );
+    for (const side of SIDES) {
+      const f = facadeProfile(mods, side);
+      if (f.steps > HARMONY.maxStepsPerFacade || f.levels > HARMONY.maxLevelsPerFacade) {
+        out.push(
+          fail(
+            "footprint-harmony",
+            "hard",
+            `Ярус ${tier}, фасад ${side}: ${f.steps} уступа — больше одного выступа или ниши на фасад делает дом рваным.`,
+            "Правило ритма фасада (владелец 01.10.2026)",
+          ),
+        );
+        break;
+      }
+    }
+    const ar = aspectRatio(mods);
+    // Второй ярус-«брусок» над нижним (CUBAX 57, P10) допускаем до 1:3.
+    if (ar > (tier === 2 ? HARMONY.maxAspectUpper : HARMONY.maxAspect))
+      out.push(
+        fail(
+          "footprint-harmony",
+          "hard",
+          `Ярус ${tier}: пятно вытянуто в ${ar.toFixed(1)} раза — длиннее 1:2,2 не делаем.`,
+          "Правило пропорций (владелец 01.10.2026)",
+        ),
+      );
+  }
+  return out.length
+    ? out
+    : [pass("footprint-harmony", "hard", "Пятно компактное, фасады ровные.", "Библиотека форм")];
+};
+
+/** Кухня-гостиная не уже двух кубиков (≥ 6,4 м), если дом больше двух кубиков. */
+const kitchenWidth: Check = (p) => {
+  const k = p.rooms.find((r) => r.type === "kitchen-living");
+  if (!k || p.modules.length <= 2) return [];
+  const mods = p.modules.filter((m) => k.moduleIds.includes(m.id));
+  const wide = mods.some((a) => mods.some((b) => a !== b && canPair(a, b)));
+  return [
+    wide
+      ? pass("kitchen-width", "hard", "Кухня-гостиная шириной от 6,4 м.", "Family Two: 6406 × 6144")
+      : fail(
+          "kitchen-width",
+          "hard",
+          "Кухня-гостиная узкая (3,2 м) — коридор, а не комната. Нужны два кубика рядом по длинной стороне (6,4 м).",
+          "Family Two: общая комната 6406 × 6144",
+          k.id,
+        ),
+  ];
+};
+
+/** У каждой комнаты есть дверь; спальни не проходные. */
+const roomDoors: Check = (p) => {
+  const out: RuleResult[] = [];
+  const hubs = new Set(["kitchen-living", "hall", "corridor"]);
+  for (const r of p.rooms) {
+    if (hubs.has(r.type)) continue;
+    const has = p.openings.some(
+      (o) => o.roomId === r.id && (o.kind === "internal-door" || o.kind === "entrance"),
+    );
+    if (!has)
+      out.push(
+        fail(
+          "room-doors",
+          "hard",
+          `${roomSpec(r.type).label}: нет двери.`,
+          "Планировочные правила",
+          r.id,
+        ),
+      );
+  }
+  for (const o of p.openings.filter((x) => x.kind === "internal-door")) {
+    const m = p.modules.find((x) => x.id === o.moduleId);
+    if (!m) continue;
+    const behind = p.modules.find((x) => {
+      if (x.id === m.id || x.tier !== m.tier) return false;
+      const c = contact(footprint(m), footprint(x));
+      return !!c && c.faceA === o.face;
+    });
+    const behindRoom = behind ? roomOf(p, behind.id) : undefined;
+    if (behindRoom?.type === "bedroom" && behindRoom.id !== o.roomId)
+      out.push(
+        fail(
+          "room-doors",
+          "hard",
+          "Проходная спальня: в неё ведёт дверь из другой комнаты.",
+          "Планировочные правила",
+          behindRoom.id,
+        ),
+      );
+  }
+  return out.length
+    ? out
+    : [
+        pass(
+          "room-doors",
+          "hard",
+          "У каждой комнаты своя дверь, проходных спален нет.",
+          "Планировочные правила",
+        ),
+      ];
+};
+
+/** Ночная зона собрана: спальни первого яруса по одну сторону общей комнаты (на больших домах — крылья). */
+/** Компактность и пропорции (мировая практика): заполнение ≥ 75 % (≥ 80 % до 6 кубиков) — жёстко, пропорции до 1:2,2 — мягко. */
+const footprintCompact: Check = (p) => {
+  const out: RuleResult[] = [];
+  for (const tier of [1, 2]) {
+    const mods = modulesOnTier(p, tier);
+    if (mods.length < 3) continue;
+    const fill = fillRatio(mods);
+    const need = mods.length <= 6 ? 0.8 : HARMONY.minFill;
+    out.push(
+      fill >= need - 1e-9
+        ? pass(
+            "footprint-fill",
+            "hard",
+            `Ярус ${tier}: пятно заполнено на ${Math.round(fill * 100)} %.`,
+            "ARCHITECT_KNOWLEDGE_WORLD, правило A1",
+          )
+        : fail(
+            "footprint-fill",
+            "hard",
+            `Ярус ${tier}: пятно заполнено на ${Math.round(fill * 100)} % — меньше ${Math.round(need * 100)} %, слишком много уступов.`,
+            "ARCHITECT_KNOWLEDGE_WORLD, правило A1",
+          ),
+    );
+  }
+  const t1 = modulesOnTier(p, 1);
+  if (t1.length >= 3) {
+    const ar = aspectRatio(t1);
+    out.push(
+      ar <= HARMONY.preferredAspect
+        ? pass(
+            "footprint-aspect",
+            "soft",
+            "Пропорции пятна спокойные (до 1:2,2).",
+            "ARCHITECT_KNOWLEDGE_WORLD, правило A3",
+          )
+        : fail(
+            "footprint-aspect",
+            "soft",
+            `Дом вытянут 1:${ar.toFixed(1)} — длинный дом теряет тепло и выглядит как вагон.`,
+            "ARCHITECT_KNOWLEDGE_WORLD, правило A3",
+          ),
+    );
+  }
+  return out;
+};
+
+/** Мокрые зоны одной группой на ярусе (CUBAX: один стояк, кубики спиной к спине). */
+const wetGrouped: Check = (p) => {
+  const out: RuleResult[] = [];
+  for (const tier of [1, 2]) {
+    const wet = p.modules.filter((m) => m.tier === tier && roomOf(p, m.id)?.type === "wet-core");
+    if (wet.length < 2) continue;
+    const ok = isConnected(wet, 1);
+    out.push(
+      ok
+        ? pass(
+            "wet-grouped",
+            "soft",
+            `Ярус ${tier}: санузлы рядом — один стояк.`,
+            "LAYOUT_PATTERNS_CUBAX, п. 3.4",
+          )
+        : fail(
+            "wet-grouped",
+            "soft",
+            `Ярус ${tier}: санузлы разбросаны — два стояка, дороже инженерия.`,
+            "LAYOUT_PATTERNS_CUBAX, п. 3.4",
+          ),
+    );
+  }
+  return out;
+};
+
+/** Коридоры не больше 12 % площади (CUBAX, мировая практика). */
+const corridorShare: Check = (p) => {
+  const c = p.rooms
+    .filter((r) => r.type === "corridor")
+    .reduce((s, r) => s + r.moduleIds.length, 0);
+  if (!c) return [];
+  const share = c / p.modules.length;
+  return [
+    share <= 0.12
+      ? pass(
+          "corridor-share",
+          "soft",
+          `Холл занимает ${Math.round(share * 100)} % — коротко.`,
+          "ARCHITECT_KNOWLEDGE_WORLD, правило B10",
+        )
+      : fail(
+          "corridor-share",
+          "soft",
+          `Холл занимает ${Math.round(share * 100)} % — больше 12 %, площадь уходит в проход.`,
+          "ARCHITECT_KNOWLEDGE_WORLD, правило B10",
+        ),
+  ];
+};
+
+const nightZone: Check = (p) => {
+  const k = p.rooms.find((r) => r.type === "kitchen-living");
+  const beds = p.rooms.filter((r) => r.type === "bedroom" && r.tier === 1);
+  if (!k || beds.length < 2 || warmContourM2(p) >= 90) return [];
+  const kx = p.modules
+    .filter((m) => k.moduleIds.includes(m.id))
+    .map((m) => (footprint(m).x0 + footprint(m).x1) / 2);
+  const kc = kx.reduce((a, b) => a + b, 0) / kx.length;
+  const sides = new Set(
+    beds.map((b) => {
+      const r = footprint(p.modules.find((m) => m.id === b.moduleIds[0])!);
+      return (r.x0 + r.x1) / 2 < kc ? "L" : "R";
+    }),
+  );
+  return [
+    sides.size === 1
+      ? pass("night-zone", "soft", "Спальни собраны в ночную зону.", "Зонирование день/ночь")
+      : fail(
+          "night-zone",
+          "soft",
+          "Спальни по разные стороны общей комнаты — ночная зона разорвана.",
+          "Зонирование день/ночь",
+        ),
+  ];
+};
+
 const plotFit: Check = (p) => {
   if (!p.plot)
     return [pass("plot-fit", "info", "Участок не задан — посадку проверит проектировщик.", "—")];
@@ -831,6 +1073,10 @@ export const HARD_CHECKS: Check[] = [
   adjacency,
   openingsValid,
   plotFit,
+  footprintHarmony,
+  kitchenWidth,
+  roomDoors,
+  footprintCompact,
 ];
 export const SOFT_CHECKS: Check[] = [
   bedroomsInCorners,
@@ -841,6 +1087,9 @@ export const SOFT_CHECKS: Check[] = [
   compactFootprint,
   cubesPairIntoModules,
   elderlyNearBath,
+  nightZone,
+  wetGrouped,
+  corridorShare,
   reviewItems,
 ];
 
