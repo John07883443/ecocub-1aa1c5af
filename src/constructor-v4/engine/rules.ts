@@ -531,7 +531,7 @@ const openingsValid: Check = (p) => {
 const plotFit: Check = (p) => {
   if (!p.plot)
     return [pass("plot-fit", "info", "Участок не задан — посадку проверит проектировщик.", "—")];
-  const sb = GRAMMAR.site.setbackMm;
+  const sb = p.plot.setbackMm ?? GRAMMAR.site.setbackMm;
   const b = bbox(p.modules.map(footprint));
   const x0 = p.placementMm.xMm + b.x0;
   const y0 = p.placementMm.yMm + b.y0;

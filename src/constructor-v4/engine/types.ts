@@ -55,6 +55,16 @@ export interface Plot {
   /** Куда смотрит север относительно оси y участка, градусы. 0 — север вверх. */
   northDeg?: number;
   entrySide?: Side;
+  /** Отступ от границ, мм. По умолчанию — из грамматики (3000, предварительно). */
+  setbackMm?: number;
+}
+
+/** Посадка дома на участке: смещение и поворот; locked — человек поставил сам. */
+export interface PlotPlacement {
+  xMm: number;
+  yMm: number;
+  rotationDeg: 0 | 90 | 180 | 270;
+  locked: boolean;
 }
 
 export interface Finishes {
@@ -75,6 +85,9 @@ export interface Project {
   plot: Plot | null;
   /** Положение начала координат дома на участке, мм. */
   placementMm: { xMm: number; yMm: number };
+  /** Поворот дома относительно участка и признак ручной посадки. */
+  rotationDeg?: PlotPlacement["rotationDeg"];
+  placementLocked?: boolean;
   finishes: Finishes;
   yearRound: boolean;
   /** Профиль стиля из слов и референсов человека (см. style.ts). */

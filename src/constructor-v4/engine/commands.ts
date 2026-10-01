@@ -11,6 +11,8 @@ import {
   PRESET_LADDER,
   WINDOW_PRESETS,
   placeWindow,
+  freeSegments,
+  faceStart,
   presetOf,
   rederive,
   type WindowPreset,
@@ -31,6 +33,31 @@ export interface WindowCommand {
   preset?: WindowPreset;
 }
 
+export type DoorAction = "add" | "move" | "remove" | "set";
+export type DoorPreset = "single" | "wide" | "double";
+
+/** Наружная дверь: вход или выход на террасу. «move» переносит главный вход на эту стену. */
+export interface DoorCommand {
+  op: "door";
+  action: DoorAction;
+  side: Side;
+  roomId?: string;
+  moduleId?: string;
+  preset?: DoorPreset;
+}
+
+/** Любой проём, выбранный на стене в 3D или названный голосом. */
+export type OpeningCommand = WindowCommand | DoorCommand;
+
+export const DOOR_PRESETS: Record<
+  DoorPreset,
+  { widthMm: number; heightMm: number; label: string }
+> = {
+  single: { widthMm: 800, heightMm: 2100, label: "дверь 800" },
+  wide: { widthMm: 1000, heightMm: 2100, label: "широкая дверь 1000" },
+  double: { widthMm: 1200, heightMm: 2100, label: "двустворчатая 1200" },
+};
+
 export type EditorCommand =
   | { op: "add_room"; room: "bedroom" | "study" | "wet-core"; tier?: number }
   | { op: "remove_room"; roomId: string }
@@ -41,11 +68,13 @@ export type EditorCommand =
   | { op: "set_style"; style: string }
   | { op: "set_finish"; category: FinishCategory; finishId: string }
   | { op: "describe_style"; text: string }
-  | WindowCommand;
+  | { op: "place_house"; xMm: number; yMm: number }
+  | { op: "rotate_house"; deg: 90 | 180 | 270 }
+  | OpeningCommand;
 
 export type CommandResult =
   | { ok: true; project: Project; evaluation: Evaluation; message: string }
-  | { ok: false; reason: string; violations: string[] };
+  | { ok: false; reason: string; violations: string[]; suggestion?: string };
 
 // ── Разбор входа ─────────────────────────────────────────────────────────
 
@@ -130,6 +159,32 @@ export function parseCommand(
         },
       };
     }
+    case "door": {
+      if (!["add", "move", "remove", "set"].includes(c.action as string)) return bad("action");
+      if (!isSide(c.side)) return bad("side");
+      if (c.preset !== undefined && !((c.preset as string) in DOOR_PRESETS)) return bad("preset");
+      if (c.roomId !== undefined && !isStr(c.roomId)) return bad("roomId");
+      if (c.moduleId !== undefined && !isStr(c.moduleId)) return bad("moduleId");
+      return {
+        ok: true,
+        command: {
+          op: "door",
+          action: c.action as DoorAction,
+          side: c.side,
+          roomId: c.roomId as string | undefined,
+          moduleId: c.moduleId as string | undefined,
+          preset: c.preset as DoorPreset | undefined,
+        },
+      };
+    }
+    case "place_house":
+      return isNum(c.xMm) && isNum(c.yMm)
+        ? { ok: true, command: { op: "place_house", xMm: c.xMm, yMm: c.yMm } }
+        : bad("xMm/yMm");
+    case "rotate_house":
+      return c.deg === 90 || c.deg === 180 || c.deg === 270
+        ? { ok: true, command: { op: "rotate_house", deg: c.deg } }
+        : bad("deg");
     default:
       return { ok: false, error: `Неизвестная команда ${String(c.op)}` };
   }
@@ -137,22 +192,72 @@ export function parseCommand(
 
 // ── Применение ──────────────────────────────────────────────────────────
 
+/** Короткая подсказка исправления по первому нарушению. */
+function suggestFix(ev: Evaluation): string | undefined {
+  const v = ev.hardViolations[0];
+  if (!v) return undefined;
+  switch (v.ruleId) {
+    case "overhang":
+      return "Уменьшите свес до 1,5 м или сдвиньте второй ярус обратно.";
+    case "upper-support":
+      return "Сдвиньте модуль второго яруса так, чтобы он опирался на нижние хотя бы наполовину.";
+    case "max-tiers":
+      return "Поставьте модуль рядом на первый или второй ярус.";
+    case "openings":
+      return /перемычки/.test(v.message)
+        ? "Поставьте большое окно 2800 — у него есть перемычка, или перенесите панораму на грань без второго яруса."
+        : "Возьмите проём меньше или другую стену.";
+    case "window-required":
+      return "Оставьте хотя бы одно окно — можно уменьшить до узкой щели.";
+    case "no-corridor":
+      return "Поставьте помещение вплотную к общей комнате или холлу.";
+    case "plot-fit":
+      return "Поверните дом на участке или уберите модуль; можно перенести спальни на второй ярус.";
+    case "connected":
+      return "Пристыкуйте модуль к соседу гранью не меньше 1,5 м.";
+    default:
+      return undefined;
+  }
+}
+
 function commit(before: Project, after: Project, message: string): CommandResult {
   const ev = evaluate(after);
   if (!ev.valid) {
     const was = new Set(evaluate(before).hardViolations.map((v) => v.message));
     const fresh = ev.hardViolations.filter((v) => !was.has(v.message));
     if (fresh.length || !evaluate(before).valid)
-      return { ok: false, reason: "Так построить нельзя", violations: explain(ev) };
+      return {
+        ok: false,
+        reason: "Так построить нельзя",
+        violations: explain(ev),
+        suggestion: suggestFix(ev),
+      };
   }
   return { ok: true, project: after, evaluation: ev, message };
 }
 
-const reject = (reason: string, violations: string[] = []): CommandResult => ({
+const reject = (reason: string, violations: string[] = [], suggestion?: string): CommandResult => ({
   ok: false,
   reason,
   violations,
+  suggestion,
 });
+
+/** Подсказка исправления: на каких сторонах этого помещения есть свободная наружная стена нужной ширины. */
+function freeSidesHint(
+  p: Project,
+  mods: ModulePlacement[],
+  needMm: number,
+  exclude?: Side,
+): string {
+  const sides = SIDES.filter(
+    (f) =>
+      f !== exclude && mods.some((m) => freeSegments(p, m, f).some(([a, b]) => b - a >= needMm)),
+  );
+  return sides.length
+    ? `Можно на стороне ${sides.join(", ")} — там свободная наружная стена.`
+    : "Свободной наружной стены у этого помещения нет — выберите соседнее.";
+}
 
 let seq = 0;
 const newId = (p: Project, prefix: string) => {
@@ -208,7 +313,7 @@ function shiftUpper(p: Project, dx: number, dy: number): Project {
   );
 }
 
-function windowTargets(p: Project, c: WindowCommand): ModulePlacement[] {
+function windowTargets(p: Project, c: OpeningCommand): ModulePlacement[] {
   if (c.moduleId) return p.modules.filter((m) => m.id === c.moduleId);
   if (c.roomId) {
     const r = p.rooms.find((x) => x.id === c.roomId);
@@ -242,6 +347,8 @@ function applyWindow(p: Project, c: WindowCommand): CommandResult {
     if (!changed)
       return reject(
         `На стороне ${c.side} нет свободной наружной стены: там стык с соседним модулем или уже стоят окна с простенками ${GRAMMAR.openings.cornerPierMm} мм.`,
+        [],
+        freeSidesHint(p, mods, 500, c.side),
       );
   } else if (c.action === "remove") {
     const ids = new Set(mods.flatMap(onFace).map((o) => o.id));
@@ -291,8 +398,139 @@ function applyWindow(p: Project, c: WindowCommand): CommandResult {
   );
 }
 
+function applyDoor(p: Project, c: DoorCommand): CommandResult {
+  const mods = windowTargets(p, c).filter((m) => m.tier === 1);
+  if (!mods.length)
+    return reject("Наружная дверь бывает только на первом ярусе — покажите помещение внизу.");
+  const preset = DOOR_PRESETS[c.preset ?? "single"];
+  const roomIdOf = (m: ModulePlacement) =>
+    p.rooms.find((r) => r.moduleIds.includes(m.id))?.id ?? "";
+  const doorsHere = p.openings.filter(
+    (o) => o.kind === "entrance" && o.face === c.side && mods.some((m) => m.id === o.moduleId),
+  );
+  let openings = [...p.openings];
+  if (c.action === "remove" || c.action === "set") {
+    if (!doorsHere.length) return reject(`На стороне ${c.side} двери нет.`);
+    openings = openings.filter((o) => !doorsHere.some((d) => d.id === o.id));
+    if (c.action === "remove") return commit(p, { ...p, openings }, "Дверь убрана.");
+  }
+  // Перенос входа: старый главный вход убирается.
+  if (c.action === "move") openings = openings.filter((o) => o.kind !== "entrance");
+  for (const m of mods) {
+    let work: Project = { ...p, openings };
+    let seg = freeSegments(work, m, c.side).find(([a, b]) => b - a >= preset.widthMm);
+    // Стена занята окном — дверь встаёт в край пролёта, окно ужимается в остаток (дверь в панораме).
+    const displaced = openings.filter(
+      (o) => o.moduleId === m.id && o.face === c.side && o.kind === "window",
+    );
+    if (!seg && displaced.length) {
+      const freed = openings.filter((o) => !displaced.includes(o));
+      work = { ...p, openings: freed };
+      seg = freeSegments(work, m, c.side).find(([a, b]) => b - a >= preset.widthMm);
+      if (seg) {
+        const door: Opening = {
+          id: `door-${++seq}`,
+          moduleId: m.id,
+          roomId: roomIdOf(m),
+          face: c.side,
+          kind: "entrance",
+          widthMm: preset.widthMm,
+          heightMm: preset.heightMm,
+          offsetMm: seg[0] - faceStart(m, c.side),
+          userSet: true,
+        };
+        const withDoor = { ...p, openings: [...freed, door] };
+        const height = Math.max(...displaced.map((o) => o.heightMm));
+        const w = placeWindow(
+          withDoor,
+          m,
+          c.side,
+          height === 3150 ? "floor-to-ceiling" : presetOf(displaced[0]),
+          roomIdOf(m),
+          displaced[0].id,
+        );
+        const next =
+          w && w.widthMm >= 600
+            ? [...withDoor.openings, { ...w, userSet: true }]
+            : withDoor.openings;
+        return commit(
+          p,
+          { ...p, openings: next },
+          `${preset.label} на стороне ${c.side}, окно рядом ужато.`,
+        );
+      }
+    }
+    if (!seg) continue;
+    openings.push({
+      id: `door-${++seq}`,
+      moduleId: m.id,
+      roomId: roomIdOf(m),
+      face: c.side,
+      kind: "entrance",
+      widthMm: preset.widthMm,
+      heightMm: preset.heightMm,
+      offsetMm: seg[0] - faceStart(m, c.side),
+      userSet: true,
+    });
+    return commit(p, { ...p, openings }, `${preset.label} на стороне ${c.side}.`);
+  }
+  return reject(
+    `Дверь ${preset.widthMm} мм на стороне ${c.side} не помещается: там стык или нет простенков.`,
+    [],
+    freeSidesHint({ ...p, openings }, mods, preset.widthMm, c.side),
+  );
+}
+
+/** Поворот дома на 90° против часовой: координаты, грани и отступы ручных проёмов. */
+export function rotateHouse90(p: Project): Project {
+  const turnFace: Record<Side, Side> = { N: "W", E: "N", S: "E", W: "S" };
+  const reversed: Side[] = ["E", "W"];
+  const rects = new Map(p.modules.map((m) => [m.id, footprint(m)]));
+  let modules = p.modules.map((m) => {
+    const r = rects.get(m.id)!;
+    return { ...m, xMm: -r.y1, yMm: r.x0, rot: ((m.rot + 90) % 360) as ModulePlacement["rot"] };
+  });
+  const minX = Math.min(...modules.map((m) => m.xMm));
+  const minY = Math.min(...modules.map((m) => m.yMm));
+  modules = modules.map((m) => ({ ...m, xMm: m.xMm - minX, yMm: m.yMm - minY }));
+  const openings = p.openings
+    .filter((o) => o.userSet)
+    .map((o) => {
+      const r = rects.get(o.moduleId)!;
+      const len = o.face === "N" || o.face === "S" ? r.x1 - r.x0 : r.y1 - r.y0;
+      return {
+        ...o,
+        face: turnFace[o.face],
+        offsetMm: reversed.includes(o.face) ? len - o.offsetMm - o.widthMm : o.offsetMm,
+      };
+    });
+  const rotationDeg = (((p.rotationDeg ?? 0) + 90) % 360) as NonNullable<Project["rotationDeg"]>;
+  return rederive(
+    { ...p, modules, openings, rotationDeg, placementLocked: false },
+    turnFace[p.terrace.side],
+  );
+}
+
 export function applyCommand(p: Project, c: EditorCommand): CommandResult {
   switch (c.op) {
+    case "door":
+      return applyDoor(p, c);
+    case "place_house":
+      if (!p.plot) return reject("Сначала задайте участок: размер и где север.");
+      return commit(
+        p,
+        {
+          ...p,
+          placementMm: { xMm: Math.round(c.xMm / 10) * 10, yMm: Math.round(c.yMm / 10) * 10 },
+          placementLocked: true,
+        },
+        "Дом поставлен на участке.",
+      );
+    case "rotate_house": {
+      let q = p;
+      for (let i = 0; i < c.deg / 90; i++) q = rotateHouse90(q);
+      return commit(p, q, `Дом повёрнут на ${c.deg}°.`);
+    }
     case "add_room": {
       const tier = c.tier ?? 1;
       if (tier > GRAMMAR.tiers.maxTiers || tier < 1)
@@ -564,10 +802,48 @@ export const COMMAND_TOOLS = [
       required: ["action", "side"],
     },
   },
+  {
+    type: "function",
+    name: "edit_door",
+    description:
+      "Наружная дверь: add — добавить (выход на террасу), move — перенести главный вход на эту стену, remove — убрать, set — сменить размер. preset: single 800, wide 1000, double 1200.",
+    parameters: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["add", "move", "remove", "set"] },
+        side,
+        roomId: { type: "string" },
+        moduleId: { type: "string" },
+        preset: { type: "string", enum: Object.keys(DOOR_PRESETS) },
+      },
+      required: ["action", "side"],
+    },
+  },
+  {
+    type: "function",
+    name: "place_house",
+    description: "Поставить дом на участке: смещение от юго-западного угла участка, мм.",
+    parameters: {
+      type: "object",
+      properties: { xMm: { type: "integer" }, yMm: { type: "integer" } },
+      required: ["xMm", "yMm"],
+    },
+  },
+  {
+    type: "function",
+    name: "rotate_house",
+    description: "Повернуть дом на участке на 90, 180 или 270 градусов.",
+    parameters: {
+      type: "object",
+      properties: { deg: { type: "integer", enum: [90, 180, 270] } },
+      required: ["deg"],
+    },
+  },
 ] as const;
 
 /** Вызов инструмента от модели → команда редактора. */
 export function toolCallToCommand(name: string, args: unknown): ReturnType<typeof parseCommand> {
   const a = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
-  return parseCommand(name === "edit_window" ? { ...a, op: "window" } : { ...a, op: name });
+  const op = name === "edit_window" ? "window" : name === "edit_door" ? "door" : name;
+  return parseCommand({ ...a, op });
 }

@@ -87,6 +87,13 @@ export interface StyleSpec {
   roof: string;
   windowFrames: string;
   interior: string;
+  /** Страна / регион, откуда стиль. */
+  region: string;
+  palette: string[];
+  /** Пресет окон по умолчанию для стиля (см. WINDOW_PRESETS). */
+  windows: "standard" | "large" | "floor-to-ceiling";
+  /** Чего стиль у нас не получит из-за конструктива (скатная кровля и т. п.). */
+  constraintNote?: string;
 }
 
 export interface FinishCatalog {

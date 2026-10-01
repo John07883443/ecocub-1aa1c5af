@@ -295,5 +295,5 @@ export function rederive(p: Project, terraceSide?: Side): Project {
   const withOpenings = { ...p, openings: deriveOpenings(p) };
   const terrace = deriveTerrace(withOpenings, terraceSide);
   const out = { ...withOpenings, terrace };
-  return { ...out, placementMm: centerOnPlot(out) };
+  return { ...out, placementMm: p.placementLocked ? p.placementMm : centerOnPlot(out) };
 }

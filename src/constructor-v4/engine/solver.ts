@@ -14,6 +14,7 @@ import { buildProject, defaultFinishes } from "./derive.ts";
 import { evaluate, expectedBathrooms, type Evaluation } from "./rules.ts";
 import type { Brief, ModulePlacement, Project, Room } from "./types.ts";
 import { findStyle } from "../grammar/index.ts";
+import { explainRanks, rankAll, type Rank } from "./ranking.ts";
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -202,7 +203,9 @@ function addTier2(a: Assignment, prog: Program["tier2"], rnd: () => number): Ass
 export interface Variant {
   project: Project;
   evaluation: Evaluation;
+  /** Итоговая оценка под сценарий (ranking.ts), 0..1. */
   score: number;
+  rank?: Rank;
   tiers: 1 | 2;
   /** Чем вариант отличается — для объяснения человеку. */
   summary: string;
@@ -302,6 +305,7 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
     }
   }
 
+  rankAll(valid).forEach((r, i) => (valid[i].score = r.total));
   valid.sort(
     (a, b) => b.score - a.score || signature(a.project).localeCompare(signature(b.project)),
   );
@@ -327,6 +331,14 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
     if (picked.length >= max) break;
     if (!picked.includes(v)) picked.push(v);
   }
+  // Ранги пересчитываются внутри выдачи: «дешевле» и «светлее» — относительно показанных.
+  const ranks = rankAll(picked);
+  explainRanks(ranks);
+  picked.forEach((v, i) => {
+    v.rank = ranks[i];
+    v.score = ranks[i].total;
+  });
+  picked.sort((a, b) => b.score - a.score);
   picked.forEach((v, i) => {
     v.project = { ...v.project, id: `variant-${i + 1}` };
     const b = bbox(v.project.modules.filter((m) => m.tier === 1).map(footprint));

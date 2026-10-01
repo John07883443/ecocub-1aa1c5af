@@ -46,6 +46,21 @@ export function trucksFor(modules: number, cfg: PriceConfig = PRICE_CONFIG): Ran
   };
 }
 
+/** Грубая вилка по числу модулей — для проверки сценария до сборки дома (терраса 60 %, сваи, без опций). */
+export function quickBudgetRange(modules: number, cfg: PriceConfig = PRICE_CONFIG): Range {
+  const warm = modules * 10.944;
+  const trucks = trucksFor(modules, cfg);
+  const built = warm;
+  const r = (k: "min" | "max") =>
+    warm * cfg.warmContourPerM2[k] +
+    trucks[k] * cfg.truckRub[k] +
+    modules * cfg.installPerModule[k] +
+    cfg.craneRub[k] +
+    built * cfg.foundationPerM2.piles[k] +
+    0.6 * warm * cfg.terracePerM2[k];
+  return { min: round(r("min")), max: round(r("max")) };
+}
+
 export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
   const cfg = opts.config ?? PRICE_CONFIG;
   const n = p.modules.length;
