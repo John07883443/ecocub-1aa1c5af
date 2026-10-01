@@ -18,7 +18,11 @@ import {
 } from "./rules.ts";
 import { PURPOSE_LABEL } from "./types.ts";
 import { tvPlace } from "./tv.ts";
+import { carportPlace } from "./site.ts";
 import type { Opening, Project, RuleResult, Side } from "./types.ts";
+
+const entranceSide = (p: Project): Side | undefined =>
+  p.openings.find((o) => o.kind === "entrance")?.face;
 
 export interface PassportModule {
   id: string;
@@ -81,6 +85,10 @@ export interface ProjectPassport {
   verifyByDesigner: string[];
   /** Рекомендации из сценария жизни: питомцы, доступность, участок. */
   recommendations: string[];
+  /** Вне модулей: навес для машины (если в сценарии машина). */
+  site: {
+    carport: { side: Side; widthMm: number; depthMm: number; note: string } | null;
+  };
   /** Место под ТВ в общей комнате. */
   tv: { moduleId: string; face: Side; wallMm: number; viewingMm: number; interior: boolean } | null;
   budget: Budget;
@@ -194,6 +202,26 @@ export function buildPassport(
     assumptions,
     verifyByDesigner: [...new Set(verify)],
     recommendations: p.recommendations ?? [],
+    site: (() => {
+      const c = carportPlace(p);
+      return {
+        carport: c
+          ? {
+              side: c.side,
+              widthMm: c.widthMm,
+              depthMm: c.depthMm,
+              note: `Навес для машины ${c.widthMm / 1000} × ${c.depthMm / 1000} м у ${c.side === entranceSide(p) ? "входа" : "дома"} (сторона ${c.side}), вне модулей — черновик, место и тип уточняет проектировщик.`,
+            }
+          : p.household?.car
+            ? {
+                side: "S",
+                widthMm: 0,
+                depthMm: 0,
+                note: "Навес для машины на участке не поместился с отступами — нужен участок побольше или другая посадка.",
+              }
+            : null,
+      };
+    })(),
     tv: (() => {
       const t = tvPlace(p);
       return t

@@ -17,6 +17,9 @@ import { findStyle } from "../grammar/index.ts";
 import { canPair, factoryModules, trucksForCubes } from "./factory.ts";
 import { patternShapes } from "./patterns.ts";
 import { explainRanks, rankAll, type Rank } from "./ranking.ts";
+import { deadEndHalls } from "./graph.ts";
+
+export { deadEndHalls };
 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -39,7 +42,15 @@ function shuffle<T>(arr: T[], rnd: () => number): T[] {
 }
 
 export interface Program {
-  tier1: { kitchen: number; wet: number; study: number; bedrooms: number; corridor?: number };
+  tier1: {
+    kitchen: number;
+    wet: number;
+    study: number;
+    bedrooms: number;
+    corridor?: number;
+    /** +1 кубик к главной спальне (спальня с гардеробной), когда площадь позволяет. */
+    master?: number;
+  };
   tier2: { hall: number; wet: number; bedrooms: number };
   bathrooms: number;
 }
@@ -51,9 +62,23 @@ export function programFor(brief: Brief, tiers: 1 | 2, upperBedrooms?: number): 
   let n = brief.bedrooms + kitchen + study + 1;
   const bathrooms = brief.bathrooms ?? expectedBathrooms(n * GRAMMAR.module.warmContourAreaM2);
   n = brief.bedrooms + kitchen + study + bathrooms;
+  // Главная спальня на 2 кубика — только на 1-м ярусе и только если есть спальня не для родителей.
+  const masterFor = (t1Bedrooms: number) =>
+    brief.masterSuite &&
+    t1Bedrooms - (brief.bedroomPurposes?.length ?? 0) >= 1 &&
+    (!brief.maxAreaM2 ||
+      (n + (tiers === 2 ? 1 : 0) + 1) * GRAMMAR.module.warmContourAreaM2 <= brief.maxAreaM2)
+      ? 1
+      : 0;
   if (tiers === 1)
     return {
-      tier1: { kitchen, wet: bathrooms, study, bedrooms: brief.bedrooms },
+      tier1: {
+        kitchen,
+        wet: bathrooms,
+        study,
+        bedrooms: brief.bedrooms,
+        master: masterFor(brief.bedrooms),
+      },
       tier2: { hall: 0, wet: 0, bedrooms: 0 },
       bathrooms,
     };
@@ -65,7 +90,13 @@ export function programFor(brief: Brief, tiers: 1 | 2, upperBedrooms?: number): 
   while (b2 > 0 && 1 + b2 + wet2 > t1()) b2--;
   if (upperBedrooms !== undefined) b2 = Math.min(b2, upperBedrooms);
   return {
-    tier1: { kitchen, wet: bathrooms - wet2, study, bedrooms: brief.bedrooms - b2 },
+    tier1: {
+      kitchen,
+      wet: bathrooms - wet2,
+      study,
+      bedrooms: brief.bedrooms - b2,
+      master: masterFor(brief.bedrooms - b2),
+    },
     tier2: { hall: b2 > 0 ? 1 : 0, wet: b2 > 0 ? wet2 : 0, bedrooms: b2 },
     bathrooms,
   };
@@ -126,7 +157,21 @@ function assignTier1(
     const byExt = [...rest].sort((a, b) => ext(b) - ext(a));
     const bedrooms = byExt.slice(0, prog.bedrooms);
     const study = byExt.slice(prog.bedrooms, prog.bedrooms + prog.study);
-    const wet = byExt.slice(prog.bedrooms + prog.study);
+    let wet = byExt.slice(prog.bedrooms + prog.study);
+    // Спальня с гардеробной: второй кубик — пара по длинной стороне к одной из спален.
+    let master: { bed: ModulePlacement; extra: ModulePlacement } | null = null;
+    if (prog.master) {
+      for (const extra of [...wet].reverse()) {
+        const bed = bedrooms.find((b) => canPair(b, extra));
+        if (bed) {
+          master = { bed, extra };
+          break;
+        }
+      }
+      if (!master) continue;
+      const taken = master.extra;
+      wet = wet.filter((c) => c !== taken);
+    }
     if (wet.length !== prog.wet) continue;
     const rooms: Room[] = [];
     const tag = (type: RoomType, mods: ModulePlacement[], i: number, subRooms?: string[]) => {
@@ -138,7 +183,11 @@ function assignTier1(
     const pick = (list: ModulePlacement[]) => list.map((l) => mods.find((m) => m.id === l.id)!);
     tag("kitchen-living", pick(kit), 0);
     if (corr.length) tag("corridor", pick(corr), 0, ["холл", "шкаф"]);
-    pick(bedrooms).forEach((m, i) => tag("bedroom", [m], i));
+    pick(bedrooms).forEach((m, i) =>
+      master && master.bed.id === m.id
+        ? tag("bedroom", [m, ...pick([master.extra])], i, ["гардеробная"])
+        : tag("bedroom", [m], i),
+    );
     pick(study).forEach((m, i) => tag("study", [m], i));
     pick(wet).forEach((m, i) =>
       tag("wet-core", [m], i, i === 0 ? ["санузел", "бойлер и техшкаф", "тамбур"] : ["санузел"]),
@@ -252,6 +301,31 @@ function rectBlocks(t1: ModulePlacement[], n: number, must: ModulePlacement): Mo
   return out;
 }
 
+/** Тупиковый холл → гардеробная соседней спальни (спальня 2 кубика). Нет подходящей спальни — null. */
+function mergeDeadHalls(a: Assignment, dead: Room[]): Assignment | null {
+  let rooms = a.rooms.map((r) => ({ ...r, moduleIds: [...r.moduleIds] }));
+  const modules = a.modules.map((m) => ({ ...m }));
+  const mod = (id: string) => modules.find((m) => m.id === id)!;
+  for (const h of dead) {
+    const hm = mod(h.moduleIds[0]);
+    const beds = rooms
+      .filter((r) => r.type === "bedroom" && r.tier === 1 && r.moduleIds.length === 1)
+      .filter((r) => touches(mod(r.moduleIds[0]), hm))
+      .sort(
+        (x, y) =>
+          Number(!!x.purpose) - Number(!!y.purpose) ||
+          Number(canPair(mod(y.moduleIds[0]), hm)) - Number(canPair(mod(x.moduleIds[0]), hm)),
+      );
+    const bed = beds[0];
+    if (!bed) return null;
+    bed.moduleIds.push(hm.id);
+    bed.subRooms = ["гардеробная"];
+    hm.roomId = bed.id;
+    rooms = rooms.filter((r) => r.id !== h.id);
+  }
+  return { rooms, modules };
+}
+
 export interface Variant {
   project: Project;
   evaluation: Evaluation;
@@ -301,7 +375,9 @@ function tagPurposes(a: Assignment, purposes: RoomPurpose[]): Room[] {
   const nearWet = (r: Room) => wet.some((w) => touches(mod(r), w));
   const free = rooms
     .filter((r) => r.type === "bedroom" && r.tier === 1)
-    .sort((x, y) => Number(nearWet(y)) - Number(nearWet(x)));
+    .sort(
+      (x, y) => x.moduleIds.length - y.moduleIds.length || Number(nearWet(y)) - Number(nearWet(x)),
+    );
   purposes.forEach((p, i) => {
     if (free[i]) free[i].purpose = p;
   });
@@ -334,10 +410,18 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
       for (let b = top; b >= 1; b--) base.push(programFor(brief, 2, b));
       if (top === 0) base.push(programFor(brief, 2));
     }
+    // Спальня с гардеробной — первым делом, но и без неё тоже: не каждая форма её вмещает.
+    for (const p0 of [...base])
+      if (p0.tier1.master) base.push({ ...p0, tier1: { ...p0.tier1, master: 0 } });
     for (const prog of base) {
       programs.push({ tiers, prog });
       // Большой первый ярус: вариант с холлом-распределителем (+1 кубик).
-      const n1 = prog.tier1.kitchen + prog.tier1.wet + prog.tier1.study + prog.tier1.bedrooms;
+      const n1 =
+        prog.tier1.kitchen +
+        prog.tier1.wet +
+        prog.tier1.study +
+        prog.tier1.bedrooms +
+        (prog.tier1.master ?? 0);
       if (n1 >= 6)
         programs.push({ tiers, prog: { ...prog, tier1: { ...prog.tier1, corridor: 1 } } });
     }
@@ -352,6 +436,7 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
       prog.tier1.wet +
       prog.tier1.study +
       prog.tier1.bedrooms +
+      (prog.tier1.master ?? 0) +
       (prog.tier1.corridor ?? 0);
     if (n1 + prog.tier2.hall + prog.tier2.wet + prog.tier2.bedrooms > 16) {
       notes.push("Больше 16 модулей — это индивидуальный проект, его делает проектировщик.");
@@ -372,15 +457,26 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
       }));
       for (const a1 of assignTier1(cells, prog.tier1, rnd))
         for (const a0 of addTier2(a1, prog.tier2, rnd)) {
-          const a = { ...a0, rooms: tagPurposes(a0, brief.bedroomPurposes ?? []) };
-          let project = buildProject({
-            id: `v-${seed}-${valid.length + rejected + 1}`,
-            modules: a.modules,
-            rooms: a.rooms,
-            plot: brief.plot ?? null,
-            yearRound: brief.yearRound,
-            finishes,
-          });
+          let a: Assignment = { ...a0, rooms: tagPurposes(a0, brief.bedroomPurposes ?? []) };
+          const build = (x: Assignment) =>
+            buildProject({
+              id: `v-${seed}-${valid.length + rejected + 1}`,
+              modules: x.modules,
+              rooms: x.rooms,
+              plot: brief.plot ?? null,
+              yearRound: brief.yearRound,
+              finishes,
+            });
+          let project = build(a);
+          // Холл, через который никуда не идут, — тупик: отдаём кубик спальне под гардеробную.
+          const dead = deadEndHalls(project);
+          if (dead.length) {
+            const merged = mergeDeadHalls(a, dead);
+            if (merged) {
+              a = merged;
+              project = build(a);
+            }
+          }
           let ev = evaluate(project);
           // Не встал на участок — пробуем повернуть дом на 90°.
           if (!ev.valid && ev.hardViolations.every((v) => v.ruleId === "plot-fit")) {
@@ -405,6 +501,7 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
           }
           if (brief.recommendations?.length)
             project = { ...project, recommendations: brief.recommendations };
+          if (brief.household) project = { ...project, household: brief.household };
           valid.push({ project, evaluation: ev, score: ev.softScore, tiers, summary: "" });
         }
     }
@@ -435,6 +532,16 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
   for (const v of valid) {
     if (picked.length >= max) break;
     if (!picked.includes(v)) picked.push(v);
+  }
+  // Площадь позволяет спальню с гардеробной — хотя бы один показанный вариант с ней.
+  const hasSuite = (v: Variant) =>
+    v.project.rooms.some((r) => r.type === "bedroom" && r.moduleIds.length > 1);
+  if (brief.masterSuite && !picked.some(hasSuite)) {
+    const suite = valid.find(hasSuite);
+    if (suite) {
+      if (picked.length >= max) picked.pop();
+      picked.push(suite);
+    }
   }
   // Ранги пересчитываются внутри выдачи: «дешевле» и «светлее» — относительно показанных.
   const ranks = rankAll(picked);

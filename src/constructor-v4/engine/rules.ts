@@ -23,7 +23,7 @@ import {
 } from "./geometry.ts";
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
 import { canPair, factoryModules } from "./factory.ts";
-import { checkRoutes } from "./graph.ts";
+import { checkRoutes, deadEndHalls } from "./graph.ts";
 import { tvPlace } from "./tv.ts";
 import { HARMONY, aspectRatio, facadeProfile, fillRatio, outlineCorners } from "./patterns.ts";
 import { PILOT } from "../pilot.config.ts";
@@ -701,6 +701,28 @@ const routes: Check = (p) => {
       ];
 };
 
+/** Холл 1-го яруса должен что-то раздавать: вход или хотя бы одну комнату. Тупиковый холл — лишний кубик. */
+const hallHasPurpose: Check = (p) => {
+  const halls = p.rooms.filter((r) => r.type === "corridor");
+  if (!halls.length) return [];
+  const dead = new Set(deadEndHalls(p).map((r) => r.id));
+  const out: RuleResult[] = [];
+  for (const h of halls)
+    if (dead.has(h.id))
+      out.push(
+        fail(
+          "hall-purpose",
+          "hard",
+          "Холл в тупике: через него не входят и в него не открывается ни одна комната — лишний кубик. Отдайте его спальне под гардеробную или уберите.",
+          "Владелец 01.10.2026: «Холл в конце без назначения»",
+          h.id,
+        ),
+      );
+  return out.length
+    ? out
+    : [pass("hall-purpose", "hard", "Холл раздаёт комнаты или встречает у входа.", SRC_ALBUM)];
+};
+
 /** Место под телевизор в общей комнате (владелец 01.10.2026). */
 const tvWall: Check = (p) => {
   if (!p.rooms.some((r) => r.type === "kitchen-living")) return [];
@@ -1139,6 +1161,7 @@ export const HARD_CHECKS: Check[] = [
   footprintCompact,
   routes,
   tvWall,
+  hallHasPurpose,
 ];
 export const SOFT_CHECKS: Check[] = [
   bedroomsInCorners,

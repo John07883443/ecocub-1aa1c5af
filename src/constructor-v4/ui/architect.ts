@@ -3,11 +3,12 @@
  * детерминированные комментарии к ходам в редакторе. Геометрию ИИ не трогает —
  * только вызывает команды, которые проверяет движок правил.
  */
-import { COMMAND_TOOLS } from "../engine/commands.ts";
+import { COMMAND_TOOLS, applyCommand, parseCommand } from "../engine/commands.ts";
 import { factoryModules, trucksForCubes } from "../engine/factory.ts";
 import { budgetFor } from "../engine/price.ts";
 import { columnsFor, evaluate, roomClearAreaM2, warmContourM2 } from "../engine/rules.ts";
 import type { Project } from "../engine/types.ts";
+import type { LifeScenario } from "../engine/scenario.ts";
 import { FINISHES, roomSpec } from "../grammar/index.ts";
 import { tvPlace } from "../engine/tv.ts";
 import { PILOT } from "../pilot.config.ts";
@@ -16,10 +17,13 @@ export const SCENARIO_TOOL = {
   type: "function",
   name: "set_scenario",
   description:
-    "Записать сценарий жизни из разговора и собрать 3 варианта дома. Вызывай, когда понятно, кто живёт (взрослые, дети), и есть хотя бы примерная площадь или бюджет — или человек просит «собери».",
+    "Записать в анкету то, что человек рассказал о жизни, и пересобрать 3 варианта дома. Передавай только то, что узнал или что изменилось — остальное в анкете сохранится. Вызывай сразу, как узнал новый факт (кто живёт, питомцы, родители, участок, площадь, бюджет, стиль).",
   parameters: {
     type: "object",
     properties: {
+      plotSotki: { type: "number", description: "Участок в сотках (1 сотка = 100 м²)" },
+      plotWidthM: { type: "number" },
+      plotDepthM: { type: "number" },
       adults: { type: "integer", minimum: 1, maximum: 6 },
       kids: { type: "integer", minimum: 0, maximum: 6 },
       kidsShareRoom: { type: "boolean" },
@@ -42,7 +46,25 @@ export const SCENARIO_TOOL = {
       budgetMaxRub: { type: "integer" },
       style: { type: "string", description: "Стиль словами, если назван" },
     },
-    required: ["adults", "kids"],
+    required: [],
+  },
+} as const;
+
+export const WHAT_IF_TOOL = {
+  type: "function",
+  name: "what_if",
+  description:
+    "Посчитать «а если…» без изменения дома: убрать/добавить помещение или изменить размер — вернёт площадь, кубики, тралы и бюджет до и после. Для вопросов «а если убрать спальню, сколько выйдет?».",
+  parameters: {
+    type: "object",
+    properties: {
+      op: { type: "string", enum: ["remove_room", "add_room", "resize_room"] },
+      roomId: { type: "string" },
+      room: { type: "string", enum: ["bedroom", "study", "wet-core"] },
+      modules: { type: "integer", minimum: 1, maximum: 5 },
+      tier: { type: "integer", enum: [1, 2] },
+    },
+    required: ["op"],
   },
 } as const;
 
@@ -57,7 +79,133 @@ export const SELECT_TOOL = {
   },
 } as const;
 
-export const ALL_TOOLS = [SCENARIO_TOOL, SELECT_TOOL, ...COMMAND_TOOLS];
+export const ALL_TOOLS = [SCENARIO_TOOL, SELECT_TOOL, WHAT_IF_TOOL, ...COMMAND_TOOLS];
+
+const clampInt = (v: unknown, min: number, max: number): number | undefined => {
+  if (v === undefined || v === null || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : undefined;
+};
+const bool = (v: unknown): boolean | undefined =>
+  typeof v === "boolean" ? v : v === "true" ? true : v === "false" ? false : undefined;
+
+/**
+ * Аргументы set_scenario от модели → новая анкета. Только проверенные значения,
+ * всё неизвестное остаётся как было: Лев дописывает факты, а не стирает форму.
+ */
+export function mergeScenario(cur: LifeScenario, args: Record<string, unknown>): LifeScenario {
+  const a = args ?? {};
+  const s: LifeScenario = { ...cur, pets: { ...cur.pets } };
+  const adults = clampInt(a.adults, 1, 6);
+  if (adults !== undefined) s.adults = adults;
+  const kids = clampInt(a.kids, 0, 6);
+  if (kids !== undefined) s.kids = kids;
+  const share = bool(a.kidsShareRoom);
+  if (share !== undefined) s.kidsShareRoom = share;
+  const dogs = clampInt(a.dogs, 0, 5);
+  if (dogs !== undefined) s.pets = { ...s.pets, dogs };
+  const cats = clampInt(a.cats, 0, 5);
+  if (cats !== undefined) s.pets = { ...s.pets, cats };
+  const other = clampInt(a.otherPets, 0, 5);
+  if (other !== undefined) s.pets = { ...s.pets, other };
+  if (a.elderly === "none") s.elderly = undefined;
+  else if (a.elderly === "live" || a.elderly === "visit")
+    s.elderly = {
+      mode: a.elderly,
+      count: Number(a.elderlyCount ?? cur.elderly?.count ?? 1) === 2 ? 2 : 1,
+    };
+  else if (a.elderlyCount !== undefined && cur.elderly)
+    s.elderly = { ...cur.elderly, count: Number(a.elderlyCount) === 2 ? 2 : 1 };
+  const wfh = clampInt(a.workFromHome, 0, 4);
+  if (wfh !== undefined) s.workFromHome = wfh;
+  for (const k of ["guestsOften", "sauna", "car"] as const) {
+    const b = bool(a[k]);
+    if (b !== undefined) s[k] = b;
+  }
+  const lots = bool(a.storageLots);
+  if (lots !== undefined) s.storage = lots ? "lots" : "normal";
+  if (a.tiers === "1" || a.tiers === 1) s.tiers = 1;
+  else if (a.tiers === "2" || a.tiers === 2) s.tiers = 2;
+  else if (a.tiers === "any") s.tiers = "any";
+  const area = clampInt(a.desiredAreaMaxM2, 20, 400);
+  if (area !== undefined) s.desiredAreaM2 = { min: 0, max: area };
+  const budget = clampInt(a.budgetMaxRub, 500_000, 200_000_000);
+  if (budget !== undefined) s.budgetRub = { min: 0, max: budget };
+  if (typeof a.style === "string" && a.style.trim()) s.styleHints = [a.style.trim().slice(0, 200)];
+  // Участок: явные размеры или сотки → прямоугольник 1:1,4 (типовая нарезка).
+  const sotki = Number(a.plotSotki);
+  const w = Number(a.plotWidthM);
+  const d = Number(a.plotDepthM);
+  if (Number.isFinite(w) && Number.isFinite(d) && w >= 8 && d >= 8 && w <= 500 && d <= 500)
+    s.plot = { ...(cur.plot ?? {}), widthM: Math.round(w), depthM: Math.round(d) };
+  else if (a.plotSotki !== undefined && Number.isFinite(sotki) && sotki >= 2 && sotki <= 500) {
+    const width = Math.round(Math.sqrt((sotki * 100) / 1.4));
+    s.plot = { ...(cur.plot ?? {}), widthM: width, depthM: Math.round((sotki * 100) / width) };
+  }
+  return s;
+}
+
+/** Что уже известно из анкеты — словами, чтобы Лев не переспрашивал. */
+export function scenarioContext(s: LifeScenario | null | undefined): string {
+  if (!s) return "Анкета пуста.";
+  const known: string[] = [];
+  known.push(`взрослых ${s.adults}, детей ${s.kids}${s.kidsShareRoom ? " (в одной комнате)" : ""}`);
+  const pets = [
+    s.pets?.dogs ? `собак ${s.pets.dogs}` : "",
+    s.pets?.cats ? `кошек ${s.pets.cats}` : "",
+    s.pets?.other ? `других питомцев ${s.pets.other}` : "",
+  ].filter(Boolean);
+  known.push(pets.length ? `питомцы: ${pets.join(", ")}` : "питомцев нет");
+  known.push(
+    s.elderly
+      ? `пожилые родители: ${s.elderly.mode === "live" ? "живут с нами" : "приезжают в гости"}, ${s.elderly.count} чел.`
+      : "пожилых родителей в доме нет",
+  );
+  known.push(s.workFromHome ? `работают из дома: ${s.workFromHome}` : "из дома не работают");
+  known.push(s.guestsOften ? "гости часто" : "гости нечасто");
+  if (s.sauna) known.push("нужна сауна");
+  if (s.storage === "lots") known.push("много хранения");
+  known.push(s.car ? "есть машина — навес на участке" : "машины нет");
+  known.push(
+    `этажность: ${s.tiers === 1 ? "один ярус" : s.tiers === 2 ? "два яруса" : "не важно"}`,
+  );
+  if (s.desiredAreaM2?.max) known.push(`площадь до ${s.desiredAreaM2.max} м²`);
+  const missing: string[] = [];
+  if (s.budgetRub?.max)
+    known.push(`бюджет до ${(s.budgetRub.max / 1e6).toLocaleString("ru-RU")} млн ₽`);
+  else missing.push("бюджет");
+  if (s.plot)
+    known.push(
+      `участок ${s.plot.widthM} × ${s.plot.depthM} м (${Math.round((s.plot.widthM * s.plot.depthM) / 100)} сот.)`,
+    );
+  else missing.push("участок");
+  if (s.styleHints?.length) known.push(`стиль: ${s.styleHints.join(", ")}`);
+  else missing.push("стиль и вкус");
+  return [
+    `Анкета (уже известно — НЕ переспрашивай, коротко подтверди): ${known.join("; ")}.`,
+    missing.length
+      ? `Не хватает: ${missing.join(", ")} — спрашивай по одному вопросу.`
+      : "Анкета заполнена.",
+  ].join("\n");
+}
+
+/** «А если…» — применить команду к копии дома и сравнить цифры. Дом не меняется. */
+export function whatIf(p: Project | null, args: Record<string, unknown>): string {
+  if (!p) return "Дом ещё не собран — сначала соберите варианты.";
+  const parsed = parseCommand({ ...args });
+  if (!parsed.ok) return `Не понял, что посчитать: ${parsed.error}.`;
+  const res = applyCommand(p, parsed.command);
+  if (!res.ok)
+    return `Так нельзя: ${res.reason}. ${res.violations.slice(0, 2).join(" ")} ${res.suggestion ?? ""}`.trim();
+  const fmt = (q: Project) => {
+    const b = budgetFor(q).total;
+    return `${q.modules.length} кубиков, ${Math.round(warmContourM2(q))} м², ${trucksForCubes(q.modules.length)} трала, ${fmtMln(b.min)}–${fmtMln(b.max)} млн ₽`;
+  };
+  const bb = budgetFor(p).total;
+  const ba = budgetFor(res.project).total;
+  const d = (ba.min + ba.max - bb.min - bb.max) / 2;
+  return `Сейчас: ${fmt(p)}. Если так: ${fmt(res.project)} (${d >= 0 ? "+" : "−"}${fmtMln(Math.abs(d))} млн ₽ к середине вилки, предварительно). Дом не менял — скажите «делаем», и применю.`;
+}
 
 /** Формат инструментов для chat/completions (OpenAI-совместимый). */
 export function chatTools() {
@@ -129,17 +277,26 @@ export const ARCHITECT_KNOWLEDGE = `Ты — архитектор ЭкоКуба
 переделай его молча и покажи лучший. Меньше, но точнее; простая форма,
 одна сильная идея, свет как главный материал.`;
 
+/** Миссия Льва — первая строка промпта (формулировка владельца 01.10.2026). */
+export const LEV_MISSION =
+  "Твоя главная задача — постепенно, вопрос за вопросом, узнавать клиента и рисовать ему дом мечты на технической базе ЭкоКуба: только реальные кубики 3200×3420, заводские модули по 2 кубика, до 2 ярусов, свесы в допустимых пределах. Всё, что ты предлагаешь, должно быть реально построимо.";
+
 export function systemPrompt(context: string): string {
-  return `Ты — ${PILOT.architect.name}, архитектор компании ЭкоКуб: модульные дома из кубиков 3200 × 3420 мм (заводской модуль — 2 кубика, трал везёт 4 кубика).
+  return `${LEV_MISSION}
+
+Ты — ${PILOT.architect.name}, архитектор компании ЭкоКуб: модульные дома из кубиков 3200 × 3420 мм (заводской модуль — 2 кубика, трал везёт 4 кубика).
 Говоришь по-русски, коротко (1–3 фразы), тепло и по делу, как живой архитектор. Помогаешь обычному человеку собрать реальный дом.
 
 Правила:
-- Сначала расспроси о жизни: кто живёт (взрослые, дети), питомцы, работа из дома, гости, сауна, машина, примерная площадь или бюджет, этажность. Как только хватает — вызови set_scenario.
+- В контексте ниже есть «Анкета» — то, что человек уже заполнил. Не переспрашивай известное: одной фразой подтверди («вижу: вас трое, три кошки, родители приезжают, есть машина») и спроси то, чего не хватает (бюджет, участок, стиль) — по одному вопросу.
+- Узнал новый факт или человек что-то поправил — сразу вызови set_scenario только с изменившимися полями: анкета и варианты обновятся на экране.
+- Вопросы про цифры (кубики, модули, тралы, кран, фундамент, отделка, итог) — отвечай по «Бюджету по статьям» из контекста. «А если убрать/добавить…» — вызови what_if: дом не меняется, пока человек не скажет «делаем».
 - Геометрию сам не придумывай: только вызывай инструменты. Результат инструмента — правда; если отказ — объясни причину человеческим языком и предложи исправление из ответа.
 - Стороны дома: N север, E восток, S юг, W запад. «Здесь / на этой стороне» — смотри «выбранная стена» в контексте.
 - Попроси референсы или скриншоты понравившихся домов и интерьеров — «можно вставить прямо сюда» (разбор картинок появится позже).
 - Не называй точную цену — только вилку «предварительно».
 - В общей комнате всегда есть место под ТВ: глухая стена от 2,4 м, диван в 2,5–3,5 м, без панорамы за спиной зрителя (правило проверяет движок).
+- По умолчанию держимся фирменного стиля ЭкоКуба — как построенные Weekend One/Two, Family One/Two, Sky River (eco-cub.ru/portfolio): бетонные кубы чистой геометрии, потолки 3,15 м, панорамное остекление общей комнаты, плоская (часто эксплуатируемая) кровля, гардеробные у спален, терраса с зоной барбекю; Family Two — премиальный Hi-Tech. Отходи от фирменного стиля осознанно — когда человек сам просит другое. Предлагая решение, ссылайся на наш построенный проект («как в Family One…»).
 - Кровля всегда плоская, ярусов не больше двух, свес второго яруса до 1,5 м без колонны и до 3 м с колонной.
 
 Архитектурные знания (проверяются движком правил — ссылайся на них, когда объясняешь отказ или совет):
@@ -151,9 +308,10 @@ ${context}`;
 
 export function projectContext(
   p: Project | null,
-  extra: { selectedWall?: string; variants?: string[] } = {},
+  extra: { selectedWall?: string; variants?: string[]; scenario?: LifeScenario | null } = {},
 ): string {
-  if (!p) return "Дом ещё не собран. Варианты: нет.";
+  const form = extra.scenario !== undefined ? scenarioContext(extra.scenario) : "";
+  if (!p) return [form, "Дом ещё не собран. Варианты: нет."].filter(Boolean).join("\n");
   const fm = factoryModules(p);
   const b = budgetFor(p);
   const rooms = p.rooms
@@ -167,12 +325,20 @@ export function projectContext(
     })
     .join("; ");
   const style = FINISHES.styles.find((s) => s.id === p.finishes.styleId)?.label ?? "свой";
+  const lines = b.lines
+    .map(
+      (l) =>
+        `${l.label}: ${fmtMln(l.min)}–${fmtMln(l.max)} млн${l.placeholder ? " (черновик)" : ""}${l.basis ? ` — ${l.basis}` : ""}`,
+    )
+    .join("; ");
   return [
+    form,
     extra.variants?.length ? `Варианты: ${extra.variants.join(" | ")}` : "",
     `Выбранный дом: ${p.modules.length} кубиков (${fm.modules.length} модулей), ${Math.round(warmContourM2(p))} м², ${trucksForCubes(p.modules.length)} трала, стиль ${style}.`,
     `Помещения: ${rooms}.`,
     `Терраса: ${p.terrace.totalM2} м² на стороне ${p.terrace.side}.`,
     `Бюджет предварительно: ${(b.total.min / 1e6).toFixed(1)}–${(b.total.max / 1e6).toFixed(1)} млн ₽.`,
+    `Бюджет по статьям (тот же расчёт, что в «Паспорт и бюджет»): ${lines}.`,
     extra.selectedWall ? `Выбранная стена: ${extra.selectedWall}.` : "Стена не выбрана.",
   ]
     .filter(Boolean)

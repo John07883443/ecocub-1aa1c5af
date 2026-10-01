@@ -265,7 +265,28 @@ export function briefFromScenario(
     styleHints: s.styleHints,
     bedroomPurposes: use.filter((i) => i.purpose).map((i) => i.purpose!),
     recommendations: [...program.recommendations, ...program.plotItems],
+    masterSuite: masterSuiteFits(
+      s,
+      use.reduce((a, i) => a + i.modules, 0),
+    ),
+    maxAreaM2: s.desiredAreaM2?.max,
+    household: {
+      cats: s.pets?.cats ?? 0,
+      dogs: s.pets?.dogs ?? 0,
+      car: !!s.car,
+    },
   };
+}
+
+/**
+ * Главная спальня на 2 кубика (с гардеробной) — если желаемая площадь и бюджет
+ * вмещают ещё один кубик сверх программы. Без указанной площади — не раздуваем дом.
+ */
+export function masterSuiteFits(s: LifeScenario, modules: number): boolean {
+  if (!s.desiredAreaM2) return false;
+  if (s.desiredAreaM2.max < (modules + 1) * M2()) return false;
+  if (s.budgetRub && s.budgetRub.max < quickBudgetRange(modules + 1).min) return false;
+  return true;
 }
 
 export function checkArea(s: LifeScenario, program = programFromScenario(s)): AreaCheck {

@@ -4,7 +4,7 @@
  * рисуется на плане и в 3D. По нему проверяется маршрут от входа.
  */
 import { contact, footprint } from "./geometry.ts";
-import type { ModulePlacement, Opening, Project } from "./types.ts";
+import type { ModulePlacement, Opening, Project, Room } from "./types.ts";
 import { intersect } from "./geometry.ts";
 
 export interface RoomEdge {
@@ -94,4 +94,20 @@ export function checkRoutes(p: Project): RouteCheck {
     unreachable: p.rooms.filter((r) => !all.has(r.id)).map((r) => r.id),
     throughBedroom: [...bedrooms].filter((b) => all.has(b) && !noBed.has(b)),
   };
+}
+
+/** Холлы 1-го яруса, которые ничего не раздают: в них не открывается ни одна комната и нет входа. */
+export function deadEndHalls(p: Project): Room[] {
+  const edges = roomGraph(p);
+  const typeOf = (id: string) => p.rooms.find((r) => r.id === id)?.type;
+  return p.rooms.filter(
+    (r) =>
+      r.type === "corridor" &&
+      !p.openings.some((o) => o.kind === "entrance" && o.roomId === r.id) &&
+      !edges.some((e) => {
+        const other = e.a === r.id ? e.b : e.b === r.id ? e.a : null;
+        const t = other ? typeOf(other) : undefined;
+        return !!t && t !== "kitchen-living" && t !== "hall";
+      }),
+  );
 }
