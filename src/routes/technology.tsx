@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
+import { NO_FINISH_PRICE_PER_M2_RUB, START_PRICE_PER_M2_RUB } from "@/lib/site";
+import { formatRubSpaced } from "@/lib/seo";
 
 export const Route = createFileRoute("/technology")({
   head: () => ({
@@ -197,7 +199,7 @@ function TechnologyPage() {
               Почему мы доступнее
             </p>
             <h2 className="mt-3 text-3xl font-bold uppercase md:text-4xl">
-              Дешевле панельного дома, прочнее газобетона
+              По цене панельного дома — прочнее газобетона
             </h2>
             <div className="mt-8 space-y-6 text-base text-foreground/90">
               <p>
@@ -207,9 +209,16 @@ function TechnologyPage() {
               </p>
               <p>
                 Модули ECO·CUB легче (бетон + утеплитель снаружи), монтируются обычным автокраном за
-                10 дней, а утепление снаружи устраняет мостики холода. Поэтому наша цена —{" "}
-                <strong className="text-accent">от 105 000 ₽ за м²</strong> с фиксированной сметой и
-                заводской гарантией.
+                10 дней, а утепление снаружи устраняет мостики холода. Поэтому наша цена без
+                чистовой отделки —{" "}
+                <strong className="text-accent">
+                  около {formatRubSpaced(NO_FINISH_PRICE_PER_M2_RUB)} ₽ за м²
+                </strong>{" "}
+                уже с доставкой и фундаментом, а под ключ с чистовой отделкой —{" "}
+                <strong className="text-accent">
+                  {formatRubSpaced(START_PRICE_PER_M2_RUB)} ₽ за м²
+                </strong>
+                , с фиксированной сметой и заводской гарантией.
               </p>
               <p>
                 По сравнению с газобетоном вы получаете капитальный дом из настоящего бетона с

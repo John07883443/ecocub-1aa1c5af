@@ -1,4 +1,6 @@
 import { Check, X, Minus } from "lucide-react";
+import { NO_FINISH_PRICE_PER_M2_RUB, START_PRICE_PER_M2_RUB } from "@/lib/site";
+import { formatRubSpaced } from "@/lib/seo";
 
 type Cell = string | "yes" | "no" | "partial";
 
@@ -6,7 +8,26 @@ const headers = ["Параметр", "ECO·CUB", "Кирпич", "Газобет
 
 const rows: Cell[][] = [
   ["Срок строительства", "90 дней", "12–18 мес", "8–12 мес", "6–10 мес", "6–9 мес"],
-  ["Цена за м² (предчист.)", "от 105 000 ₽", "90–130 тыс ₽", "70–100 тыс ₽", "100–150 тыс ₽", "130–180 тыс ₽"],
+  // Конкуренты сравниваются «под предчистовую», поэтому в этой строке у нас —
+  // ставка без чистовой отделки. Честная оговорка: наша цифра уже включает
+  // доставку и фундамент, у конкурентов обычно нет — это сказано в подписи.
+  [
+    "Цена за м² без чистовой отделки",
+    `≈ ${formatRubSpaced(NO_FINISH_PRICE_PER_M2_RUB)} ₽ с доставкой и фундаментом`,
+    "90–130 тыс ₽",
+    "70–100 тыс ₽",
+    "100–150 тыс ₽",
+    "130–180 тыс ₽",
+  ],
+  // Под ключ с чистовой отделкой у конкурентов единой цифры нет — не выдумываем.
+  [
+    "Цена за м² под ключ с чистовой",
+    `${formatRubSpaced(START_PRICE_PER_M2_RUB)} ₽`,
+    "по смете",
+    "по смете",
+    "по смете",
+    "по смете",
+  ],
   ["Зависимость от погоды", "no", "yes", "yes", "yes", "partial"],
   ["Заводское качество", "yes", "no", "no", "no", "yes"],
   ["Срок службы", ">120 лет", "100+ лет", "50–70 лет", "100+ лет", "80–100 лет"],
@@ -18,7 +39,10 @@ const rows: Cell[][] = [
 
 function renderCell(c: Cell, isHighlight: boolean) {
   const base = isHighlight ? "font-semibold text-accent" : "text-foreground";
-  if (c === "yes") return <Check className={`mx-auto size-5 ${isHighlight ? "text-accent" : "text-emerald-600"}`} />;
+  if (c === "yes")
+    return (
+      <Check className={`mx-auto size-5 ${isHighlight ? "text-accent" : "text-emerald-600"}`} />
+    );
   if (c === "no") return <X className="mx-auto size-5 text-destructive/70" />;
   if (c === "partial") return <Minus className="mx-auto size-5 text-muted-foreground" />;
   return <span className={base}>{c}</span>;
