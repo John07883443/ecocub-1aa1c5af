@@ -198,7 +198,7 @@ function suggestFix(ev: Evaluation): string | undefined {
   if (!v) return undefined;
   switch (v.ruleId) {
     case "overhang":
-      return "Уменьшите свес до 1,5 м или сдвиньте второй ярус обратно.";
+      return "Свес до 1,5 м — без колонны, до 3 м — с колонной (черновик); больше — сдвиньте второй ярус обратно.";
     case "upper-support":
       return "Сдвиньте модуль второго яруса так, чтобы он опирался на нижние хотя бы наполовину.";
     case "max-tiers":

@@ -23,6 +23,7 @@ import {
 } from "./geometry.ts";
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
 import { factoryModules } from "./factory.ts";
+import { PILOT } from "../pilot.config.ts";
 
 const SRC_ALBUM = "Альбом Weekend One";
 const SRC_OWNER = "Решение владельца 01.10.2026";
@@ -255,15 +256,16 @@ const upperSupport: Check = (p) => {
       );
     for (const side of SIDES) {
       const o = s.overhangMm[side];
+      const withColumn = overhangWithColumnMm();
+      if (o > limit && withColumn !== null && o <= withColumn) continue; // колонна, см. reviewItems
       if (o > limit) {
-        const withColumn = GRAMMAR.tiers.overhangWithColumnMm;
         out.push(
           fail(
             "overhang",
             "hard",
             withColumn === null
               ? `Свес ${fmtM(o)} м больше ${fmtM(limit)} м: без колонны так нельзя, а предел с колонной завод пока не подтвердил — такой вариант не предлагаем.`
-              : `Свес ${fmtM(o)} м больше ${fmtM(limit)} м — нужна колонна.`,
+              : `Свес ${fmtM(o)} м больше ${fmtM(withColumn)} м — так нельзя даже с колонной.`,
             SRC_OWNER,
             u.id,
             true,
@@ -726,14 +728,43 @@ const cubesPairIntoModules: Check = (p) => {
   ];
 };
 
+/** Предел свеса с колонной: черновик пилота (3 м), пока завод не назвал своё. */
+export function overhangWithColumnMm(): number | null {
+  return PILOT.structure.overhangWithColumnMm ?? GRAMMAR.tiers.overhangWithColumnMm;
+}
+
+/** Сколько колонн нужно под свесами больше 1,5 м. */
+export function columnsFor(p: Project): number {
+  const t1 = modulesOnTier(p, 1);
+  let n = 0;
+  for (const u of modulesOnTier(p, 2)) {
+    const s = supportOf(u, t1);
+    for (const side of SIDES)
+      if (s.overhangMm[side] > GRAMMAR.tiers.maxOverhangMm)
+        n += PILOT.structure.columnsPerOverhangSide;
+  }
+  return n;
+}
+
 const reviewItems: Check = (p) => {
   const out: RuleResult[] = [];
+  const cols = columnsFor(p);
+  if (cols)
+    out.push({
+      ...pass(
+        "column-review",
+        "info",
+        `Свес больше 1,5 м — под ним ${cols} колонн(ы). Предел 3 м и колонна — черновик, проверяет проектировщик.`,
+        "Черновик пилота 01.10.2026",
+      ),
+      review: true,
+    });
   if (modulesOnTier(p, 2).length) {
     out.push({
       ...pass(
         "stairs-review",
         "info",
-        "Лестница на второй ярус: тип и габарит не заданы заводом.",
+        `Лестница на второй ярус: ${PILOT.structure.stairType} (черновик), габарит уточняет проектировщик.`,
         SRC_ALBUM,
       ),
       review: true,

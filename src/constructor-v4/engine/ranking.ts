@@ -6,6 +6,7 @@
 import { GRAMMAR } from "../grammar/index.ts";
 import { contact, exteriorFaces, footprint, intersect } from "./geometry.ts";
 import { budgetFor } from "./price.ts";
+import { factoryModules } from "./factory.ts";
 import {
   compassOf,
   modulesOnTier,
@@ -17,7 +18,14 @@ import {
 import type { Project, Room } from "./types.ts";
 
 export type Criterion =
-  "fit" | "areaEfficiency" | "circulation" | "daylight" | "privacy" | "wetStacking" | "cost";
+  | "fit"
+  | "factory"
+  | "areaEfficiency"
+  | "circulation"
+  | "daylight"
+  | "privacy"
+  | "wetStacking"
+  | "cost";
 
 export interface Rank {
   total: number;
@@ -28,6 +36,7 @@ export interface Rank {
 
 export const CRITERIA_WEIGHTS: Record<Criterion, number> = {
   fit: 2,
+  factory: 2,
   areaEfficiency: 1,
   circulation: 1.5,
   daylight: 2,
@@ -38,6 +47,7 @@ export const CRITERIA_WEIGHTS: Record<Criterion, number> = {
 
 const PHRASE: Record<Criterion, string> = {
   fit: "лучше всех соответствует приёмам наших домов",
+  factory: "все кубики собираются в заводские модули по 2",
   areaEfficiency: "меньше всего теряется площади",
   circulation: "короткие проходы: всё рядом с общей комнатой",
   daylight: "больше всего света в гостиной и спальнях",
@@ -135,6 +145,7 @@ export function criteriaOf(p: Project, ev: Evaluation): Omit<Record<Criterion, n
   }
   return {
     fit: ev.softScore,
+    factory: p.modules.length ? 1 - factoryModules(p).unpairedCubeIds.length / p.modules.length : 1,
     areaEfficiency: clamp((clear / warm - 0.7) / 0.15),
     circulation: clamp(1.5 / hopsFromEntrance(p)),
     daylight: 0.6 * (sunny / allGlass) + 0.4 * (bedMods.length ? corner / bedMods.length : 1),

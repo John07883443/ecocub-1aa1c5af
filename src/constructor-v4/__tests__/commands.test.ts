@@ -18,7 +18,7 @@ test("пресеты окон дают только высоты из катал
   assert.equal(WINDOW_PRESETS["floor-to-ceiling"].heightMm, 3150);
 });
 
-test("«сделай второй этаж со свесом 1,2 м» применяется, 1,6 м — нет", () => {
+test("«сделай второй этаж со свесом 1,2 м» применяется, 3,1 м — нет", () => {
   const ok = applyCommand(twoTier(), { op: "set_overhang", side: "W", mm: 1200 });
   assert.equal(ok.ok, true);
   if (ok.ok) {
@@ -28,7 +28,7 @@ test("«сделай второй этаж со свесом 1,2 м» приме
       1200,
     );
   }
-  const bad = applyCommand(twoTier(), { op: "set_overhang", side: "W", mm: 1600 });
+  const bad = applyCommand(twoTier(), { op: "set_overhang", side: "W", mm: 3100 });
   assert.equal(bad.ok, false);
   if (!bad.ok) assert.ok(bad.violations.some((v) => /колонн/.test(v)));
 });

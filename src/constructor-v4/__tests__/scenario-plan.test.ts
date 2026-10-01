@@ -200,9 +200,9 @@ test("дверь: перенос входа, ширина из каталога,
 });
 
 test("отказ по правилам несёт подсказку исправления", () => {
-  const r = applyCommand(twoTier(), { op: "set_overhang", side: "W", mm: 1600 });
+  const r = applyCommand(twoTier(), { op: "set_overhang", side: "W", mm: 3100 });
   assert.equal(r.ok, false);
-  if (!r.ok) assert.match(r.suggestion ?? "", /1,5 м/);
+  if (!r.ok) assert.match(r.suggestion ?? "", /1,5 м|Сдвиньте/);
 });
 
 test("дом поворачивается и ставится на участке, правила проверяют посадку", () => {

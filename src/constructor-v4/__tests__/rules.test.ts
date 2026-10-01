@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, roomClearAreaM2 } from "../engine/rules.ts";
+import { columnsFor, evaluate, roomClearAreaM2 } from "../engine/rules.ts";
 import { buildProject } from "../engine/derive.ts";
 import type { Project } from "../engine/types.ts";
 import { singleTier, twoTier } from "./fixtures.ts";
@@ -30,12 +30,16 @@ test("кухня-гостиная на двух модулях = 2 × 8,34 + 0,6
   );
 });
 
-test("свес 1,6 м без колонны отклоняется, 1,2 м проходит", () => {
-  const bad = evaluate(twoTier(-1600)).hardViolations.find((v) => v.ruleId === "overhang");
-  assert.ok(bad, "свес 1,6 м должен быть запрещён");
-  assert.match(bad.message, /1,6 м больше 1,5 м/);
-  assert.equal(bad.review, true);
+test("свес: 1,2 м без колонны; 1,6 м — с колонной (черновик); больше 3 м — запрет", () => {
   assert.deepEqual(evaluate(twoTier(-1200)).hardViolations, []);
+  const withColumn = evaluate(twoTier(-1600));
+  assert.deepEqual(withColumn.hardViolations, [], "1,6 м допустимо с колонной");
+  assert.ok(withColumn.review.some((r) => r.ruleId === "column-review"));
+  assert.equal(columnsFor(twoTier(-1600)), 2);
+  const bad = evaluate(twoTier(-3100)).hardViolations.find((v) => v.ruleId === "overhang");
+  assert.ok(bad, "свес 3,1 м должен быть запрещён");
+  assert.match(bad.message, /3,1 м больше 3 м/);
+  assert.equal(bad.review, true);
 });
 
 test("три яруса отклоняются", () => {

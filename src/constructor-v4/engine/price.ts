@@ -6,6 +6,8 @@ import { FINISHES, findFinish } from "../grammar/index.ts";
 import type { FinishCategory } from "../grammar/index.ts";
 import { MM2_PER_M2, area, footprint } from "./geometry.ts";
 import { factoryModules } from "./factory.ts";
+import { PILOT } from "../pilot.config.ts";
+import { columnsFor } from "./rules.ts";
 import { PRICE_CONFIG, type PriceConfig, type Rate } from "./price-config.ts";
 import { modulesOnTier, warmContourM2 } from "./rules.ts";
 import type { Project, Range } from "./types.ts";
@@ -30,13 +32,23 @@ export interface Budget {
   status: PriceConfig["status"];
   disclaimer: string;
   whatCanChangePrice: string[];
+  /** Сверка с ориентиром владельца: середина вилки по статьям «всё включено» на м². */
+  benchmark: { perM2: number; allInMidPerM2: number; articles: BudgetLineId[]; note: string };
 }
+
+export const BENCHMARK_ARTICLES: BudgetLineId[] = [
+  "modules",
+  "finishes",
+  "transport",
+  "crane-montage",
+  "foundation",
+];
 
 const round = (n: number) => Math.round(n / 10_000) * 10_000;
 const mul = (r: Range, k: number): Range => ({ min: r.min * k, max: r.max * k });
 
 export interface BudgetOptions {
-  foundation?: "piles" | "slab";
+  foundation?: "piles" | "slab" | "screw-piles";
   config?: PriceConfig;
 }
 
@@ -58,7 +70,7 @@ export function quickBudgetRange(modules: number, cfg: PriceConfig = PRICE_CONFI
     trucks[k] * cfg.truckRub[k] +
     modules * cfg.installPerModule[k] +
     cfg.craneRub[k] +
-    built * cfg.foundationPerM2.piles[k] +
+    built * cfg.foundationPerM2[PILOT.structure.defaultFoundation][k] +
     0.6 * warm * cfg.terracePerM2[k];
   return { min: round(r("min")), max: round(r("max")) };
 }
@@ -122,15 +134,19 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
       min: n * cfg.installPerModule.min + cfg.craneRub.min,
       max: n * cfg.installPerModule.max + cfg.craneRub.max,
     },
-    `${n} модулей × монтаж + кран на объект`,
+    `${n} кубиков × монтаж + кран на объект`,
     [cfg.installPerModule, cfg.craneRub],
   );
 
-  const foundation = opts.foundation ?? "piles";
+  const foundation = opts.foundation ?? PILOT.structure.defaultFoundation;
   const built = modulesOnTier(p, 1).reduce((s, m) => s + area(footprint(m)), 0) / MM2_PER_M2;
   add(
     "foundation",
-    foundation === "piles" ? "Фундамент: ЖБИ-сваи" : "Фундамент: плита",
+    {
+      piles: "Фундамент: ЖБИ-сваи",
+      slab: "Фундамент: плита",
+      "screw-piles": "Фундамент: винтовые сваи",
+    }[foundation],
     mul(cfg.foundationPerM2[foundation], built),
     `Пятно застройки ${built.toFixed(1)} м²; тип уточняется по геологии`,
     [cfg.foundationPerM2[foundation]],
@@ -153,8 +169,15 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
   if (upper) {
     opt.min += upper * cfg.upperTierPerModule.min + cfg.stairsRub.min;
     opt.max += upper * cfg.upperTierPerModule.max + cfg.stairsRub.max;
-    optParts.push(`второй ярус ${upper} мод. и лестница`);
+    optParts.push(`второй ярус ${upper} куб. и лестница (${PILOT.structure.stairType})`);
     optRates.push(cfg.upperTierPerModule, cfg.stairsRub);
+  }
+  const cols = columnsFor(p);
+  if (cols) {
+    opt.min += cols * cfg.columnRub.min;
+    opt.max += cols * cfg.columnRub.max;
+    optParts.push(`колонн под свесом: ${cols}`);
+    optRates.push(cfg.columnRub);
   }
   if (baths > 1) {
     opt.min += (baths - 1) * cfg.extraBathroomRub.min;
@@ -176,6 +199,16 @@ export function budgetFor(p: Project, opts: BudgetOptions = {}): Budget {
   });
   return {
     currency: "RUB",
+    benchmark: {
+      perM2: cfg.benchmarkAllInPerM2.min,
+      allInMidPerM2: Math.round(
+        lines
+          .filter((l) => BENCHMARK_ARTICLES.includes(l.id))
+          .reduce((s, l) => s + (l.min + l.max) / 2, 0) / warm,
+      ),
+      articles: BENCHMARK_ARTICLES,
+      note: "Ориентир владельца ≈130 тыс. ₽/м² всё включено; терраса и опции — сверху.",
+    },
     lines,
     total,
     status: cfg.status,

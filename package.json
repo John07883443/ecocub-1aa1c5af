@@ -17,7 +17,9 @@
     "test:planner": "node --experimental-strip-types --test \"src/lib/planner/__tests__/*.test.ts\"",
     "test:house-project": "node --experimental-strip-types --test \"src/lib/house-project/__tests__/*.test.ts\"",
     "house-projects:export": "node --experimental-strip-types scripts/house-projects-export.mjs",
-    "test:constructor-v4": "node --experimental-strip-types --test \"src/constructor-v4/__tests__/*.test.ts\""
+    "test:constructor-v4": "node --experimental-strip-types --test \"src/constructor-v4/__tests__/*.test.ts\"",
+    "pilot": "node scripts/pilot.mjs",
+    "pilot:server": "node scripts/pilot-server.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

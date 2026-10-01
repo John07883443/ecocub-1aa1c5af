@@ -244,7 +244,7 @@ export function checkArea(s: LifeScenario, program = programFromScenario(s)): Ar
       options.push({
         id: "kids-share",
         label: "Одна детская на двоих",
-        reason: "Пока дети маленькие, общая детская экономит модуль; позже дом можно дорастить.",
+        reason: "Пока дети маленькие, общая детская экономит кубик; позже дом можно дорастить.",
         deltaModules: -Math.floor(s.kids / 2),
         solves: solvesBy(-Math.floor(s.kids / 2)),
       });
@@ -253,7 +253,7 @@ export function checkArea(s: LifeScenario, program = programFromScenario(s)): Ar
       options.push({
         id: "compact-kitchen",
         label: "Кухня-гостиная поменьше",
-        reason: "Общая комната на 2 модуля (17,3 м²) — как в Weekend One; тесновато для гостей.",
+        reason: "Общая комната на 2 кубика (17,3 м²) — как в Weekend One; тесновато для гостей.",
         deltaModules: -(kitchenItem.modules - 2),
         solves: solvesBy(-(kitchenItem.modules - 2)),
       });
@@ -278,10 +278,10 @@ export function checkArea(s: LifeScenario, program = programFromScenario(s)): Ar
   const fmtRub = (n: number) =>
     `${(n / 1_000_000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
   const message = fits
-    ? `Под ваш сценарий нужно от ${minArea} м² (${program.minModules} модулей), комфортно — ${recommended.min}–${recommended.max} м².`
+    ? `Под ваш сценарий нужно от ${minArea} м² (${program.minModules} кубиков), комфортно — ${recommended.min}–${recommended.max} м².`
     : [
         limitedBy.includes("area") &&
-          `${s.desiredAreaM2!.max} м² — не помещается: под ваш сценарий минимум ${minArea} м² (${program.minModules} модулей), рекомендуем ${recommended.min}–${recommended.max} м².`,
+          `${s.desiredAreaM2!.max} м² — не помещается: под ваш сценарий минимум ${minArea} м² (${program.minModules} кубиков), рекомендуем ${recommended.min}–${recommended.max} м².`,
         limitedBy.includes("budget") &&
           `Бюджет до ${fmtRub(s.budgetRub!.max)} меньше минимальной оценки ${fmtRub(minBudget.min)}–${fmtRub(minBudget.max)} (предварительно).`,
         limitedBy.includes("plot") &&
