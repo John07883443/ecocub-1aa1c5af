@@ -83,6 +83,24 @@ async function rg(path: string, body: unknown): Promise<Record<string, unknown>>
   return JSON.parse(text) as Record<string, unknown>;
 }
 
+/** Вызов chat/completions rgrouter (для архитектора-раскладчика и критика). */
+export async function rgChat(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (!cfg().rgKey) throw new Error("Нет ключа rgrouter на сервере.");
+  return rg("/chat/completions", body);
+}
+
+/** Модели пилота из окружения (без ключей). */
+export function pilotModels() {
+  const c = cfg();
+  const e = env();
+  return {
+    chat: c.chatModel,
+    layout: e.PILOT_LAYOUT_MODEL || c.chatModel,
+    critic: e.PILOT_CRITIC_MODEL || "rg-google-gemini-3.8-flash",
+    configured: !!c.rgKey,
+  };
+}
+
 export async function pilotChat(input: unknown, session: string): Promise<PilotResult> {
   const c = cfg();
   if (!c.rgKey)
@@ -105,8 +123,13 @@ export async function pilotChat(input: unknown, session: string): Promise<PilotR
     tools?: unknown[];
     system?: string;
   };
+  const override = (input as { model?: unknown } | null)?.model;
+  const evalOk =
+    typeof override === "string" &&
+    !!env().PILOT_EVAL_SECRET &&
+    (input as { evalSecret?: unknown }).evalSecret === env().PILOT_EVAL_SECRET;
   const out = await rg("/chat/completions", {
-    model: c.chatModel,
+    model: evalOk ? override : c.chatModel,
     messages: [
       { role: "system", content: String(system).slice(0, 20_000) },
       ...messages.slice(-30),

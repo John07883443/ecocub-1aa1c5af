@@ -36,6 +36,8 @@ import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.re
 import { Route as ApiDesignProjectsRouteImport } from './routes/api.design.projects'
 import { Route as ApiDesignSessionRouteImport } from './routes/api.design.session'
 import { Route as ApiPilotChatRouteImport } from './routes/api.pilot.chat'
+import { Route as ApiPilotCriticRouteImport } from './routes/api.pilot.critic'
+import { Route as ApiPilotDesignRouteImport } from './routes/api.pilot.design'
 import { Route as ApiPilotHealthRouteImport } from './routes/api.pilot.health'
 import { Route as ApiPilotLeadRouteImport } from './routes/api.pilot.lead'
 import { Route as ApiPilotRenderRouteImport } from './routes/api.pilot.render'
@@ -181,6 +183,16 @@ const ApiPilotChatRoute = ApiPilotChatRouteImport.update({
   path: '/api/pilot/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPilotCriticRoute = ApiPilotCriticRouteImport.update({
+  id: '/api/pilot/critic',
+  path: '/api/pilot/critic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPilotDesignRoute = ApiPilotDesignRouteImport.update({
+  id: '/api/pilot/design',
+  path: '/api/pilot/design',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPilotHealthRoute = ApiPilotHealthRouteImport.update({
   id: '/api/pilot/health',
   path: '/api/pilot/health',
@@ -255,6 +267,8 @@ export interface FileRoutesByFullPath {
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
   '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/critic': typeof ApiPilotCriticRoute
+  '/api/pilot/design': typeof ApiPilotDesignRoute
   '/api/pilot/health': typeof ApiPilotHealthRoute
   '/api/pilot/lead': typeof ApiPilotLeadRoute
   '/api/pilot/render': typeof ApiPilotRenderRoute
@@ -293,6 +307,8 @@ export interface FileRoutesByTo {
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
   '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/critic': typeof ApiPilotCriticRoute
+  '/api/pilot/design': typeof ApiPilotDesignRoute
   '/api/pilot/health': typeof ApiPilotHealthRoute
   '/api/pilot/lead': typeof ApiPilotLeadRoute
   '/api/pilot/render': typeof ApiPilotRenderRoute
@@ -332,6 +348,8 @@ export interface FileRoutesById {
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
   '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/critic': typeof ApiPilotCriticRoute
+  '/api/pilot/design': typeof ApiPilotDesignRoute
   '/api/pilot/health': typeof ApiPilotHealthRoute
   '/api/pilot/lead': typeof ApiPilotLeadRoute
   '/api/pilot/render': typeof ApiPilotRenderRoute
@@ -372,6 +390,8 @@ export interface FileRouteTypes {
     | '/api/design/projects'
     | '/api/design/session'
     | '/api/pilot/chat'
+    | '/api/pilot/critic'
+    | '/api/pilot/design'
     | '/api/pilot/health'
     | '/api/pilot/lead'
     | '/api/pilot/render'
@@ -410,6 +430,8 @@ export interface FileRouteTypes {
     | '/api/design/projects'
     | '/api/design/session'
     | '/api/pilot/chat'
+    | '/api/pilot/critic'
+    | '/api/pilot/design'
     | '/api/pilot/health'
     | '/api/pilot/lead'
     | '/api/pilot/render'
@@ -448,6 +470,8 @@ export interface FileRouteTypes {
     | '/api/design/projects'
     | '/api/design/session'
     | '/api/pilot/chat'
+    | '/api/pilot/critic'
+    | '/api/pilot/design'
     | '/api/pilot/health'
     | '/api/pilot/lead'
     | '/api/pilot/render'
@@ -485,6 +509,8 @@ export interface RootRouteChildren {
   ApiDesignProjectsRoute: typeof ApiDesignProjectsRouteWithChildren
   ApiDesignSessionRoute: typeof ApiDesignSessionRoute
   ApiPilotChatRoute: typeof ApiPilotChatRoute
+  ApiPilotCriticRoute: typeof ApiPilotCriticRoute
+  ApiPilotDesignRoute: typeof ApiPilotDesignRoute
   ApiPilotHealthRoute: typeof ApiPilotHealthRoute
   ApiPilotLeadRoute: typeof ApiPilotLeadRoute
   ApiPilotRenderRoute: typeof ApiPilotRenderRoute
@@ -686,6 +712,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPilotChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pilot/critic': {
+      id: '/api/pilot/critic'
+      path: '/api/pilot/critic'
+      fullPath: '/api/pilot/critic'
+      preLoaderRoute: typeof ApiPilotCriticRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pilot/design': {
+      id: '/api/pilot/design'
+      path: '/api/pilot/design'
+      fullPath: '/api/pilot/design'
+      preLoaderRoute: typeof ApiPilotDesignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pilot/health': {
       id: '/api/pilot/health'
       path: '/api/pilot/health'
@@ -803,6 +843,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDesignProjectsRoute: ApiDesignProjectsRouteWithChildren,
   ApiDesignSessionRoute: ApiDesignSessionRoute,
   ApiPilotChatRoute: ApiPilotChatRoute,
+  ApiPilotCriticRoute: ApiPilotCriticRoute,
+  ApiPilotDesignRoute: ApiPilotDesignRoute,
   ApiPilotHealthRoute: ApiPilotHealthRoute,
   ApiPilotLeadRoute: ApiPilotLeadRoute,
   ApiPilotRenderRoute: ApiPilotRenderRoute,

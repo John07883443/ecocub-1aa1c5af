@@ -144,3 +144,61 @@ export async function runRenderJob(
     if (j.data.status === "done") return p;
   }
 }
+
+/**
+ * Общая задача сервера пилота (design / critic): POST → jobId, затем GET ?job=…
+ * до status done/error. Бросает Error с человеческим текстом.
+ */
+export async function runJob<T>(
+  api: string,
+  path: string,
+  body: unknown,
+  opts: {
+    session: string;
+    fetch?: FetchLike;
+    onStage?: (stage: string) => void;
+    pollMs?: number;
+    timeoutMs?: number;
+  },
+): Promise<T> {
+  const f: FetchLike = opts.fetch ?? ((u, i) => fetch(u, i));
+  const headers = { "Content-Type": "application/json", "X-Pilot-Session": opts.session };
+  let start: Response;
+  try {
+    start = await f(`${api}/${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+  } catch {
+    throw new Error("Сервер пилота не отвечает — проверьте интернет и попробуйте ещё раз.");
+  }
+  const s = await readJson<{ jobId?: string }>(start);
+  if (!s.ok) throw new Error(s.error);
+  if (!s.data.jobId) throw new Error("Сервер не вернул задачу — попробуйте ещё раз.");
+  const deadline = Date.now() + (opts.timeoutMs ?? 4 * 60_000);
+  let failures = 0;
+  for (;;) {
+    if (Date.now() > deadline)
+      throw new Error("Архитектор думает слишком долго — попробуйте ещё раз.");
+    await sleep(opts.pollMs ?? 1500);
+    let r: Response;
+    try {
+      r = await f(`${api}/${path}?job=${encodeURIComponent(s.data.jobId)}`, { headers });
+    } catch {
+      if (++failures >= 5) throw new Error("Связь с сервером пропала — попробуйте ещё раз.");
+      continue;
+    }
+    const j = await readJson<{
+      status?: string;
+      stage?: string;
+      result?: T;
+      error?: string | null;
+    }>(r);
+    if (!j.ok) {
+      if (r.status >= 500 && ++failures < 5) continue;
+      throw new Error(j.error);
+    }
+    failures = 0;
+    if (j.data.stage) opts.onStage?.(j.data.stage);
+    if (j.data.status === "error")
+      throw new Error(j.data.error || "Не получилось — попробуйте ещё раз.");
+    if (j.data.status === "done") return j.data.result as T;
+  }
+}

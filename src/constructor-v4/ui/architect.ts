@@ -12,6 +12,7 @@ import type { LifeScenario } from "../engine/scenario.ts";
 import { FINISHES, roomSpec } from "../grammar/index.ts";
 import { tvPlace } from "../engine/tv.ts";
 import { PILOT } from "../pilot.config.ts";
+import { knowledgeFor } from "../engine/knowledge.ts";
 
 export const SCENARIO_TOOL = {
   type: "function",
@@ -79,7 +80,86 @@ export const SELECT_TOOL = {
   },
 } as const;
 
-export const ALL_TOOLS = [SCENARIO_TOOL, SELECT_TOOL, WHAT_IF_TOOL, ...COMMAND_TOOLS];
+export const CONFIRM_STEP_TOOL = {
+  type: "function",
+  name: "confirm_step",
+  description:
+    "Шаг интервью подтверждён без изменений (человек сказал «да, верно» или «пропустим») — перейти к следующему вопросу.",
+  parameters: {
+    type: "object",
+    properties: {
+      step: {
+        type: "string",
+        enum: ["plot", "people", "pets", "elderly", "lifestyle", "style", "budget"],
+      },
+    },
+    required: ["step"],
+  },
+} as const;
+
+export const SHOW_OPTIONS_TOOL = {
+  type: "function",
+  name: "show_options",
+  description:
+    "Показать карточки A/B/C (стиль дома) с картинками. Человек может выбрать одну или смешать: «из А крышу, из Б окна».",
+  parameters: { type: "object", properties: {}, required: [] },
+} as const;
+
+export const APPLY_OPTIONS_TOOL = {
+  type: "function",
+  name: "apply_options",
+  description:
+    "Применить выбор по карточкам A/B/C словами человека как есть: «Б, только терраса побольше», «из А крышу, из Б окна». Вернёт, что из чего взято и что поменялось.",
+  parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+} as const;
+
+export const DESIGN_TOOL = {
+  type: "function",
+  name: "design_variants",
+  description:
+    "Нейросеть-архитектор заново раскладывает 3 варианта дома под бриф (с проверкой правил и прецедентами), затем независимый критик смотрит на план и поправляет. Долго (до минуты) — скажи человеку, что рисуешь.",
+  parameters: {
+    type: "object",
+    properties: { intents: { type: "array", items: { type: "string" }, maxItems: 3 } },
+    required: [],
+  },
+} as const;
+
+export const CRITIC_TOOL = {
+  type: "function",
+  name: "critic_review",
+  description:
+    "Независимый взгляд: модель зрения смотрит на план текущего дома и 3D-снимок, оценивает путь, зонирование, пропорции, фасад, стиль и вносит до 3 правок.",
+  parameters: { type: "object", properties: {}, required: [] },
+} as const;
+
+export const OFFER_TOOL = {
+  type: "function",
+  name: "offer_change",
+  description:
+    "Предложить человеку правку кнопками «показать / не надо» вместо того, чтобы делать молча. command — команда редактора (как у инструментов правки, поле op).",
+  parameters: {
+    type: "object",
+    properties: {
+      text: { type: "string", description: "Коротко: «могу перенести террасу на юг — показать?»" },
+      command: { type: "object" },
+    },
+    required: ["text", "command"],
+  },
+} as const;
+
+export const ALL_TOOLS = [
+  SCENARIO_TOOL,
+  SELECT_TOOL,
+  WHAT_IF_TOOL,
+  CONFIRM_STEP_TOOL,
+  SHOW_OPTIONS_TOOL,
+  APPLY_OPTIONS_TOOL,
+  DESIGN_TOOL,
+  CRITIC_TOOL,
+  OFFER_TOOL,
+  ...COMMAND_TOOLS,
+];
 
 const clampInt = (v: unknown, min: number, max: number): number | undefined => {
   if (v === undefined || v === null || v === "") return undefined;
@@ -296,7 +376,10 @@ export function systemPrompt(context: string): string {
 - Попроси референсы или скриншоты понравившихся домов и интерьеров — «можно вставить прямо сюда» (разбор картинок появится позже).
 - Не называй точную цену — только вилку «предварительно».
 - В общей комнате всегда есть место под ТВ: глухая стена от 2,4 м, диван в 2,5–3,5 м, без панорамы за спиной зрителя (правило проверяет движок).
-- По умолчанию держимся фирменного стиля ЭкоКуба — как построенные Weekend One/Two, Family One/Two, Sky River (eco-cub.ru/portfolio): бетонные кубы чистой геометрии, потолки 3,15 м, панорамное остекление общей комнаты, плоская (часто эксплуатируемая) кровля, гардеробные у спален, терраса с зоной барбекю; Family Two — премиальный Hi-Tech. Отходи от фирменного стиля осознанно — когда человек сам просит другое. Предлагая решение, ссылайся на наш построенный проект («как в Family One…»).
+- По умолчанию держимся фирменного стиля ЭкоКуба (рендеры слайдера eco-cub.ru и построенные Weekend One/Two, Family One/Two, Sky River — см. «Знания под этот дом»). Отходи от него осознанно — когда человек сам просит другое. Предлагая решение, называй прецедент: «как в Family One…», «приём CUBAX 74: две спальни спиной к спине…», «как у Muji Hut — веранда под общей крышей».
+- Ведёшь интервью (блок «Интервью» в контексте): один вопрос за раз, после ответа дом пересобирается — одной фразой скажи, что поменялось и почему. На шаге стиля вызови show_options и попроси выбрать или смешать карточки A/B/C; ответ передай в apply_options как есть.
+- Предлагай, а не делай молча: улучшения — через offer_change (кнопки «показать / не надо»). Новые решения целиком — design_variants, свежий взгляд — critic_review; кратко пересказывай, что поправил критик.
+- Площадь по полу ≈ кубики × 9,25 м², тёплый контур — кубики × 10,94 м²; «под ключ» ≈ 150 тыс. ₽/м² (ориентир владельца), материалы чистовой ≈ 15 тыс./м² отдельно, проект и подключение — отдельной строкой.
 - Кровля всегда плоская, ярусов не больше двух, свес второго яруса до 1,5 м без колонны и до 3 м с колонной.
 
 Архитектурные знания (проверяются движком правил — ссылайся на них, когда объясняешь отказ или совет):
@@ -308,10 +391,22 @@ ${context}`;
 
 export function projectContext(
   p: Project | null,
-  extra: { selectedWall?: string; variants?: string[]; scenario?: LifeScenario | null } = {},
+  extra: {
+    selectedWall?: string;
+    variants?: string[];
+    scenario?: LifeScenario | null;
+    /** Блок интервью (interview.ts). */
+    interview?: string;
+    /** Карточки A/B/C на экране — структурно, чтобы Лев понимал ссылки на их черты. */
+    options?: string;
+  } = {},
 ): string {
   const form = extra.scenario !== undefined ? scenarioContext(extra.scenario) : "";
-  if (!p) return [form, "Дом ещё не собран. Варианты: нет."].filter(Boolean).join("\n");
+  const head = [extra.interview ?? "", form, extra.options ?? ""].filter(Boolean);
+  const cubes = p?.modules.length ?? 7;
+  const tiers = p ? (Math.max(...p.modules.map((m) => m.tier)) as 1 | 2) : "any";
+  const know = `Знания под этот дом:\n${knowledgeFor(cubes, tiers)}`;
+  if (!p) return [...head, "Дом ещё не собран. Варианты: нет.", know].join("\n");
   const fm = factoryModules(p);
   const b = budgetFor(p);
   const rooms = p.rooms
@@ -332,7 +427,7 @@ export function projectContext(
     )
     .join("; ");
   return [
-    form,
+    ...head,
     extra.variants?.length ? `Варианты: ${extra.variants.join(" | ")}` : "",
     `Выбранный дом: ${p.modules.length} кубиков (${fm.modules.length} модулей), ${Math.round(warmContourM2(p))} м², ${trucksForCubes(p.modules.length)} трала, стиль ${style}.`,
     `Помещения: ${rooms}.`,
@@ -340,12 +435,39 @@ export function projectContext(
     `Бюджет предварительно: ${(b.total.min / 1e6).toFixed(1)}–${(b.total.max / 1e6).toFixed(1)} млн ₽.`,
     `Бюджет по статьям (тот же расчёт, что в «Паспорт и бюджет»): ${lines}.`,
     extra.selectedWall ? `Выбранная стена: ${extra.selectedWall}.` : "Стена не выбрана.",
+    know,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
 const fmtMln = (n: number) => (n / 1e6).toLocaleString("ru-RU", { maximumFractionDigits: 1 });
+
+/** Что поменялось после пересборки — одной строкой для Льва и человека. */
+export function rebuildSummary(before: Project, after: Project): string {
+  const parts: string[] = [];
+  const nb = before.modules.length;
+  const na = after.modules.length;
+  if (nb !== na) parts.push(`кубиков ${nb} → ${na}`);
+  const tb = Math.max(...before.modules.map((m) => m.tier));
+  const ta = Math.max(...after.modules.map((m) => m.tier));
+  if (tb !== ta) parts.push(ta === 2 ? "появился второй ярус" : "стал одноярусным");
+  const count = (p: Project, t: string) => p.rooms.filter((r) => r.type === t).length;
+  for (const [t, ru] of [
+    ["bedroom", "спален"],
+    ["wet-core", "санузлов"],
+    ["study", "кабинетов"],
+  ] as const)
+    if (count(before, t) !== count(after, t))
+      parts.push(`${ru} ${count(before, t)} → ${count(after, t)}`);
+  const bb = budgetFor(before).total;
+  const ba = budgetFor(after).total;
+  const d = (ba.min + ba.max - bb.min - bb.max) / 2;
+  if (Math.abs(d) >= 50_000) parts.push(`${d > 0 ? "+" : "−"}${fmtMln(Math.abs(d))} млн ₽`);
+  if (JSON.stringify(before.plot) !== JSON.stringify(after.plot) && after.plot)
+    parts.push(`участок ${after.plot.widthM} × ${after.plot.depthM} м`);
+  return parts.join(", ");
+}
 
 /** Комментарий архитектора к ходу: что поменялось в правилах, цене, тралах. Без LLM — мгновенно. */
 export function commentOn(before: Project, after: Project): string[] {

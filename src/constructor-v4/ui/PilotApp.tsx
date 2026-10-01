@@ -33,12 +33,34 @@ import {
   commentOn,
   mergeScenario,
   projectContext,
+  rebuildSummary,
   realtimeTools,
   systemPrompt,
   whatIf,
 } from "./architect.ts";
 import { VOICE_STATE_RU, VoiceSession, type VoiceState } from "./voice.ts";
-import { readJson, runRenderJob } from "./render-client.ts";
+import { readJson, runJob, runRenderJob } from "./render-client.ts";
+import {
+  choiceToCommands,
+  mergeChoice,
+  optionsContext,
+  parseOptionReply,
+  styleOptions,
+  type OptionCard,
+} from "./options.ts";
+import {
+  answer as answerStep,
+  currentMode,
+  interviewContext,
+  progress as interviewProgress,
+  startInterview,
+  stepsForFields,
+  touchForm,
+  STEPS,
+  type InterviewState,
+  type Step,
+} from "./interview.ts";
+import { evaluate } from "../engine/rules.ts";
 import { PlanSvg } from "./PlanSvg.tsx";
 import type { WallPick } from "./Scene.tsx";
 
@@ -51,7 +73,42 @@ const SESSION = Math.random().toString(36).slice(2);
 const SIDE_RU: Record<Side, string> = { N: "север", E: "восток", S: "юг", W: "запад" };
 const mln = (n: number) => (n / 1e6).toLocaleString("ru-RU", { maximumFractionDigits: 1 });
 
-type ChatMsg = { role: "user" | "assistant" | "system"; text: string };
+type Offer = { text: string; command: EditorCommand; state: "open" | "done" | "declined" };
+type ChatMsg = {
+  role: "user" | "assistant" | "system";
+  text: string;
+  /** Карточки A/B/C или предложение кнопками. */
+  kind?: "options" | "offer";
+  options?: OptionCard[];
+  offer?: Offer;
+};
+type Chip = { label: string; run: () => void };
+
+const STEP_RU: Record<Step, string> = {
+  plot: "участок",
+  people: "семья",
+  pets: "питомцы",
+  elderly: "родители",
+  lifestyle: "образ жизни",
+  style: "стиль",
+  budget: "бюджет",
+};
+
+type DesignOut = {
+  intent: string;
+  project: Project | null;
+  valid: boolean;
+  fallback: boolean;
+  attempts: number;
+  precedent: string;
+  why: string;
+};
+type CriticOut = {
+  score: number;
+  verdict: string;
+  notes: string[];
+  commands: EditorCommand[];
+};
 type LlmMsg = Record<string, unknown>;
 
 const DEFAULT_SCENARIO: LifeScenario = {
@@ -182,6 +239,16 @@ export function PilotApp() {
   const [windowPreset, setWindowPreset] = useState<WindowPreset>("standard");
   const [styleText, setStyleText] = useState("");
   const [elapsed, setElapsed] = useState<number | null>(null);
+  const [interview, setInterviewState] = useState<InterviewState>(() => startInterview());
+  const interviewRef = useRef(interview);
+  const setInterview = useCallback((f: (s: InterviewState) => InterviewState) => {
+    interviewRef.current = f(interviewRef.current);
+    setInterviewState(interviewRef.current);
+  }, []);
+  /** Карточки A/B/C, которые сейчас на экране (Лев понимает ссылки на них). */
+  const optionsRef = useRef<OptionCard[] | null>(null);
+  const [flash, setFlash] = useState(0);
+  const [aiBusy, setAiBusy] = useState("");
 
   useEffect(() => {
     fetch(`${API}/health`)
@@ -198,6 +265,12 @@ export function PilotApp() {
   }, []);
 
   const say = (role: ChatMsg["role"], text: string) => setChat((c) => [...c, { role, text }]);
+
+  /** Человек сам поправил анкету: значение меняется, шаг интервью Лев только подтверждает. */
+  const setForm = (step: Step, next: LifeScenario) => {
+    setScenario(next);
+    setInterview((i) => touchForm(i, step));
+  };
 
   /** Выбор стены в 3D выбирает и комнату — для «Удалить комнату». */
   const setSelected = useCallback((w: WallPick | null) => {
@@ -224,14 +297,24 @@ export function PilotApp() {
       const r = solve(briefFromScenario(s));
       setVariants(r.variants);
       setElapsed(Math.round(performance.now() - t));
+      const before = currentRef.current;
+      let summary = "";
       if (r.variants[0]) {
+        summary = before ? rebuildSummary(before, r.variants[0].project) : "";
         setCurrent(r.variants[0].project);
-        setComments([r.variants[0].rank?.why ?? ""]);
+        setComments([summary, r.variants[0].rank?.why ?? ""].filter(Boolean));
+        setFlash((x) => x + 1);
       }
-      return { check, r };
+      return { check, r, summary };
     },
     [setCurrent],
   );
+
+  // Дом на экране сразу: интервью уточняет его, а не начинает с пустого экрана.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("demo")) return;
+    if (!currentRef.current) build(DEFAULT_SCENARIO);
+  }, [build]);
 
   // ?demo — сразу собрать варианты по анкете по умолчанию (быстрый показ и проверка).
   useEffect(() => {
@@ -275,12 +358,41 @@ export function PilotApp() {
         const s = mergeScenario(scenarioRef.current, a);
         scenarioRef.current = s;
         setScenario(s);
-        const { check, r } = build(s);
-        return `${check.message} Собрано вариантов: ${r.variants.length}. ${r.variants
+        setInterview((i) => answerStep(i, stepsForFields(Object.keys(a))));
+        const { check, r, summary } = build(s);
+        return `${summary ? `Дом пересобран: ${summary}. ` : ""}${check.message} Собрано вариантов: ${r.variants.length}. ${r.variants
           .map((v, i) => `${i + 1}) ${v.summary}; ${v.rank?.why ?? ""}`)
           .join(" ")} Опции: ${check.options.map((o) => `${o.label} — ${o.reason}`).join("; ")}`;
       }
       if (name === "what_if") return whatIf(currentRef.current, a);
+      if (name === "confirm_step") {
+        const step = String(a.step) as Step;
+        if (!STEPS.includes(step)) return "Нет такого шага.";
+        setInterview((i) => answerStep(i, [step]));
+        return interviewContext(interviewRef.current, scenarioRef.current);
+      }
+      if (name === "show_options") return showOptions();
+      if (name === "apply_options") return applyChoice(String(a.text ?? ""));
+      if (name === "design_variants")
+        return designVariants(Array.isArray(a.intents) ? a.intents.map(String) : undefined);
+      if (name === "critic_review") return criticPass();
+      if (name === "offer_change") {
+        const parsed = toolCallToCommand(
+          String((a.command as { op?: string })?.op ?? ""),
+          a.command,
+        );
+        if (!parsed.ok) return `Не понял правку для кнопки: ${parsed.error}`;
+        setChat((c) => [
+          ...c,
+          {
+            role: "assistant",
+            text: String(a.text ?? "Показать правку?"),
+            kind: "offer",
+            offer: { text: String(a.text ?? ""), command: parsed.command, state: "open" },
+          },
+        ]);
+        return "Показал человеку кнопки «показать / не надо». Жди его выбора.";
+      }
       if (name === "select_variant") {
         const v = variantsRef.current[Number(a.index) - 1];
         if (!v) return "Такого варианта нет.";
@@ -291,6 +403,7 @@ export function PilotApp() {
       if (!parsed.ok) return `Команда не распознана: ${parsed.error}`;
       return run(parsed.command);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [build, run, setCurrent],
   );
 
@@ -300,8 +413,228 @@ export function PilotApp() {
       selectedWall: w ? `кубик ${w.moduleId}, сторона ${w.side} (${SIDE_RU[w.side]})` : undefined,
       variants: variantsRef.current.map((v, i) => `${i + 1}) ${v.summary}`),
       scenario: scenarioRef.current,
+      interview: interviewContext(interviewRef.current, scenarioRef.current),
+      options: optionsContext(optionsRef.current),
     });
   };
+
+  // ── Карточки A/B/C ────────────────────────────────────────────────────
+  function showOptions(): string {
+    const cards = styleOptions();
+    optionsRef.current = cards;
+    setChat((c) => [
+      ...c,
+      {
+        role: "assistant",
+        text: "Что ближе? Можно выбрать одну карточку или смешать: «из А крышу, из Б окна».",
+        kind: "options",
+        options: cards,
+      },
+    ]);
+    return `Показал карточки. ${optionsContext(cards)}`;
+  }
+
+  /** Реплика со ссылками на карточки → основа + черты → команды через движок правил. */
+  function applyChoice(text: string): string {
+    const cards = optionsRef.current ?? styleOptions();
+    const choice = mergeChoice(cards, parseOptionReply(text));
+    if (!choice) return "Не понял, какую карточку выбрали — назовите букву A, B или C.";
+    let p = currentRef.current;
+    if (!p) return "Дом ещё не собран.";
+    const plan = choiceToCommands(p, choice);
+    const notes: string[] = [];
+    if (plan.tiers) {
+      const s2 = mergeScenario(scenarioRef.current, { tiers: String(plan.tiers) });
+      scenarioRef.current = s2;
+      setScenario(s2);
+      const { summary } = build(s2);
+      notes.push(
+        `форма: ${plan.tiers === 2 ? "два яруса" : "один ярус"}${summary ? ` (${summary})` : ""}`,
+      );
+      p = currentRef.current!;
+    }
+    let work = p;
+    const failed: string[] = [];
+    for (const c of choiceToCommands(work, choice).commands) {
+      const r = applyCommand(work, c);
+      if (r.ok) work = r.project;
+      else failed.push(r.reason);
+    }
+    const style = cards.find((c) => c.letter === choice.base);
+    work = {
+      ...work,
+      finishes: { ...work.finishes, styleId: style?.styleId ?? work.finishes.styleId },
+      recommendations: [
+        ...(work.recommendations ?? []).filter((x) => !x.startsWith("Пожелания по стилю")),
+        ...(plan.wishes.length ? [`Пожелания по стилю: ${plan.wishes.join(", ")}`] : []),
+      ],
+    };
+    const c = commentOn(p, work);
+    setCurrent(work);
+    setFlash((x) => x + 1);
+    setInterview((i) => answerStep(i, ["style"]));
+    scenarioRef.current = { ...scenarioRef.current, styleHints: [choice.summary] };
+    setScenario(scenarioRef.current);
+    const out = [
+      `Взял: ${choice.summary}.`,
+      ...notes,
+      plan.wishes.length ? `Пожелания записал в паспорт: ${plan.wishes.join(", ")}.` : "",
+      failed.length ? `Не всё получилось: ${failed.slice(0, 2).join("; ")}.` : "",
+      ...c.slice(0, 2),
+    ]
+      .filter(Boolean)
+      .join(" ");
+    setComments([out]);
+    return out;
+  }
+
+  // ── Нейросеть-архитектор и критик ─────────────────────────────────────
+  async function designVariants(intents?: string[]): Promise<string> {
+    const brief = briefFromScenario(scenarioRef.current);
+    const list = (
+      intents?.length
+        ? intents
+        : [
+            "Фирменный ЭкоКуб: компактный объём, общая комната на юг к террасе во всю длину, спальни крылом",
+            "Экономный: минимум кубиков и тралов, все модули парами",
+            "Смелый: двор-терраса в развороте Г или П, либо второй ярус с консолью",
+          ]
+    ).slice(0, 3);
+    setAiBusy("Лев раскладывает кубики…");
+    try {
+      const results = await Promise.all(
+        list.map((intent) =>
+          runJob<DesignOut>(
+            API,
+            "design",
+            { brief, intent, style: scenarioRef.current.styleHints?.[0] },
+            {
+              session: SESSION,
+            },
+          ).catch((e: Error) => ({ intent, error: e.message }) as DesignOut & { error: string }),
+        ),
+      );
+      const ok = results.filter((r): r is DesignOut => !!(r as DesignOut).project);
+      if (!ok.length)
+        return `Не получилось: ${(results[0] as { error?: string }).error ?? "сервер не ответил"}. Остались варианты солвера.`;
+      const vs: Variant[] = ok.map((r, i) => {
+        const p = { ...r.project!, id: `ai-${i + 1}` };
+        const tiers = Math.max(...p.modules.map((m) => m.tier)) as 1 | 2;
+        return {
+          project: p,
+          evaluation: evaluate(p),
+          score: r.valid ? 1 : 0.5,
+          tiers,
+          summary: `${r.fallback ? "запасной (солвер)" : r.intent.split(":")[0]}: ${p.modules.length} кубиков, ${tiers === 2 ? "два яруса" : "один ярус"}${r.precedent ? `, по мотивам: ${r.precedent}` : ""}`,
+          rank: { recommended: i === 0, why: r.why || r.intent } as Variant["rank"],
+        };
+      });
+      setVariants(vs);
+      setCurrent(vs[0].project);
+      setFlash((x) => x + 1);
+      const critic = await criticPass();
+      return `${vs.map((v, i) => `${i + 1}) ${v.summary}${ok[i].fallback ? " — нейросеть не уложилась в правила, показал ближайший проверенный" : ""}`).join("; ")}. Критик: ${critic}`;
+    } finally {
+      setAiBusy("");
+    }
+  }
+
+  async function criticPass(): Promise<string> {
+    const p = currentRef.current;
+    if (!p) return "Дом ещё не собран.";
+    const canvas = document.querySelector<HTMLCanvasElement>("#pilot-3d canvas");
+    let snapshot: string | null = null;
+    try {
+      snapshot = canvas ? canvas.toDataURL("image/jpeg", 0.7) : null;
+    } catch {
+      snapshot = null;
+    }
+    setAiBusy("Критик смотрит на план…");
+    try {
+      const r = await runJob<CriticOut>(
+        API,
+        "critic",
+        { project: p, style: scenarioRef.current.styleHints?.[0], snapshot },
+        { session: SESSION },
+      );
+      let work = p;
+      const done: string[] = [];
+      for (const c of r.commands) {
+        const res = applyCommand(work, c);
+        if (res.ok) {
+          work = res.project;
+          done.push(res.message);
+        }
+      }
+      if (work !== p) {
+        setCurrent(work);
+        setFlash((x) => x + 1);
+      }
+      const text = `${r.verdict} (оценка ${r.score}/10).${r.notes.length ? ` ${r.notes.slice(0, 3).join(" ")}` : ""}${done.length ? ` Поправил: ${done.join(" ")}` : ""}`;
+      setComments([`Независимый взгляд: ${text}`]);
+      return text;
+    } catch (e) {
+      return `Критик недоступен: ${(e as Error).message}`;
+    } finally {
+      setAiBusy("");
+    }
+  }
+
+  /** Быстрые ответы под текущим вопросом интервью — работают и без нейросети. */
+  const chips: Chip[] = (() => {
+    const step = interview.current;
+    const confirm = (st: Step) => ({
+      label: "Да, как в анкете",
+      run: () => {
+        setInterview((i) => answerStep(i, [st]));
+        say("user", "Да, как в анкете");
+      },
+    });
+    const set = (label: string, args: Record<string, unknown>) => ({
+      label,
+      run: () => {
+        say("user", label);
+        void runTool("set_scenario", args).then((out) => say("system", `⚙ ${out.slice(0, 200)}`));
+      },
+    });
+    switch (step) {
+      case "plot":
+        return [
+          set("Участка пока нет — возьмём 10 соток", { plotSotki: 10 }),
+          set("Участок 15 соток", { plotSotki: 15 }),
+        ];
+      case "people":
+        return [confirm("people")];
+      case "pets":
+        return [set("Питомцев нет", { dogs: 0, cats: 0, otherPets: 0 }), confirm("pets")];
+      case "elderly":
+        return [
+          set("Родителей не будет", { elderly: "none" }),
+          set("Приезжают в гости", { elderly: "visit" }),
+          confirm("elderly"),
+        ];
+      case "lifestyle":
+        return [confirm("lifestyle")];
+      case "style":
+        return [{ label: "Показать варианты A/B/C", run: () => void showOptions() }];
+      case "budget":
+        return [
+          { label: "Пока не знаю", run: () => setInterview((i) => answerStep(i, ["budget"])) },
+          set("До 12 млн", { budgetMaxRub: 12_000_000 }),
+        ];
+      default:
+        return [
+          {
+            label: "Лев, предложи 3 решения",
+            run: () => void sendChat("Предложи три решения нейросетью"),
+          },
+          {
+            label: "Независимый взгляд",
+            run: () => void criticPass().then((t) => say("assistant", t)),
+          },
+        ];
+    }
+  })();
 
   // Голос слышит актуальную анкету и дом: обновляем инструкции сессии при каждом изменении.
   useEffect(() => {
@@ -312,7 +645,16 @@ export function PilotApp() {
     if (!text.trim() || busy) return;
     setInput("");
     say("user", text);
-    llm.current.push({ role: "user", content: text });
+    // Ссылки на карточки A/B/C применяем сразу, Льву — что уже сделано.
+    let note = "";
+    if (optionsRef.current && parseOptionReply(text).picks.length) {
+      note = applyChoice(text);
+      say("system", `⚙ карточки: ${note.slice(0, 220)}`);
+    }
+    llm.current.push({
+      role: "user",
+      content: note ? `${text}\n[служебно: выбор по карточкам уже применён: ${note}]` : text,
+    });
     setBusy(true);
     try {
       for (let round = 0; round < 4; round++) {
@@ -430,7 +772,7 @@ export function PilotApp() {
         continuous: hands,
         model,
         greeting: () =>
-          "[служебное] Поздоровайся одной фразой. Коротко подтверди, что уже знаешь из анкеты (не переспрашивай), и задай один вопрос о том, чего не хватает: бюджет, участок или стиль.",
+          "[служебное] Поздоровайся одной фразой и задай текущий вопрос интервью из блока «Интервью» (если он уже есть в анкете — коротко подтверди и иди дальше).",
       },
     );
     setVoice(v);
@@ -549,7 +891,7 @@ export function PilotApp() {
 
   const updatePlot = (patch: Partial<NonNullable<Project["plot"]>>) => {
     const plot = { ...(scenario.plot ?? { widthM: 25, depthM: 35 }), ...patch };
-    setScenario({ ...scenario, plot });
+    setForm("plot", { ...scenario, plot });
     const p = currentRef.current;
     if (p) setCurrent(rederive({ ...p, plot, placementLocked: false }, p.terrace.side));
   };
@@ -580,6 +922,7 @@ export function PilotApp() {
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-20 text-neutral-900 lg:pb-0">
+      <style>{`@keyframes pilot-flash{0%{box-shadow:inset 0 0 0 4px rgba(217,119,6,.85)}100%{box-shadow:inset 0 0 0 0 rgba(217,119,6,0)}}`}</style>
       <header className="flex flex-wrap items-center justify-between gap-2 border-b bg-white px-4 py-3">
         <div>
           <h1 className="text-lg font-semibold">Конструктор дома ЭкоКуб · бета</h1>
@@ -601,202 +944,7 @@ export function PilotApp() {
         )}
       </header>
 
-      <div className="grid gap-3 p-3 lg:grid-cols-[300px_1fr_360px]">
-        {/* ── Левая колонка: сценарий и участок ── */}
-        <aside className="space-y-3">
-          <section className="space-y-2 rounded-lg border bg-white p-3">
-            <h2 className="font-semibold">Кто будет жить</h2>
-            <Num
-              label="Взрослые"
-              value={s.adults}
-              min={1}
-              max={6}
-              onChange={(n) => setScenario({ ...s, adults: n })}
-            />
-            <Num
-              label="Дети"
-              value={s.kids}
-              max={6}
-              onChange={(n) => setScenario({ ...s, kids: n })}
-            />
-            <Check
-              label="Дети в одной комнате"
-              value={!!s.kidsShareRoom}
-              onChange={(b) => setScenario({ ...s, kidsShareRoom: b })}
-            />
-            <Num
-              label="Собаки"
-              value={s.pets?.dogs ?? 0}
-              max={5}
-              onChange={(n) => setScenario({ ...s, pets: { ...s.pets, dogs: n } })}
-            />
-            <Num
-              label="Кошки"
-              value={s.pets?.cats ?? 0}
-              max={5}
-              onChange={(n) => setScenario({ ...s, pets: { ...s.pets, cats: n } })}
-            />
-            <Num
-              label="Другие питомцы"
-              value={s.pets?.other ?? 0}
-              max={5}
-              onChange={(n) => setScenario({ ...s, pets: { ...s.pets, other: n } })}
-            />
-            <label className="flex items-center justify-between gap-2 text-sm">
-              Пожилые родители
-              <select
-                className="rounded border px-2 py-1"
-                value={s.elderly ? `${s.elderly.mode}-${s.elderly.count}` : "none"}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "none") return setScenario({ ...s, elderly: undefined });
-                  const [mode, count] = v.split("-");
-                  setScenario({
-                    ...s,
-                    elderly: { mode: mode as "live" | "visit", count: Number(count) as 1 | 2 },
-                  });
-                }}
-              >
-                <option value="none">нет</option>
-                <option value="live-1">живёт с нами: 1</option>
-                <option value="live-2">живут с нами: 2</option>
-                <option value="visit-1">приезжает в гости: 1</option>
-                <option value="visit-2">приезжают в гости: 2</option>
-              </select>
-            </label>
-            <Num
-              label="Работают из дома"
-              value={s.workFromHome ?? 0}
-              max={4}
-              onChange={(n) => setScenario({ ...s, workFromHome: n })}
-            />
-            <Check
-              label="Часто гости"
-              value={!!s.guestsOften}
-              onChange={(b) => setScenario({ ...s, guestsOften: b })}
-            />
-            <Check
-              label="Сауна"
-              value={!!s.sauna}
-              onChange={(b) => setScenario({ ...s, sauna: b })}
-            />
-            <Check
-              label="Много хранения"
-              value={s.storage === "lots"}
-              onChange={(b) => setScenario({ ...s, storage: b ? "lots" : "normal" })}
-            />
-            <Check label="Машина" value={!!s.car} onChange={(b) => setScenario({ ...s, car: b })} />
-            <label className="flex items-center justify-between text-sm">
-              Этажность
-              <select
-                className="rounded border px-2 py-1"
-                value={String(s.tiers ?? "any")}
-                onChange={(e) =>
-                  setScenario({
-                    ...s,
-                    tiers: e.target.value === "any" ? "any" : (Number(e.target.value) as 1 | 2),
-                  })
-                }
-              >
-                <option value="any">не важно</option>
-                <option value="1">один ярус</option>
-                <option value="2">два яруса</option>
-              </select>
-            </label>
-            <Num
-              label="Площадь до, м²"
-              value={s.desiredAreaM2?.max ?? 0}
-              max={300}
-              onChange={(n) =>
-                setScenario({ ...s, desiredAreaM2: n ? { min: 0, max: n } : undefined })
-              }
-            />
-            <Num
-              label="Бюджет до, млн ₽"
-              value={s.budgetRub ? s.budgetRub.max / 1e6 : 0}
-              max={100}
-              step={0.5}
-              onChange={(n) =>
-                setScenario({ ...s, budgetRub: n ? { min: 0, max: n * 1e6 } : undefined })
-              }
-            />
-            <Btn kind="primary" onClick={() => build(s)}>
-              Собрать 3 варианта
-            </Btn>
-            {area && (
-              <div className={`rounded p-2 text-sm ${area.fits ? "bg-green-50" : "bg-amber-50"}`}>
-                <p>{area.message}</p>
-                {programFromScenario(s).recommendations.map((r) => (
-                  <p key={r} className="mt-1 text-xs">
-                    • {r}
-                  </p>
-                ))}
-                {area.options.map((o) => (
-                  <p key={o.id} className="mt-1 text-xs">
-                    • <b>{o.label}</b> — {o.reason}
-                  </p>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="space-y-2 rounded-lg border bg-white p-3">
-            <h2 className="font-semibold">Участок</h2>
-            <Num
-              label="Ширина, м"
-              value={s.plot?.widthM ?? 25}
-              max={200}
-              onChange={(n) => updatePlot({ widthM: n })}
-            />
-            <Num
-              label="Глубина, м"
-              value={s.plot?.depthM ?? 35}
-              max={200}
-              onChange={(n) => updatePlot({ depthM: n })}
-            />
-            <Num
-              label="Север, °"
-              value={s.plot?.northDeg ?? 0}
-              max={359}
-              step={15}
-              onChange={(n) => updatePlot({ northDeg: n })}
-            />
-            <Num
-              label="Отступ, м"
-              value={(s.plot?.setbackMm ?? 3000) / 1000}
-              max={10}
-              step={0.5}
-              onChange={(n) => updatePlot({ setbackMm: n * 1000 })}
-            />
-            {current && (
-              <div className="flex flex-wrap gap-1">
-                <Btn onClick={() => run({ op: "rotate_house", deg: 90 })}>⟲ 90°</Btn>
-                {(
-                  [
-                    ["←", -1000, 0],
-                    ["→", 1000, 0],
-                    ["↑", 0, 1000],
-                    ["↓", 0, -1000],
-                  ] as const
-                ).map(([l, dx, dy]) => (
-                  <Btn
-                    key={l}
-                    onClick={() =>
-                      run({
-                        op: "place_house",
-                        xMm: current.placementMm.xMm + dx,
-                        yMm: current.placementMm.yMm + dy,
-                      })
-                    }
-                  >
-                    {l} 1 м
-                  </Btn>
-                ))}
-              </div>
-            )}
-          </section>
-        </aside>
-
+      <div className="grid gap-3 p-3 lg:grid-cols-[1fr_440px]">
         {/* ── Центр: варианты, 3D, план, паспорт ── */}
         <main className="space-y-3">
           {variants.length > 0 && (
@@ -852,7 +1000,17 @@ export function PilotApp() {
             {current && history.length > 0 && <Btn onClick={undo}>↶ Отменить</Btn>}
           </div>
 
-          <div id="pilot-3d" className="h-[520px] overflow-hidden rounded-lg border bg-white">
+          <div
+            id="pilot-3d"
+            className="relative h-[56vh] min-h-[360px] overflow-hidden rounded-lg border bg-white"
+          >
+            {/* Дом пересобран — короткая подсветка рамки, сцена не перемонтируется. */}
+            {flash > 0 && (
+              <div
+                key={`flash-${flash}`}
+                className="pointer-events-none absolute inset-0 z-10 rounded-lg [animation:pilot-flash_1.4s_ease-out_forwards]"
+              />
+            )}
             {!current ? (
               <div className="flex h-full items-center justify-center p-6 text-center text-neutral-500">
                 Расскажите Льву о семье или заполните анкету слева и нажмите «Собрать 3 варианта».
@@ -1024,213 +1182,6 @@ export function PilotApp() {
           {current && (
             <section className="space-y-2 rounded-lg border bg-white p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <b>Правка:</b>
-                <span className="text-neutral-600">
-                  {sel
-                    ? `стена «${SIDE_RU[selected!.side]}» · ${selRoom ? roomSpec(selRoom.type).label : ""} · ярус ${sel.tier}`
-                    : selRoom
-                      ? `комната «${roomSpec(selRoom.type).label}» · ярус ${selRoom.tier}`
-                      : "кликните по стене дома в 3D или по комнате на плане"}
-                </span>
-              </div>
-              {sel && selRoom && (
-                <div className="flex flex-wrap items-center gap-1">
-                  <select
-                    className="rounded border px-2 py-1"
-                    value={windowPreset}
-                    onChange={(e) => setWindowPreset(e.target.value as WindowPreset)}
-                  >
-                    {Object.entries(WINDOW_PRESETS).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {v.label} ({v.heightMm})
-                      </option>
-                    ))}
-                  </select>
-                  <Btn
-                    onClick={() =>
-                      run({
-                        op: "window",
-                        action: "add",
-                        side: selected!.side,
-                        moduleId: sel.id,
-                        preset: windowPreset,
-                      })
-                    }
-                  >
-                    + окно
-                  </Btn>
-                  <Btn
-                    onClick={() =>
-                      run({
-                        op: "window",
-                        action: "set",
-                        side: selected!.side,
-                        moduleId: sel.id,
-                        preset: windowPreset,
-                      })
-                    }
-                  >
-                    задать размер
-                  </Btn>
-                  <Btn
-                    onClick={() =>
-                      run({
-                        op: "window",
-                        action: "enlarge",
-                        side: selected!.side,
-                        moduleId: sel.id,
-                      })
-                    }
-                  >
-                    больше
-                  </Btn>
-                  <Btn
-                    onClick={() =>
-                      run({
-                        op: "window",
-                        action: "shrink",
-                        side: selected!.side,
-                        moduleId: sel.id,
-                      })
-                    }
-                  >
-                    меньше
-                  </Btn>
-                  <Btn
-                    onClick={() =>
-                      run({
-                        op: "window",
-                        action: "remove",
-                        side: selected!.side,
-                        moduleId: sel.id,
-                      })
-                    }
-                  >
-                    убрать окно
-                  </Btn>
-                  <span className="mx-1 text-neutral-300">|</span>
-                  {Object.entries(DOOR_PRESETS).map(([k, v]) => (
-                    <Btn
-                      key={k}
-                      onClick={() =>
-                        run({
-                          op: "door",
-                          action: "add",
-                          side: selected!.side,
-                          moduleId: sel.id,
-                          preset: k as keyof typeof DOOR_PRESETS,
-                        })
-                      }
-                    >
-                      + {v.label}
-                    </Btn>
-                  ))}
-                  <Btn
-                    onClick={() =>
-                      run({ op: "door", action: "move", side: selected!.side, moduleId: sel.id })
-                    }
-                  >
-                    вход сюда
-                  </Btn>
-                  <Btn
-                    onClick={() =>
-                      run({ op: "door", action: "remove", side: selected!.side, moduleId: sel.id })
-                    }
-                  >
-                    убрать дверь
-                  </Btn>
-                  <Btn onClick={() => run({ op: "move_terrace", side: selected!.side })}>
-                    терраса сюда
-                  </Btn>
-                  {sel.tier === 2 && (
-                    <>
-                      <span className="mx-1 text-neutral-300">|</span>
-                      {[0, 600, 1200, 1500, 2400].map((mm) => (
-                        <Btn
-                          key={mm}
-                          onClick={() => run({ op: "set_overhang", side: selected!.side, mm })}
-                        >
-                          свес {mm / 1000} м
-                        </Btn>
-                      ))}
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-1">
-                <Btn onClick={() => run({ op: "add_room", room: "bedroom" })}>+ спальня</Btn>
-                {hasUpper && (
-                  <Btn onClick={() => run({ op: "add_room", room: "bedroom", tier: 2 })}>
-                    + спальня на 2 ярус
-                  </Btn>
-                )}
-                <Btn onClick={() => run({ op: "add_room", room: "study" })}>+ кабинет</Btn>
-                <Btn onClick={() => run({ op: "add_room", room: "wet-core" })}>+ санузел</Btn>
-                {(() => {
-                  const k = current.rooms.find((r) => r.type === "kitchen-living");
-                  return k ? (
-                    <>
-                      <Btn
-                        onClick={() =>
-                          run({ op: "resize_room", roomId: k.id, modules: k.moduleIds.length + 1 })
-                        }
-                      >
-                        кухня больше
-                      </Btn>
-                      <Btn
-                        onClick={() =>
-                          run({ op: "resize_room", roomId: k.id, modules: k.moduleIds.length - 1 })
-                        }
-                      >
-                        кухня меньше
-                      </Btn>
-                    </>
-                  ) : null;
-                })()}
-                {selRoom ? (
-                  <Btn onClick={removeSelectedRoom} disabled={!!removeBlock}>
-                    − убрать «{roomSpec(selRoom.type).label}»
-                  </Btn>
-                ) : (
-                  <span className="self-center text-xs text-neutral-500">
-                    − убрать комнату: выберите её на плане или в 3D
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-1">
-                <b>Стиль:</b>
-                <select
-                  className="rounded border px-2 py-1"
-                  value={current.finishes.styleId ?? ""}
-                  onChange={(e) => run({ op: "set_style", style: e.target.value })}
-                >
-                  {FINISHES.styles.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.label} ({st.region})
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="min-w-[200px] flex-1 rounded border px-2 py-1"
-                  placeholder="или словами: тёмный фасад, чёрные рамы, зелёная кровля"
-                  value={styleText}
-                  onChange={(e) => setStyleText(e.target.value)}
-                />
-                <Btn onClick={() => styleText && run({ op: "describe_style", text: styleText })}>
-                  понять стиль
-                </Btn>
-              </div>
-              <p className="text-xs text-neutral-500">
-                {current.modules.length} кубиков · {factoryModules(current).modules.length} модулей
-                · {Math.round(warmContourM2(current))} м² · {trucksForCubes(current.modules.length)}{" "}
-                трала
-              </p>
-            </section>
-          )}
-
-          {current && (
-            <section className="space-y-2 rounded-lg border bg-white p-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
                 <b>Рендеры</b>
                 <Btn onClick={snapshot}>Снимок 3D (стадия 1)</Btn>
                 <Btn kind="primary" disabled={renderBusy} onClick={doRenders}>
@@ -1260,34 +1211,606 @@ export function PilotApp() {
               </div>
             </section>
           )}
+          {/* Анкета и ручная правка — для тех, кому так удобнее (и для проектировщика). */}
+          <details className="rounded-lg border bg-white">
+            <summary className="cursor-pointer select-none p-3 text-sm font-medium">
+              Ручная правка и анкета
+              <span className="ml-2 text-xs font-normal text-neutral-500">
+                всё то же можно сказать Льву словами
+              </span>
+            </summary>
+            <div className="grid gap-3 p-3 pt-0 md:grid-cols-[300px_1fr]">
+              <div className="space-y-3">
+                <section className="space-y-2 rounded-lg border bg-white p-3">
+                  <h2 className="font-semibold">Кто будет жить</h2>
+                  <Num
+                    label="Взрослые"
+                    value={s.adults}
+                    min={1}
+                    max={6}
+                    onChange={(n) => setForm("people", { ...s, adults: n })}
+                  />
+                  <Num
+                    label="Дети"
+                    value={s.kids}
+                    max={6}
+                    onChange={(n) => setForm("people", { ...s, kids: n })}
+                  />
+                  <Check
+                    label="Дети в одной комнате"
+                    value={!!s.kidsShareRoom}
+                    onChange={(b) => setForm("people", { ...s, kidsShareRoom: b })}
+                  />
+                  <Num
+                    label="Собаки"
+                    value={s.pets?.dogs ?? 0}
+                    max={5}
+                    onChange={(n) => setForm("pets", { ...s, pets: { ...s.pets, dogs: n } })}
+                  />
+                  <Num
+                    label="Кошки"
+                    value={s.pets?.cats ?? 0}
+                    max={5}
+                    onChange={(n) => setForm("pets", { ...s, pets: { ...s.pets, cats: n } })}
+                  />
+                  <Num
+                    label="Другие питомцы"
+                    value={s.pets?.other ?? 0}
+                    max={5}
+                    onChange={(n) => setForm("pets", { ...s, pets: { ...s.pets, other: n } })}
+                  />
+                  <label className="flex items-center justify-between gap-2 text-sm">
+                    Пожилые родители
+                    <select
+                      className="rounded border px-2 py-1"
+                      value={s.elderly ? `${s.elderly.mode}-${s.elderly.count}` : "none"}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "none") return setForm("elderly", { ...s, elderly: undefined });
+                        const [mode, count] = v.split("-");
+                        setForm("elderly", {
+                          ...s,
+                          elderly: {
+                            mode: mode as "live" | "visit",
+                            count: Number(count) as 1 | 2,
+                          },
+                        });
+                      }}
+                    >
+                      <option value="none">нет</option>
+                      <option value="live-1">живёт с нами: 1</option>
+                      <option value="live-2">живут с нами: 2</option>
+                      <option value="visit-1">приезжает в гости: 1</option>
+                      <option value="visit-2">приезжают в гости: 2</option>
+                    </select>
+                  </label>
+                  <Num
+                    label="Работают из дома"
+                    value={s.workFromHome ?? 0}
+                    max={4}
+                    onChange={(n) => setForm("lifestyle", { ...s, workFromHome: n })}
+                  />
+                  <Check
+                    label="Часто гости"
+                    value={!!s.guestsOften}
+                    onChange={(b) => setForm("lifestyle", { ...s, guestsOften: b })}
+                  />
+                  <Check
+                    label="Сауна"
+                    value={!!s.sauna}
+                    onChange={(b) => setForm("lifestyle", { ...s, sauna: b })}
+                  />
+                  <Check
+                    label="Много хранения"
+                    value={s.storage === "lots"}
+                    onChange={(b) => setForm("lifestyle", { ...s, storage: b ? "lots" : "normal" })}
+                  />
+                  <Check
+                    label="Машина"
+                    value={!!s.car}
+                    onChange={(b) => setForm("lifestyle", { ...s, car: b })}
+                  />
+                  <label className="flex items-center justify-between text-sm">
+                    Этажность
+                    <select
+                      className="rounded border px-2 py-1"
+                      value={String(s.tiers ?? "any")}
+                      onChange={(e) =>
+                        setScenario({
+                          ...s,
+                          tiers:
+                            e.target.value === "any" ? "any" : (Number(e.target.value) as 1 | 2),
+                        })
+                      }
+                    >
+                      <option value="any">не важно</option>
+                      <option value="1">один ярус</option>
+                      <option value="2">два яруса</option>
+                    </select>
+                  </label>
+                  <Num
+                    label="Площадь до, м²"
+                    value={s.desiredAreaM2?.max ?? 0}
+                    max={300}
+                    onChange={(n) =>
+                      setForm("budget", { ...s, desiredAreaM2: n ? { min: 0, max: n } : undefined })
+                    }
+                  />
+                  <Num
+                    label="Бюджет до, млн ₽"
+                    value={s.budgetRub ? s.budgetRub.max / 1e6 : 0}
+                    max={100}
+                    step={0.5}
+                    onChange={(n) =>
+                      setForm("budget", {
+                        ...s,
+                        budgetRub: n ? { min: 0, max: n * 1e6 } : undefined,
+                      })
+                    }
+                  />
+                  <Btn kind="primary" onClick={() => build(s)}>
+                    Собрать 3 варианта
+                  </Btn>
+                  {area && (
+                    <div
+                      className={`rounded p-2 text-sm ${area.fits ? "bg-green-50" : "bg-amber-50"}`}
+                    >
+                      <p>{area.message}</p>
+                      {programFromScenario(s).recommendations.map((r) => (
+                        <p key={r} className="mt-1 text-xs">
+                          • {r}
+                        </p>
+                      ))}
+                      {area.options.map((o) => (
+                        <p key={o.id} className="mt-1 text-xs">
+                          • <b>{o.label}</b> — {o.reason}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-2 rounded-lg border bg-white p-3">
+                  <h2 className="font-semibold">Участок</h2>
+                  <Num
+                    label="Ширина, м"
+                    value={s.plot?.widthM ?? 25}
+                    max={200}
+                    onChange={(n) => updatePlot({ widthM: n })}
+                  />
+                  <Num
+                    label="Глубина, м"
+                    value={s.plot?.depthM ?? 35}
+                    max={200}
+                    onChange={(n) => updatePlot({ depthM: n })}
+                  />
+                  <Num
+                    label="Север, °"
+                    value={s.plot?.northDeg ?? 0}
+                    max={359}
+                    step={15}
+                    onChange={(n) => updatePlot({ northDeg: n })}
+                  />
+                  <Num
+                    label="Отступ, м"
+                    value={(s.plot?.setbackMm ?? 3000) / 1000}
+                    max={10}
+                    step={0.5}
+                    onChange={(n) => updatePlot({ setbackMm: n * 1000 })}
+                  />
+                  {current && (
+                    <div className="flex flex-wrap gap-1">
+                      <Btn onClick={() => run({ op: "rotate_house", deg: 90 })}>⟲ 90°</Btn>
+                      {(
+                        [
+                          ["←", -1000, 0],
+                          ["→", 1000, 0],
+                          ["↑", 0, 1000],
+                          ["↓", 0, -1000],
+                        ] as const
+                      ).map(([l, dx, dy]) => (
+                        <Btn
+                          key={l}
+                          onClick={() =>
+                            run({
+                              op: "place_house",
+                              xMm: current.placementMm.xMm + dx,
+                              yMm: current.placementMm.yMm + dy,
+                            })
+                          }
+                        >
+                          {l} 1 м
+                        </Btn>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+              <div className="space-y-3">
+                {current && (
+                  <section className="space-y-2 rounded-lg border bg-white p-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <b>Правка:</b>
+                      <span className="text-neutral-600">
+                        {sel
+                          ? `стена «${SIDE_RU[selected!.side]}» · ${selRoom ? roomSpec(selRoom.type).label : ""} · ярус ${sel.tier}`
+                          : selRoom
+                            ? `комната «${roomSpec(selRoom.type).label}» · ярус ${selRoom.tier}`
+                            : "кликните по стене дома в 3D или по комнате на плане"}
+                      </span>
+                    </div>
+                    {sel && selRoom && (
+                      <div className="flex flex-wrap items-center gap-1">
+                        <select
+                          className="rounded border px-2 py-1"
+                          value={windowPreset}
+                          onChange={(e) => setWindowPreset(e.target.value as WindowPreset)}
+                        >
+                          {Object.entries(WINDOW_PRESETS).map(([k, v]) => (
+                            <option key={k} value={k}>
+                              {v.label} ({v.heightMm})
+                            </option>
+                          ))}
+                        </select>
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "window",
+                              action: "add",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                              preset: windowPreset,
+                            })
+                          }
+                        >
+                          + окно
+                        </Btn>
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "window",
+                              action: "set",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                              preset: windowPreset,
+                            })
+                          }
+                        >
+                          задать размер
+                        </Btn>
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "window",
+                              action: "enlarge",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                            })
+                          }
+                        >
+                          больше
+                        </Btn>
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "window",
+                              action: "shrink",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                            })
+                          }
+                        >
+                          меньше
+                        </Btn>
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "window",
+                              action: "remove",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                            })
+                          }
+                        >
+                          убрать окно
+                        </Btn>
+                        <span className="mx-1 text-neutral-300">|</span>
+                        {Object.entries(DOOR_PRESETS).map(([k, v]) => (
+                          <Btn
+                            key={k}
+                            onClick={() =>
+                              run({
+                                op: "door",
+                                action: "add",
+                                side: selected!.side,
+                                moduleId: sel.id,
+                                preset: k as keyof typeof DOOR_PRESETS,
+                              })
+                            }
+                          >
+                            + {v.label}
+                          </Btn>
+                        ))}
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "door",
+                              action: "move",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                            })
+                          }
+                        >
+                          вход сюда
+                        </Btn>
+                        <Btn
+                          onClick={() =>
+                            run({
+                              op: "door",
+                              action: "remove",
+                              side: selected!.side,
+                              moduleId: sel.id,
+                            })
+                          }
+                        >
+                          убрать дверь
+                        </Btn>
+                        <Btn onClick={() => run({ op: "move_terrace", side: selected!.side })}>
+                          терраса сюда
+                        </Btn>
+                        {sel.tier === 2 && (
+                          <>
+                            <span className="mx-1 text-neutral-300">|</span>
+                            {[0, 600, 1200, 1500, 2400].map((mm) => (
+                              <Btn
+                                key={mm}
+                                onClick={() =>
+                                  run({ op: "set_overhang", side: selected!.side, mm })
+                                }
+                              >
+                                свес {mm / 1000} м
+                              </Btn>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-1">
+                      <Btn onClick={() => run({ op: "add_room", room: "bedroom" })}>+ спальня</Btn>
+                      {hasUpper && (
+                        <Btn onClick={() => run({ op: "add_room", room: "bedroom", tier: 2 })}>
+                          + спальня на 2 ярус
+                        </Btn>
+                      )}
+                      <Btn onClick={() => run({ op: "add_room", room: "study" })}>+ кабинет</Btn>
+                      <Btn onClick={() => run({ op: "add_room", room: "wet-core" })}>+ санузел</Btn>
+                      {(() => {
+                        const k = current.rooms.find((r) => r.type === "kitchen-living");
+                        return k ? (
+                          <>
+                            <Btn
+                              onClick={() =>
+                                run({
+                                  op: "resize_room",
+                                  roomId: k.id,
+                                  modules: k.moduleIds.length + 1,
+                                })
+                              }
+                            >
+                              кухня больше
+                            </Btn>
+                            <Btn
+                              onClick={() =>
+                                run({
+                                  op: "resize_room",
+                                  roomId: k.id,
+                                  modules: k.moduleIds.length - 1,
+                                })
+                              }
+                            >
+                              кухня меньше
+                            </Btn>
+                          </>
+                        ) : null;
+                      })()}
+                      {selRoom ? (
+                        <Btn onClick={removeSelectedRoom} disabled={!!removeBlock}>
+                          − убрать «{roomSpec(selRoom.type).label}»
+                        </Btn>
+                      ) : (
+                        <span className="self-center text-xs text-neutral-500">
+                          − убрать комнату: выберите её на плане или в 3D
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <b>Стиль:</b>
+                      <select
+                        className="rounded border px-2 py-1"
+                        value={current.finishes.styleId ?? ""}
+                        onChange={(e) => run({ op: "set_style", style: e.target.value })}
+                      >
+                        {FINISHES.styles.map((st) => (
+                          <option key={st.id} value={st.id}>
+                            {st.label} ({st.region})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="min-w-[200px] flex-1 rounded border px-2 py-1"
+                        placeholder="или словами: тёмный фасад, чёрные рамы, зелёная кровля"
+                        value={styleText}
+                        onChange={(e) => setStyleText(e.target.value)}
+                      />
+                      <Btn
+                        onClick={() => styleText && run({ op: "describe_style", text: styleText })}
+                      >
+                        понять стиль
+                      </Btn>
+                    </div>
+                    <p className="text-xs text-neutral-500">
+                      {current.modules.length} кубиков · {factoryModules(current).modules.length}{" "}
+                      модулей · {Math.round(warmContourM2(current))} м² ·{" "}
+                      {trucksForCubes(current.modules.length)} трала
+                    </p>
+                  </section>
+                )}
+              </div>
+            </div>
+          </details>
         </main>
 
         {/* ── Правая колонка: архитектор и заявка ── */}
         <aside className="space-y-3">
-          <section className="flex h-[620px] flex-col rounded-lg border bg-white">
-            <div className="flex items-center justify-between border-b p-3">
-              <b>{PILOT.architect.name}</b>
-              <span className="text-xs text-neutral-500">текстом или голосом</span>
+          <section className="flex h-[78vh] flex-col rounded-lg border bg-white lg:sticky lg:top-3 lg:h-[calc(100vh-24px)]">
+            <div className="border-b p-3">
+              <div className="flex items-center justify-between">
+                <b>{PILOT.architect.name}</b>
+                <span className="text-xs text-neutral-500">
+                  говорите или пишите — дом меняется сразу
+                </span>
+              </div>
+              {/* Ход интервью: где мы и что уже знаем */}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {STEPS.map((st) => (
+                  <span
+                    key={st}
+                    className={`rounded-full px-2 py-0.5 text-[11px] ${
+                      interview.confirmed.includes(st)
+                        ? "bg-green-100 text-green-800"
+                        : interview.current === st
+                          ? "bg-neutral-900 text-white"
+                          : "bg-neutral-100 text-neutral-500"
+                    }`}
+                  >
+                    {interview.confirmed.includes(st) ? "✓ " : ""}
+                    {STEP_RU[st]}
+                  </span>
+                ))}
+                <span className="ml-auto text-[11px] text-neutral-400">
+                  {interviewProgress(interview).done}/{interviewProgress(interview).total}
+                  {currentMode(interview) === "confirm" ? " · подтверждаем анкету" : ""}
+                </span>
+              </div>
             </div>
             <div className="flex-1 space-y-2 overflow-auto p-3 text-sm">
-              {chat.map((m, i) => (
-                <p
-                  key={i}
-                  className={
-                    m.role === "user"
-                      ? "ml-8 rounded bg-neutral-900 p-2 text-white"
-                      : m.role === "system"
-                        ? "text-xs text-neutral-400"
-                        : "mr-8 rounded bg-neutral-100 p-2"
-                  }
-                >
-                  {m.text}
-                </p>
-              ))}
+              {chat.map((m, i) =>
+                m.kind === "options" && m.options ? (
+                  <div key={i} className="space-y-2">
+                    <p className="mr-8 rounded bg-neutral-100 p-2">{m.text}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {m.options.map((o) => (
+                        <button
+                          key={o.letter}
+                          type="button"
+                          onClick={() => void sendChat(`${o.letter}`)}
+                          className="group relative overflow-hidden rounded-lg border bg-white text-left hover:border-neutral-900"
+                          title={o.summary}
+                        >
+                          {o.image && (
+                            <img
+                              src={o.image}
+                              alt={o.title}
+                              className="h-20 w-full object-cover"
+                              loading="lazy"
+                            />
+                          )}
+                          <span className="absolute left-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-sm font-bold text-white shadow">
+                            {o.letter}
+                          </span>
+                          <span className="block p-1.5 text-[11px] font-medium leading-tight">
+                            {o.title}
+                          </span>
+                          <span className="block px-1.5 pb-1.5 text-[10px] leading-tight text-neutral-500">
+                            {o.traits.roof.label}; {o.traits.windows.label}; {o.traits.facade.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : m.kind === "offer" && m.offer ? (
+                  <div key={i} className="mr-8 space-y-1 rounded bg-amber-50 p-2">
+                    <p>{m.text}</p>
+                    {m.offer.state === "open" ? (
+                      <div className="flex gap-1">
+                        <Btn
+                          kind="primary"
+                          onClick={() => {
+                            const out = run(m.offer!.command);
+                            setChat((c) =>
+                              c.map((x, j) =>
+                                j === i && x.offer
+                                  ? { ...x, offer: { ...x.offer, state: "done" } }
+                                  : x,
+                              ),
+                            );
+                            say("system", `⚙ ${out.slice(0, 200)}`);
+                            llm.current.push({
+                              role: "user",
+                              content: `[служебно: человек принял предложение «${m.offer!.text}»: ${out}]`,
+                            });
+                          }}
+                        >
+                          Показать
+                        </Btn>
+                        <Btn
+                          onClick={() => {
+                            setChat((c) =>
+                              c.map((x, j) =>
+                                j === i && x.offer
+                                  ? { ...x, offer: { ...x.offer, state: "declined" } }
+                                  : x,
+                              ),
+                            );
+                            llm.current.push({
+                              role: "user",
+                              content: `[служебно: человек отказался от «${m.offer!.text}»]`,
+                            });
+                          }}
+                        >
+                          Не надо
+                        </Btn>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-500">
+                        {m.offer.state === "done" ? "✓ применено" : "отклонено"}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p
+                    key={i}
+                    className={
+                      m.role === "user"
+                        ? "ml-8 rounded bg-neutral-900 p-2 text-white"
+                        : m.role === "system"
+                          ? "text-xs text-neutral-400"
+                          : "mr-8 rounded bg-neutral-100 p-2"
+                    }
+                  >
+                    {m.text}
+                  </p>
+                ),
+              )}
               {busy && <p className="text-xs text-neutral-400">Лев думает…</p>}
+              {aiBusy && <p className="animate-pulse text-xs text-amber-700">{aiBusy}</p>}
             </div>
+            {chips.length > 0 && (
+              <div className="flex flex-wrap gap-1 border-t px-2 pt-2">
+                {chips.map((c) => (
+                  <button
+                    key={c.label}
+                    type="button"
+                    onClick={c.run}
+                    className="rounded-full border px-3 py-1 text-xs hover:bg-neutral-100"
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <form
-              className="flex gap-1 border-t p-2"
+              className="flex gap-1 p-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 void sendChat(input);
@@ -1295,7 +1818,7 @@ export function PilotApp() {
             >
               <input
                 className="flex-1 rounded border px-2 py-1 text-sm"
-                placeholder="Например: нас четверо и собака, хочу 90 м²"
+                placeholder="Например: участка нет, нас трое и три кошки"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
               />
