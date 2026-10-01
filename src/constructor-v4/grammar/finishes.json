@@ -1,0 +1,323 @@
+{
+  "version": "4.0.0-draft",
+  "status": "PLACEHOLDER",
+  "note": "Каталог отделок как данные. Состав и надбавки — ЗАГЛУШКИ до списка отделок, фото и прайса от владельца. Надбавка задаётся вилкой ₽ за м² тёплого контура. Кровля модулей всегда плоская: стили «шале», «американский», «средиземноморский» передаются облицовкой, цветом, окнами и интерьером, скатной кровли нет.",
+  "categories": {
+    "facade": [
+      {
+        "id": "planken-larch",
+        "label": "Планкен лиственница",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "planken-thermo",
+        "label": "Термодерево",
+        "surchargePerM2": {
+          "min": 2000,
+          "max": 5000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "fiber-cement",
+        "label": "Фиброцемент под бетон",
+        "surchargePerM2": {
+          "min": 1500,
+          "max": 4000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "metal-panel",
+        "label": "Металлокассеты",
+        "surchargePerM2": {
+          "min": 3000,
+          "max": 7000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "plaster-white",
+        "label": "Штукатурка белая",
+        "surchargePerM2": {
+          "min": 500,
+          "max": 2500
+        },
+        "placeholder": true
+      },
+      {
+        "id": "siding-light",
+        "label": "Сайдинг светлый (фиброцемент)",
+        "surchargePerM2": {
+          "min": 1000,
+          "max": 3500
+        },
+        "placeholder": true
+      },
+      {
+        "id": "planken-dark-stone",
+        "label": "Тёмное дерево и камень по цоколю",
+        "surchargePerM2": {
+          "min": 4000,
+          "max": 9000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "plaster-warm",
+        "label": "Штукатурка тёплая (песочная)",
+        "surchargePerM2": {
+          "min": 500,
+          "max": 2500
+        },
+        "placeholder": true
+      }
+    ],
+    "roof": [
+      {
+        "id": "flat-membrane",
+        "label": "Плоская, мембрана",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "flat-exploitable-deck",
+        "label": "Эксплуатируемая с настилом",
+        "surchargePerM2": {
+          "min": 3000,
+          "max": 8000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "flat-green",
+        "label": "Зелёная кровля",
+        "surchargePerM2": {
+          "min": 4000,
+          "max": 10000
+        },
+        "placeholder": true
+      }
+    ],
+    "windowFrames": [
+      {
+        "id": "frame-graphite",
+        "label": "Рамы графит",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "frame-black",
+        "label": "Рамы чёрные",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 1000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "frame-wood-alu",
+        "label": "Дерево-алюминий",
+        "surchargePerM2": {
+          "min": 3000,
+          "max": 8000
+        },
+        "placeholder": true
+      }
+    ],
+    "interior": [
+      {
+        "id": "interior-light-oak",
+        "label": "Светлый дуб и белый",
+        "surchargePerM2": {
+          "min": 0,
+          "max": 0
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-warm-wood",
+        "label": "Тёплое дерево",
+        "surchargePerM2": {
+          "min": 1000,
+          "max": 4000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-concrete",
+        "label": "Микроцемент и графит",
+        "surchargePerM2": {
+          "min": 2000,
+          "max": 6000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-japandi",
+        "label": "Джапанди: бежевый, лён, дерево",
+        "surchargePerM2": {
+          "min": 1000,
+          "max": 5000
+        },
+        "placeholder": true
+      },
+      {
+        "id": "interior-mediterranean",
+        "label": "Белёные стены, терракота, лён",
+        "surchargePerM2": {
+          "min": 1500,
+          "max": 5000
+        },
+        "placeholder": true
+      }
+    ]
+  },
+  "styles": [
+    {
+      "id": "riga-clean",
+      "label": "Рижский без планкена",
+      "aliases": ["рижский без планкена", "рижск без планкен"],
+      "facade": "plaster-white",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-black",
+      "interior": "interior-light-oak",
+      "region": "Прибалтика",
+      "palette": ["#F4F2EE", "#1C1C1C"],
+      "windows": "floor-to-ceiling"
+    },
+    {
+      "id": "scandi",
+      "label": "Скандинавский",
+      "aliases": ["скандинавский", "сканди", "скандинав"],
+      "facade": "planken-larch",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-light-oak",
+      "region": "Скандинавия",
+      "palette": ["#F4F2EE", "#C9B79C", "#3A3D40"],
+      "windows": "large"
+    },
+    {
+      "id": "japandi",
+      "label": "Японский минимализм",
+      "aliases": ["японский", "японск", "джапанди"],
+      "facade": "planken-thermo",
+      "roof": "flat-green",
+      "windowFrames": "frame-black",
+      "interior": "interior-japandi",
+      "region": "Япония",
+      "palette": ["#2B2724", "#D8CBB5", "#8A7F70"],
+      "windows": "large"
+    },
+    {
+      "id": "riga-planken",
+      "label": "Рижский с планкеном",
+      "aliases": ["рижский", "рижск", "рига"],
+      "facade": "planken-thermo",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-black",
+      "interior": "interior-warm-wood",
+      "region": "Прибалтика",
+      "palette": ["#2B2724", "#B08D63", "#1C1C1C"],
+      "windows": "floor-to-ceiling"
+    },
+    {
+      "id": "wood",
+      "label": "Дерево",
+      "aliases": ["дерево", "деревянн", "эко"],
+      "facade": "planken-larch",
+      "roof": "flat-exploitable-deck",
+      "windowFrames": "frame-wood-alu",
+      "interior": "interior-warm-wood",
+      "region": "Россия, лес",
+      "palette": ["#B08D63", "#6B4F35"],
+      "windows": "large"
+    },
+    {
+      "id": "concrete",
+      "label": "Бетон",
+      "aliases": ["бетон", "лофт", "брутализм"],
+      "facade": "fiber-cement",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-concrete",
+      "region": "Город, лофт",
+      "palette": ["#9A9A96", "#3A3D40"],
+      "windows": "floor-to-ceiling"
+    },
+    {
+      "id": "hi-tech",
+      "label": "Хай-тек",
+      "aliases": ["хай-тек", "хайтек", "модерн"],
+      "facade": "metal-panel",
+      "roof": "flat-exploitable-deck",
+      "windowFrames": "frame-black",
+      "interior": "interior-concrete",
+      "region": "Хай-тек",
+      "palette": ["#1C1C1C", "#C0C4C8"],
+      "windows": "floor-to-ceiling"
+    },
+    {
+      "id": "american",
+      "label": "Американский",
+      "aliases": ["американский", "америк"],
+      "facade": "siding-light",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-warm-wood",
+      "region": "США",
+      "palette": ["#E8E4DA", "#5B6B7A", "#FFFFFF"],
+      "windows": "standard",
+      "constraintNote": "Кровля у модулей плоская — скатной не будет; характер стиля даём облицовкой, цветом и окнами."
+    },
+    {
+      "id": "chalet",
+      "label": "Альпийский / шале",
+      "aliases": ["альпийский", "альпийск", "шале", "альпы"],
+      "facade": "planken-dark-stone",
+      "roof": "flat-exploitable-deck",
+      "windowFrames": "frame-wood-alu",
+      "interior": "interior-warm-wood",
+      "region": "Альпы",
+      "palette": ["#3B2A1E", "#8C8A84", "#D9CBB0"],
+      "windows": "large",
+      "constraintNote": "Кровля у модулей плоская — скатной не будет; характер стиля даём облицовкой, цветом и окнами."
+    },
+    {
+      "id": "mediterranean",
+      "label": "Средиземноморский",
+      "aliases": ["средиземноморский", "средиземномор", "италия", "греция", "испания"],
+      "facade": "plaster-warm",
+      "roof": "flat-exploitable-deck",
+      "windowFrames": "frame-wood-alu",
+      "interior": "interior-mediterranean",
+      "region": "Средиземноморье",
+      "palette": ["#EFE6D6", "#C26A3D", "#5F7F6E"],
+      "windows": "standard",
+      "constraintNote": "Кровля у модулей плоская — скатной не будет; характер стиля даём облицовкой, цветом и окнами."
+    },
+    {
+      "id": "minimalism",
+      "label": "Минимализм",
+      "aliases": ["минимализм", "минималист"],
+      "facade": "plaster-white",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-light-oak",
+      "region": "—",
+      "palette": ["#FFFFFF", "#E5E5E2", "#3A3D40"],
+      "windows": "floor-to-ceiling"
+    }
+  ]
+}

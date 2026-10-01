@@ -9,85 +9,46 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TrainingRouteImport } from './routes/training'
-import { Route as TechnologyRouteImport } from './routes/technology'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
-import { Route as PresentationRouteImport } from './routes/presentation'
-import { Route as PortfolioRouteImport } from './routes/portfolio'
-import { Route as DesignRouteImport } from './routes/design'
-import { Route as ContactsRouteImport } from './routes/contacts'
-import { Route as ConstructorRouteImport } from './routes/constructor'
-import { Route as ConcreteRouteImport } from './routes/concrete'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as HousesIndexRouteImport } from './routes/houses.index'
-import { Route as BlogIndexRouteImport } from './routes/blog.index'
-import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
-import { Route as HousesSlugRouteImport } from './routes/houses.$slug'
-import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
-import { Route as ApiPlannerTrainingRouteImport } from './routes/api.planner-training'
-import { Route as ApiLeadRouteImport } from './routes/api.lead'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as ConcreteRouteImport } from './routes/concrete'
+import { Route as ConstructorRouteImport } from './routes/constructor'
+import { Route as ContactsRouteImport } from './routes/contacts'
+import { Route as DesignRouteImport } from './routes/design'
+import { Route as PilotRouteImport } from './routes/pilot'
+import { Route as PortfolioRouteImport } from './routes/portfolio'
+import { Route as PresentationRouteImport } from './routes/presentation'
+import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TechnologyRouteImport } from './routes/technology'
+import { Route as TrainingRouteImport } from './routes/training'
 import { Route as ApiAiLayoutRouteImport } from './routes/api.ai-layout'
-import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
-import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
-import { Route as ApiDesignSessionRouteImport } from './routes/api.design.session'
-import { Route as ApiDesignProjectsRouteImport } from './routes/api.design.projects'
-import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.result'
+import { Route as ApiLeadRouteImport } from './routes/api.lead'
+import { Route as ApiPlannerTrainingRouteImport } from './routes/api.planner-training'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as ConstructorClassicRouteImport } from './routes/constructor_.classic'
+import { Route as HousesIndexRouteImport } from './routes/houses.index'
+import { Route as HousesSlugRouteImport } from './routes/houses.$slug'
+import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as ApiAiLayoutFootprintRouteImport } from './routes/api.ai-layout.footprint'
-import { Route as ApiDesignProjectsIdRouteImport } from './routes/api.design.projects.$id'
-import { Route as ApiDesignOauthStartRouteImport } from './routes/api.design.oauth.start'
-import { Route as ApiDesignOauthCallbackRouteImport } from './routes/api.design.oauth.callback'
+import { Route as ApiAiLayoutResultRouteImport } from './routes/api.ai-layout.result'
+import { Route as ApiDesignProjectsRouteImport } from './routes/api.design.projects'
+import { Route as ApiDesignSessionRouteImport } from './routes/api.design.session'
+import { Route as ApiPilotChatRouteImport } from './routes/api.pilot.chat'
+import { Route as ApiPilotHealthRouteImport } from './routes/api.pilot.health'
+import { Route as ApiPilotLeadRouteImport } from './routes/api.pilot.lead'
+import { Route as ApiPilotRenderRouteImport } from './routes/api.pilot.render'
+import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
+import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as ApiDesignCoverIdRouteImport } from './routes/api.design.cover.$id'
+import { Route as ApiDesignOauthCallbackRouteImport } from './routes/api.design.oauth.callback'
+import { Route as ApiDesignOauthStartRouteImport } from './routes/api.design.oauth.start'
+import { Route as ApiDesignProjectsIdRouteImport } from './routes/api.design.projects.$id'
 
-const TrainingRoute = TrainingRouteImport.update({
-  id: '/training',
-  path: '/training',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnologyRoute = TechnologyRouteImport.update({
-  id: '/technology',
-  path: '/technology',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RssDotxmlRoute = RssDotxmlRouteImport.update({
-  id: '/rss.xml',
-  path: '/rss.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PresentationRoute = PresentationRouteImport.update({
-  id: '/presentation',
-  path: '/presentation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortfolioRoute = PortfolioRouteImport.update({
-  id: '/portfolio',
-  path: '/portfolio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignRoute = DesignRouteImport.update({
-  id: '/design',
-  path: '/design',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactsRoute = ContactsRouteImport.update({
-  id: '/contacts',
-  path: '/contacts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConstructorRoute = ConstructorRouteImport.update({
-  id: '/constructor',
-  path: '/constructor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConcreteRoute = ConcreteRouteImport.update({
-  id: '/concrete',
-  path: '/concrete',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
@@ -95,44 +56,59 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ConcreteRoute = ConcreteRouteImport.update({
+  id: '/concrete',
+  path: '/concrete',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HousesIndexRoute = HousesIndexRouteImport.update({
-  id: '/houses/',
-  path: '/houses/',
+const ConstructorRoute = ConstructorRouteImport.update({
+  id: '/constructor',
+  path: '/constructor',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogIndexRoute = BlogIndexRouteImport.update({
-  id: '/blog/',
-  path: '/blog/',
+const ContactsRoute = ContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectsSlugRoute = ProjectsSlugRouteImport.update({
-  id: '/projects/$slug',
-  path: '/projects/$slug',
+const DesignRoute = DesignRouteImport.update({
+  id: '/design',
+  path: '/design',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HousesSlugRoute = HousesSlugRouteImport.update({
-  id: '/houses/$slug',
-  path: '/houses/$slug',
+const PilotRoute = PilotRouteImport.update({
+  id: '/pilot',
+  path: '/pilot',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/blog/$slug',
-  path: '/blog/$slug',
+const PortfolioRoute = PortfolioRouteImport.update({
+  id: '/portfolio',
+  path: '/portfolio',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPlannerTrainingRoute = ApiPlannerTrainingRouteImport.update({
-  id: '/api/planner-training',
-  path: '/api/planner-training',
+const PresentationRoute = PresentationRouteImport.update({
+  id: '/presentation',
+  path: '/presentation',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiLeadRoute = ApiLeadRouteImport.update({
-  id: '/api/lead',
-  path: '/api/lead',
+const RssDotxmlRoute = RssDotxmlRouteImport.update({
+  id: '/rss.xml',
+  path: '/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnologyRoute = TechnologyRouteImport.update({
+  id: '/technology',
+  path: '/technology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrainingRoute = TrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiLayoutRoute = ApiAiLayoutRouteImport.update({
@@ -140,14 +116,59 @@ const ApiAiLayoutRoute = ApiAiLayoutRouteImport.update({
   path: '/api/ai-layout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogTagTagRoute = BlogTagTagRouteImport.update({
-  id: '/blog/tag/$tag',
-  path: '/blog/tag/$tag',
+const ApiLeadRoute = ApiLeadRouteImport.update({
+  id: '/api/lead',
+  path: '/api/lead',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
-  id: '/blog/category/$category',
-  path: '/blog/category/$category',
+const ApiPlannerTrainingRoute = ApiPlannerTrainingRouteImport.update({
+  id: '/api/planner-training',
+  path: '/api/planner-training',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConstructorClassicRoute = ConstructorClassicRouteImport.update({
+  id: '/constructor_/classic',
+  path: '/constructor/classic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HousesIndexRoute = HousesIndexRouteImport.update({
+  id: '/houses/',
+  path: '/houses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HousesSlugRoute = HousesSlugRouteImport.update({
+  id: '/houses/$slug',
+  path: '/houses/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsSlugRoute = ProjectsSlugRouteImport.update({
+  id: '/projects/$slug',
+  path: '/projects/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiLayoutFootprintRoute = ApiAiLayoutFootprintRouteImport.update({
+  id: '/footprint',
+  path: '/footprint',
+  getParentRoute: () => ApiAiLayoutRoute,
+} as any)
+const ApiAiLayoutResultRoute = ApiAiLayoutResultRouteImport.update({
+  id: '/result',
+  path: '/result',
+  getParentRoute: () => ApiAiLayoutRoute,
+} as any)
+const ApiDesignProjectsRoute = ApiDesignProjectsRouteImport.update({
+  id: '/api/design/projects',
+  path: '/api/design/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDesignSessionRoute = ApiDesignSessionRouteImport.update({
@@ -155,29 +176,39 @@ const ApiDesignSessionRoute = ApiDesignSessionRouteImport.update({
   path: '/api/design/session',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDesignProjectsRoute = ApiDesignProjectsRouteImport.update({
-  id: '/api/design/projects',
-  path: '/api/design/projects',
+const ApiPilotChatRoute = ApiPilotChatRouteImport.update({
+  id: '/api/pilot/chat',
+  path: '/api/pilot/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAiLayoutResultRoute = ApiAiLayoutResultRouteImport.update({
-  id: '/result',
-  path: '/result',
-  getParentRoute: () => ApiAiLayoutRoute,
+const ApiPilotHealthRoute = ApiPilotHealthRouteImport.update({
+  id: '/api/pilot/health',
+  path: '/api/pilot/health',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAiLayoutFootprintRoute = ApiAiLayoutFootprintRouteImport.update({
-  id: '/footprint',
-  path: '/footprint',
-  getParentRoute: () => ApiAiLayoutRoute,
+const ApiPilotLeadRoute = ApiPilotLeadRouteImport.update({
+  id: '/api/pilot/lead',
+  path: '/api/pilot/lead',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDesignProjectsIdRoute = ApiDesignProjectsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiDesignProjectsRoute,
+const ApiPilotRenderRoute = ApiPilotRenderRouteImport.update({
+  id: '/api/pilot/render',
+  path: '/api/pilot/render',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDesignOauthStartRoute = ApiDesignOauthStartRouteImport.update({
-  id: '/api/design/oauth/start',
-  path: '/api/design/oauth/start',
+const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
+  id: '/blog/category/$category',
+  path: '/blog/category/$category',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogTagTagRoute = BlogTagTagRouteImport.update({
+  id: '/blog/tag/$tag',
+  path: '/blog/tag/$tag',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignCoverIdRoute = ApiDesignCoverIdRouteImport.update({
+  id: '/api/design/cover/$id',
+  path: '/api/design/cover/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDesignOauthCallbackRoute = ApiDesignOauthCallbackRouteImport.update({
@@ -185,10 +216,15 @@ const ApiDesignOauthCallbackRoute = ApiDesignOauthCallbackRouteImport.update({
   path: '/api/design/oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDesignCoverIdRoute = ApiDesignCoverIdRouteImport.update({
-  id: '/api/design/cover/$id',
-  path: '/api/design/cover/$id',
+const ApiDesignOauthStartRoute = ApiDesignOauthStartRouteImport.update({
+  id: '/api/design/oauth/start',
+  path: '/api/design/oauth/start',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignProjectsIdRoute = ApiDesignProjectsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiDesignProjectsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -198,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
   '/design': typeof DesignRoute
+  '/pilot': typeof PilotRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
   '/rss.xml': typeof RssDotxmlRoute
@@ -208,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/api/lead': typeof ApiLeadRoute
   '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/constructor/classic': typeof ConstructorClassicRoute
   '/houses/$slug': typeof HousesSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -216,6 +254,10 @@ export interface FileRoutesByFullPath {
   '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
+  '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/health': typeof ApiPilotHealthRoute
+  '/api/pilot/lead': typeof ApiPilotLeadRoute
+  '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
@@ -230,6 +272,7 @@ export interface FileRoutesByTo {
   '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
   '/design': typeof DesignRoute
+  '/pilot': typeof PilotRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
   '/rss.xml': typeof RssDotxmlRoute
@@ -240,6 +283,7 @@ export interface FileRoutesByTo {
   '/api/lead': typeof ApiLeadRoute
   '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/constructor/classic': typeof ConstructorClassicRoute
   '/houses/$slug': typeof HousesSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog': typeof BlogIndexRoute
@@ -248,6 +292,10 @@ export interface FileRoutesByTo {
   '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
+  '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/health': typeof ApiPilotHealthRoute
+  '/api/pilot/lead': typeof ApiPilotLeadRoute
+  '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
@@ -263,6 +311,7 @@ export interface FileRoutesById {
   '/constructor': typeof ConstructorRoute
   '/contacts': typeof ContactsRoute
   '/design': typeof DesignRoute
+  '/pilot': typeof PilotRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
   '/rss.xml': typeof RssDotxmlRoute
@@ -273,6 +322,7 @@ export interface FileRoutesById {
   '/api/lead': typeof ApiLeadRoute
   '/api/planner-training': typeof ApiPlannerTrainingRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/constructor_/classic': typeof ConstructorClassicRoute
   '/houses/$slug': typeof HousesSlugRoute
   '/projects/$slug': typeof ProjectsSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -281,6 +331,10 @@ export interface FileRoutesById {
   '/api/ai-layout/result': typeof ApiAiLayoutResultRoute
   '/api/design/projects': typeof ApiDesignProjectsRouteWithChildren
   '/api/design/session': typeof ApiDesignSessionRoute
+  '/api/pilot/chat': typeof ApiPilotChatRoute
+  '/api/pilot/health': typeof ApiPilotHealthRoute
+  '/api/pilot/lead': typeof ApiPilotLeadRoute
+  '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
@@ -297,6 +351,7 @@ export interface FileRouteTypes {
     | '/constructor'
     | '/contacts'
     | '/design'
+    | '/pilot'
     | '/portfolio'
     | '/presentation'
     | '/rss.xml'
@@ -307,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/lead'
     | '/api/planner-training'
     | '/blog/$slug'
+    | '/constructor/classic'
     | '/houses/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -315,6 +371,10 @@ export interface FileRouteTypes {
     | '/api/ai-layout/result'
     | '/api/design/projects'
     | '/api/design/session'
+    | '/api/pilot/chat'
+    | '/api/pilot/health'
+    | '/api/pilot/lead'
+    | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
@@ -329,6 +389,7 @@ export interface FileRouteTypes {
     | '/constructor'
     | '/contacts'
     | '/design'
+    | '/pilot'
     | '/portfolio'
     | '/presentation'
     | '/rss.xml'
@@ -339,6 +400,7 @@ export interface FileRouteTypes {
     | '/api/lead'
     | '/api/planner-training'
     | '/blog/$slug'
+    | '/constructor/classic'
     | '/houses/$slug'
     | '/projects/$slug'
     | '/blog'
@@ -347,6 +409,10 @@ export interface FileRouteTypes {
     | '/api/ai-layout/result'
     | '/api/design/projects'
     | '/api/design/session'
+    | '/api/pilot/chat'
+    | '/api/pilot/health'
+    | '/api/pilot/lead'
+    | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
@@ -361,6 +427,7 @@ export interface FileRouteTypes {
     | '/constructor'
     | '/contacts'
     | '/design'
+    | '/pilot'
     | '/portfolio'
     | '/presentation'
     | '/rss.xml'
@@ -371,6 +438,7 @@ export interface FileRouteTypes {
     | '/api/lead'
     | '/api/planner-training'
     | '/blog/$slug'
+    | '/constructor_/classic'
     | '/houses/$slug'
     | '/projects/$slug'
     | '/blog/'
@@ -379,6 +447,10 @@ export interface FileRouteTypes {
     | '/api/ai-layout/result'
     | '/api/design/projects'
     | '/api/design/session'
+    | '/api/pilot/chat'
+    | '/api/pilot/health'
+    | '/api/pilot/lead'
+    | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
     | '/api/design/cover/$id'
@@ -394,6 +466,7 @@ export interface RootRouteChildren {
   ConstructorRoute: typeof ConstructorRoute
   ContactsRoute: typeof ContactsRoute
   DesignRoute: typeof DesignRoute
+  PilotRoute: typeof PilotRoute
   PortfolioRoute: typeof PortfolioRoute
   PresentationRoute: typeof PresentationRoute
   RssDotxmlRoute: typeof RssDotxmlRoute
@@ -404,12 +477,17 @@ export interface RootRouteChildren {
   ApiLeadRoute: typeof ApiLeadRoute
   ApiPlannerTrainingRoute: typeof ApiPlannerTrainingRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  ConstructorClassicRoute: typeof ConstructorClassicRoute
   HousesSlugRoute: typeof HousesSlugRoute
   ProjectsSlugRoute: typeof ProjectsSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   HousesIndexRoute: typeof HousesIndexRoute
   ApiDesignProjectsRoute: typeof ApiDesignProjectsRouteWithChildren
   ApiDesignSessionRoute: typeof ApiDesignSessionRoute
+  ApiPilotChatRoute: typeof ApiPilotChatRoute
+  ApiPilotHealthRoute: typeof ApiPilotHealthRoute
+  ApiPilotLeadRoute: typeof ApiPilotLeadRoute
+  ApiPilotRenderRoute: typeof ApiPilotRenderRoute
   BlogCategoryCategoryRoute: typeof BlogCategoryCategoryRoute
   BlogTagTagRoute: typeof BlogTagTagRoute
   ApiDesignCoverIdRoute: typeof ApiDesignCoverIdRoute
@@ -419,74 +497,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/training': {
-      id: '/training'
-      path: '/training'
-      fullPath: '/training'
-      preLoaderRoute: typeof TrainingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technology': {
-      id: '/technology'
-      path: '/technology'
-      fullPath: '/technology'
-      preLoaderRoute: typeof TechnologyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rss.xml': {
-      id: '/rss.xml'
-      path: '/rss.xml'
-      fullPath: '/rss.xml'
-      preLoaderRoute: typeof RssDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/presentation': {
-      id: '/presentation'
-      path: '/presentation'
-      fullPath: '/presentation'
-      preLoaderRoute: typeof PresentationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portfolio': {
-      id: '/portfolio'
-      path: '/portfolio'
-      fullPath: '/portfolio'
-      preLoaderRoute: typeof PortfolioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design': {
-      id: '/design'
-      path: '/design'
-      fullPath: '/design'
-      preLoaderRoute: typeof DesignRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contacts': {
-      id: '/contacts'
-      path: '/contacts'
-      fullPath: '/contacts'
-      preLoaderRoute: typeof ContactsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/constructor': {
-      id: '/constructor'
-      path: '/constructor'
-      fullPath: '/constructor'
-      preLoaderRoute: typeof ConstructorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/concrete': {
-      id: '/concrete'
-      path: '/concrete'
-      fullPath: '/concrete'
-      preLoaderRoute: typeof ConcreteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics': {
@@ -496,60 +511,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/concrete': {
+      id: '/concrete'
+      path: '/concrete'
+      fullPath: '/concrete'
+      preLoaderRoute: typeof ConcreteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/houses/': {
-      id: '/houses/'
-      path: '/houses'
-      fullPath: '/houses/'
-      preLoaderRoute: typeof HousesIndexRouteImport
+    '/constructor': {
+      id: '/constructor'
+      path: '/constructor'
+      fullPath: '/constructor'
+      preLoaderRoute: typeof ConstructorRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/': {
-      id: '/blog/'
-      path: '/blog'
-      fullPath: '/blog/'
-      preLoaderRoute: typeof BlogIndexRouteImport
+    '/contacts': {
+      id: '/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof ContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/projects/$slug': {
-      id: '/projects/$slug'
-      path: '/projects/$slug'
-      fullPath: '/projects/$slug'
-      preLoaderRoute: typeof ProjectsSlugRouteImport
+    '/design': {
+      id: '/design'
+      path: '/design'
+      fullPath: '/design'
+      preLoaderRoute: typeof DesignRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/houses/$slug': {
-      id: '/houses/$slug'
-      path: '/houses/$slug'
-      fullPath: '/houses/$slug'
-      preLoaderRoute: typeof HousesSlugRouteImport
+    '/pilot': {
+      id: '/pilot'
+      path: '/pilot'
+      fullPath: '/pilot'
+      preLoaderRoute: typeof PilotRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
+    '/portfolio': {
+      id: '/portfolio'
+      path: '/portfolio'
+      fullPath: '/portfolio'
+      preLoaderRoute: typeof PortfolioRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/planner-training': {
-      id: '/api/planner-training'
-      path: '/api/planner-training'
-      fullPath: '/api/planner-training'
-      preLoaderRoute: typeof ApiPlannerTrainingRouteImport
+    '/presentation': {
+      id: '/presentation'
+      path: '/presentation'
+      fullPath: '/presentation'
+      preLoaderRoute: typeof PresentationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/lead': {
-      id: '/api/lead'
-      path: '/api/lead'
-      fullPath: '/api/lead'
-      preLoaderRoute: typeof ApiLeadRouteImport
+    '/rss.xml': {
+      id: '/rss.xml'
+      path: '/rss.xml'
+      fullPath: '/rss.xml'
+      preLoaderRoute: typeof RssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technology': {
+      id: '/technology'
+      path: '/technology'
+      fullPath: '/technology'
+      preLoaderRoute: typeof TechnologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/training': {
+      id: '/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof TrainingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai-layout': {
@@ -559,18 +595,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/tag/$tag': {
-      id: '/blog/tag/$tag'
-      path: '/blog/tag/$tag'
-      fullPath: '/blog/tag/$tag'
-      preLoaderRoute: typeof BlogTagTagRouteImport
+    '/api/lead': {
+      id: '/api/lead'
+      path: '/api/lead'
+      fullPath: '/api/lead'
+      preLoaderRoute: typeof ApiLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/category/$category': {
-      id: '/blog/category/$category'
-      path: '/blog/category/$category'
-      fullPath: '/blog/category/$category'
-      preLoaderRoute: typeof BlogCategoryCategoryRouteImport
+    '/api/planner-training': {
+      id: '/api/planner-training'
+      path: '/api/planner-training'
+      fullPath: '/api/planner-training'
+      preLoaderRoute: typeof ApiPlannerTrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/constructor_/classic': {
+      id: '/constructor_/classic'
+      path: '/constructor/classic'
+      fullPath: '/constructor/classic'
+      preLoaderRoute: typeof ConstructorClassicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/houses/': {
+      id: '/houses/'
+      path: '/houses'
+      fullPath: '/houses/'
+      preLoaderRoute: typeof HousesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/houses/$slug': {
+      id: '/houses/$slug'
+      path: '/houses/$slug'
+      fullPath: '/houses/$slug'
+      preLoaderRoute: typeof HousesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$slug': {
+      id: '/projects/$slug'
+      path: '/projects/$slug'
+      fullPath: '/projects/$slug'
+      preLoaderRoute: typeof ProjectsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai-layout/footprint': {
+      id: '/api/ai-layout/footprint'
+      path: '/footprint'
+      fullPath: '/api/ai-layout/footprint'
+      preLoaderRoute: typeof ApiAiLayoutFootprintRouteImport
+      parentRoute: typeof ApiAiLayoutRoute
+    }
+    '/api/ai-layout/result': {
+      id: '/api/ai-layout/result'
+      path: '/result'
+      fullPath: '/api/ai-layout/result'
+      preLoaderRoute: typeof ApiAiLayoutResultRouteImport
+      parentRoute: typeof ApiAiLayoutRoute
+    }
+    '/api/design/projects': {
+      id: '/api/design/projects'
+      path: '/api/design/projects'
+      fullPath: '/api/design/projects'
+      preLoaderRoute: typeof ApiDesignProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/design/session': {
@@ -580,39 +679,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/design/projects': {
-      id: '/api/design/projects'
-      path: '/api/design/projects'
-      fullPath: '/api/design/projects'
-      preLoaderRoute: typeof ApiDesignProjectsRouteImport
+    '/api/pilot/chat': {
+      id: '/api/pilot/chat'
+      path: '/api/pilot/chat'
+      fullPath: '/api/pilot/chat'
+      preLoaderRoute: typeof ApiPilotChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ai-layout/result': {
-      id: '/api/ai-layout/result'
-      path: '/result'
-      fullPath: '/api/ai-layout/result'
-      preLoaderRoute: typeof ApiAiLayoutResultRouteImport
-      parentRoute: typeof ApiAiLayoutRoute
+    '/api/pilot/health': {
+      id: '/api/pilot/health'
+      path: '/api/pilot/health'
+      fullPath: '/api/pilot/health'
+      preLoaderRoute: typeof ApiPilotHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/ai-layout/footprint': {
-      id: '/api/ai-layout/footprint'
-      path: '/footprint'
-      fullPath: '/api/ai-layout/footprint'
-      preLoaderRoute: typeof ApiAiLayoutFootprintRouteImport
-      parentRoute: typeof ApiAiLayoutRoute
+    '/api/pilot/lead': {
+      id: '/api/pilot/lead'
+      path: '/api/pilot/lead'
+      fullPath: '/api/pilot/lead'
+      preLoaderRoute: typeof ApiPilotLeadRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/design/projects/$id': {
-      id: '/api/design/projects/$id'
-      path: '/$id'
-      fullPath: '/api/design/projects/$id'
-      preLoaderRoute: typeof ApiDesignProjectsIdRouteImport
-      parentRoute: typeof ApiDesignProjectsRoute
+    '/api/pilot/render': {
+      id: '/api/pilot/render'
+      path: '/api/pilot/render'
+      fullPath: '/api/pilot/render'
+      preLoaderRoute: typeof ApiPilotRenderRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/design/oauth/start': {
-      id: '/api/design/oauth/start'
-      path: '/api/design/oauth/start'
-      fullPath: '/api/design/oauth/start'
-      preLoaderRoute: typeof ApiDesignOauthStartRouteImport
+    '/blog/category/$category': {
+      id: '/blog/category/$category'
+      path: '/blog/category/$category'
+      fullPath: '/blog/category/$category'
+      preLoaderRoute: typeof BlogCategoryCategoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/tag/$tag': {
+      id: '/blog/tag/$tag'
+      path: '/blog/tag/$tag'
+      fullPath: '/blog/tag/$tag'
+      preLoaderRoute: typeof BlogTagTagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/design/cover/$id': {
+      id: '/api/design/cover/$id'
+      path: '/api/design/cover/$id'
+      fullPath: '/api/design/cover/$id'
+      preLoaderRoute: typeof ApiDesignCoverIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/design/oauth/callback': {
@@ -622,12 +735,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/design/cover/$id': {
-      id: '/api/design/cover/$id'
-      path: '/api/design/cover/$id'
-      fullPath: '/api/design/cover/$id'
-      preLoaderRoute: typeof ApiDesignCoverIdRouteImport
+    '/api/design/oauth/start': {
+      id: '/api/design/oauth/start'
+      path: '/api/design/oauth/start'
+      fullPath: '/api/design/oauth/start'
+      preLoaderRoute: typeof ApiDesignOauthStartRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/design/projects/$id': {
+      id: '/api/design/projects/$id'
+      path: '/$id'
+      fullPath: '/api/design/projects/$id'
+      preLoaderRoute: typeof ApiDesignProjectsIdRouteImport
+      parentRoute: typeof ApiDesignProjectsRoute
     }
   }
 }
@@ -664,6 +784,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConstructorRoute: ConstructorRoute,
   ContactsRoute: ContactsRoute,
   DesignRoute: DesignRoute,
+  PilotRoute: PilotRoute,
   PortfolioRoute: PortfolioRoute,
   PresentationRoute: PresentationRoute,
   RssDotxmlRoute: RssDotxmlRoute,
@@ -674,12 +795,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLeadRoute: ApiLeadRoute,
   ApiPlannerTrainingRoute: ApiPlannerTrainingRoute,
   BlogSlugRoute: BlogSlugRoute,
+  ConstructorClassicRoute: ConstructorClassicRoute,
   HousesSlugRoute: HousesSlugRoute,
   ProjectsSlugRoute: ProjectsSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   HousesIndexRoute: HousesIndexRoute,
   ApiDesignProjectsRoute: ApiDesignProjectsRouteWithChildren,
   ApiDesignSessionRoute: ApiDesignSessionRoute,
+  ApiPilotChatRoute: ApiPilotChatRoute,
+  ApiPilotHealthRoute: ApiPilotHealthRoute,
+  ApiPilotLeadRoute: ApiPilotLeadRoute,
+  ApiPilotRenderRoute: ApiPilotRenderRoute,
   BlogCategoryCategoryRoute: BlogCategoryCategoryRoute,
   BlogTagTagRoute: BlogTagTagRoute,
   ApiDesignCoverIdRoute: ApiDesignCoverIdRoute,
