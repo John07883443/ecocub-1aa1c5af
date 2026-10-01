@@ -1,0 +1,2810 @@
+{
+  "model": "openai/gpt-5.4-mini",
+  "recordedAt": "2026-10-01T18:02:03.733Z",
+  "utterances": [
+    "Сделай фасад светлее, белая штукатурка.",
+    "Добавь спальню с южной стороны.",
+    "Окна на южном фасаде сделай больше.",
+    "Добавь второй этаж.",
+    "Отмени последнее.",
+    "Сделай дом больше на двадцать квадратов.",
+    "Перенеси вход на восток."
+  ],
+  "events": [
+    {
+      "t": 934,
+      "event_id": "f2e9eceb-3c13-433e-b80f-7549f8d8bb8b",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 1150,
+      "event_id": "ca00f5b4-0450-4946-a934-6f2702c79991",
+      "type": "conversation.item.added",
+      "previous_item_id": null,
+      "item": {
+        "id": "b770df84-f2cf-4300-aef0-aea4caf7c65f",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Сделай фасад светлее, белая штукатурка." }]
+      }
+    },
+    {
+      "t": 1150,
+      "event_id": "db634620-43c8-4983-874e-ea38f46b9ad0",
+      "type": "conversation.item.done",
+      "previous_item_id": null,
+      "item": {
+        "id": "b770df84-f2cf-4300-aef0-aea4caf7c65f",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Сделай фасад светлее, белая штукатурка." }]
+      }
+    },
+    {
+      "t": 1150,
+      "event_id": "d794aec9-d97a-405b-adf0-8ac4bb444451",
+      "type": "response.created",
+      "response": {
+        "id": "44c81a1a-7e4d-4a27-a2af-c8298314f206",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 2215,
+      "event_id": "9f3ffa6d-16d8-4973-9850-feb411920d87",
+      "type": "response.output_item.added",
+      "response_id": "44c81a1a-7e4d-4a27-a2af-c8298314f206",
+      "output_index": 0,
+      "item": {
+        "id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+        "name": "set_finish",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 2215,
+      "event_id": "d85a0b07-0ed3-49a9-81c3-b8fe5059acd5",
+      "type": "conversation.item.added",
+      "previous_item_id": "b770df84-f2cf-4300-aef0-aea4caf7c65f",
+      "item": {
+        "id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+        "name": "set_finish",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 2254,
+      "event_id": "d7f97577-32e6-4d77-ad03-f9e2b9fa0553",
+      "type": "response.function_call_arguments.done",
+      "response_id": "44c81a1a-7e4d-4a27-a2af-c8298314f206",
+      "item_id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+      "output_index": 0,
+      "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+      "name": "set_finish",
+      "arguments": "{\"category\":\"facade\",\"finishId\":\"plaster-white\"}"
+    },
+    {
+      "t": 2260,
+      "event_id": "850c04d2-939e-4de5-9096-bec7eeec0ad0",
+      "type": "conversation.item.done",
+      "previous_item_id": "b770df84-f2cf-4300-aef0-aea4caf7c65f",
+      "item": {
+        "id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+        "name": "set_finish",
+        "arguments": "{\"category\":\"facade\",\"finishId\":\"plaster-white\"}"
+      }
+    },
+    {
+      "t": 2260,
+      "event_id": "d0ef020b-861e-4950-b4f4-79b6a704ca32",
+      "type": "response.output_item.done",
+      "response_id": "44c81a1a-7e4d-4a27-a2af-c8298314f206",
+      "output_index": 0,
+      "item": {
+        "id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+        "name": "set_finish",
+        "arguments": "{\"category\":\"facade\",\"finishId\":\"plaster-white\"}"
+      }
+    },
+    {
+      "t": 2260,
+      "event_id": "867871c9-93e8-451a-b050-bc9953c4fc1e",
+      "type": "response.done",
+      "response": {
+        "id": "44c81a1a-7e4d-4a27-a2af-c8298314f206",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+            "name": "set_finish",
+            "arguments": "{\"category\":\"facade\",\"finishId\":\"plaster-white\"}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 7099,
+          "input_tokens": 7057,
+          "output_tokens": 42,
+          "input_token_details": { "text_tokens": 7057 },
+          "output_token_details": { "text_tokens": 42 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 2479,
+      "event_id": "be897da0-1137-4b11-b37e-b1962ea9750a",
+      "type": "conversation.item.added",
+      "previous_item_id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+      "item": {
+        "id": "584ea97f-1873-41e6-b6cd-1920ba70ae79",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+        "output": "ГОТОВО, дом изменён: Штукатурка белая. Изменения: фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 2479,
+      "event_id": "bec27cf5-b5a7-4835-b972-acdd4c9ecf91",
+      "type": "conversation.item.done",
+      "previous_item_id": "8bd852e9-7a4b-4be9-bd5e-146b3cda332a",
+      "item": {
+        "id": "584ea97f-1873-41e6-b6cd-1920ba70ae79",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_rZiiVTzynoWzK94X6rsIvdWV",
+        "output": "ГОТОВО, дом изменён: Штукатурка белая. Изменения: фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 2479,
+      "event_id": "726b2005-5112-4834-81a1-68c3b529d00d",
+      "type": "response.created",
+      "response": {
+        "id": "a41d14a9-e41e-406f-9fc9-b41b93302450",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 2536,
+      "event_id": "20577398-efd2-4b18-b36b-f067351585ec",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 2536,
+      "event_id": "25a491ad-41ac-4567-819f-4ed35ccb4642",
+      "type": "response.done",
+      "response": {
+        "id": "a41d14a9-e41e-406f-9fc9-b41b93302450",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 2537,
+      "event_id": "0b386388-d8a2-4288-8ac7-74aeba67c332",
+      "type": "response.created",
+      "response": {
+        "id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 3119,
+      "event_id": "9d7d10d1-e321-451c-9024-d31833767841",
+      "type": "response.output_item.added",
+      "response_id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+      "output_index": 0,
+      "item": {
+        "id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 3119,
+      "event_id": "84b4fb07-b1b0-4c20-9735-5c6ba741f198",
+      "type": "conversation.item.added",
+      "previous_item_id": "584ea97f-1873-41e6-b6cd-1920ba70ae79",
+      "item": {
+        "id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 3119,
+      "event_id": "0746b867-a70e-401e-a18a-d068c41867a0",
+      "type": "response.content_part.added",
+      "response_id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+      "item_id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 3384,
+      "event_id": "9669f36b-aeef-4085-8d52-80f3d3964c34",
+      "type": "response.output_text.done",
+      "response_id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+      "item_id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки."
+    },
+    {
+      "t": 3386,
+      "event_id": "27eb7c29-9a76-4834-afa8-694a5b7e5802",
+      "type": "response.content_part.done",
+      "response_id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+      "item_id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+      "output_index": 0,
+      "content_index": 0,
+      "part": {
+        "type": "text",
+        "text": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки."
+      }
+    },
+    {
+      "t": 3386,
+      "event_id": "0582ec46-d5f0-48f5-822d-91b46e13b66c",
+      "type": "conversation.item.done",
+      "previous_item_id": "584ea97f-1873-41e6-b6cd-1920ba70ae79",
+      "item": {
+        "id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки.",
+            "transcript": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки."
+          }
+        ]
+      }
+    },
+    {
+      "t": 3386,
+      "event_id": "bdc78c35-fef7-4423-a8c0-07119927c5e1",
+      "type": "response.output_item.done",
+      "response_id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+      "output_index": 0,
+      "item": {
+        "id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки.",
+            "transcript": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки."
+          }
+        ]
+      }
+    },
+    {
+      "t": 3386,
+      "event_id": "8f0d8f13-2718-4114-a9f6-b1a64b22d474",
+      "type": "response.done",
+      "response": {
+        "id": "ef5fe4fe-a7b3-4ccf-b00c-394c099dfecd",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки.",
+                "transcript": "Фасад: Планкен лиственница → Штукатурка белая; +0,1 млн ₽ к середине вилки."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 7197,
+          "input_tokens": 7164,
+          "output_tokens": 33,
+          "input_token_details": { "cached_tokens": 4608, "text_tokens": 7164 },
+          "output_token_details": { "text_tokens": 33 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 6116,
+      "event_id": "84442b0e-0ed9-4c1c-8736-e3ad3112017e",
+      "type": "conversation.item.added",
+      "previous_item_id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+      "item": {
+        "id": "ba423481-3728-4ef0-ad6a-5a5b6209d153",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Добавь спальню с южной стороны." }]
+      }
+    },
+    {
+      "t": 6116,
+      "event_id": "5ae40a9f-805a-4bcb-90ae-27b5b8a51b95",
+      "type": "conversation.item.done",
+      "previous_item_id": "955a8c13-882c-4ae7-95b8-809bdca20d4a",
+      "item": {
+        "id": "ba423481-3728-4ef0-ad6a-5a5b6209d153",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Добавь спальню с южной стороны." }]
+      }
+    },
+    {
+      "t": 6117,
+      "event_id": "d1862d8d-f756-44f9-9500-6001e6af4fda",
+      "type": "response.created",
+      "response": {
+        "id": "d5be2aa5-da63-4cca-b197-52f6c2ef9d02",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 6924,
+      "event_id": "659e1756-564b-45ee-835e-ef14f1e4a6f1",
+      "type": "response.output_item.added",
+      "response_id": "d5be2aa5-da63-4cca-b197-52f6c2ef9d02",
+      "output_index": 0,
+      "item": {
+        "id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+        "name": "add_room",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 6924,
+      "event_id": "78ffeed6-1fa5-4ea2-a40f-066c6a01784f",
+      "type": "conversation.item.added",
+      "previous_item_id": "ba423481-3728-4ef0-ad6a-5a5b6209d153",
+      "item": {
+        "id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+        "name": "add_room",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 7149,
+      "event_id": "00da0b40-db32-4931-8b15-50448691ddad",
+      "type": "response.function_call_arguments.done",
+      "response_id": "d5be2aa5-da63-4cca-b197-52f6c2ef9d02",
+      "item_id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+      "output_index": 0,
+      "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+      "name": "add_room",
+      "arguments": "{\"room\":\"bedroom\",\"side\":\"S\"}"
+    },
+    {
+      "t": 7157,
+      "event_id": "2b019728-6b7e-4349-b7bb-60164237727f",
+      "type": "conversation.item.done",
+      "previous_item_id": "ba423481-3728-4ef0-ad6a-5a5b6209d153",
+      "item": {
+        "id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+        "name": "add_room",
+        "arguments": "{\"room\":\"bedroom\",\"side\":\"S\"}"
+      }
+    },
+    {
+      "t": 7157,
+      "event_id": "9c82e687-4948-42f6-92af-132e7398fd4b",
+      "type": "response.output_item.done",
+      "response_id": "d5be2aa5-da63-4cca-b197-52f6c2ef9d02",
+      "output_index": 0,
+      "item": {
+        "id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+        "name": "add_room",
+        "arguments": "{\"room\":\"bedroom\",\"side\":\"S\"}"
+      }
+    },
+    {
+      "t": 7157,
+      "event_id": "69903579-c818-4f4d-82ab-72b291b3fb67",
+      "type": "response.done",
+      "response": {
+        "id": "d5be2aa5-da63-4cca-b197-52f6c2ef9d02",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+            "name": "add_room",
+            "arguments": "{\"room\":\"bedroom\",\"side\":\"S\"}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 7236,
+          "input_tokens": 7213,
+          "output_tokens": 23,
+          "input_token_details": { "cached_tokens": 6656, "text_tokens": 7213 },
+          "output_token_details": { "text_tokens": 23 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 7382,
+      "event_id": "f1a5bac4-dcfe-4969-8600-854fed3d8930",
+      "type": "conversation.item.added",
+      "previous_item_id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+      "item": {
+        "id": "d4ef0377-dcb9-4a96-905b-df03d345820d",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+        "output": "ГОТОВО, дом изменён: Добавлено: спальня с юга. Изменения: +1 кубик (было 6, стало 7; 66 → 77 м²); спальня: 2 → 3; окна на юге меньше (остекление 12,5 → 7,5 м²); терраса 39,4 → 46 м²; +1,8 млн ₽ к середине вилки. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 7382,
+      "event_id": "832fe239-c05c-4a11-868a-046ab850645d",
+      "type": "conversation.item.done",
+      "previous_item_id": "6b9a9f23-0e1f-49f1-8c08-59bd91f20209",
+      "item": {
+        "id": "d4ef0377-dcb9-4a96-905b-df03d345820d",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_Mv71n1CRpR6kWurU6huzww4o",
+        "output": "ГОТОВО, дом изменён: Добавлено: спальня с юга. Изменения: +1 кубик (было 6, стало 7; 66 → 77 м²); спальня: 2 → 3; окна на юге меньше (остекление 12,5 → 7,5 м²); терраса 39,4 → 46 м²; +1,8 млн ₽ к середине вилки. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 7382,
+      "event_id": "01e4d89a-e38a-4a19-a1df-7409ccf32dd8",
+      "type": "response.created",
+      "response": {
+        "id": "2780f3a7-fc49-4065-8956-6482d000460a",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 7413,
+      "event_id": "973afc60-0342-4b5e-a461-0fc66063f991",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 7413,
+      "event_id": "839ac925-7d8a-4740-8f8c-316503280e9b",
+      "type": "response.done",
+      "response": {
+        "id": "2780f3a7-fc49-4065-8956-6482d000460a",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 7415,
+      "event_id": "fccc60e3-ccf6-4c33-8c40-c37ff7b048a5",
+      "type": "response.created",
+      "response": {
+        "id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 8221,
+      "event_id": "39564b25-db3c-44cf-9fa0-570c0796f7da",
+      "type": "response.output_item.added",
+      "response_id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+      "output_index": 0,
+      "item": {
+        "id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 8221,
+      "event_id": "bfb97d11-6636-4594-aee7-c4ee08607386",
+      "type": "conversation.item.added",
+      "previous_item_id": "d4ef0377-dcb9-4a96-905b-df03d345820d",
+      "item": {
+        "id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 8221,
+      "event_id": "3fbf06e4-f99b-4481-8826-dabc3495a477",
+      "type": "response.content_part.added",
+      "response_id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+      "item_id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 8698,
+      "event_id": "9d62b294-e86d-48ad-827a-1e03941b7191",
+      "type": "response.output_text.done",
+      "response_id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+      "item_id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки."
+    },
+    {
+      "t": 8699,
+      "event_id": "0a3c1106-ecde-4c09-972f-95edf8b6ffdf",
+      "type": "response.content_part.done",
+      "response_id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+      "item_id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+      "output_index": 0,
+      "content_index": 0,
+      "part": {
+        "type": "text",
+        "text": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки."
+      }
+    },
+    {
+      "t": 8700,
+      "event_id": "a5fe69cc-84d8-4c82-851a-d4597efcd694",
+      "type": "conversation.item.done",
+      "previous_item_id": "d4ef0377-dcb9-4a96-905b-df03d345820d",
+      "item": {
+        "id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки.",
+            "transcript": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки."
+          }
+        ]
+      }
+    },
+    {
+      "t": 8700,
+      "event_id": "3c6f60cf-1382-4041-8f92-5aba44aea17b",
+      "type": "response.output_item.done",
+      "response_id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+      "output_index": 0,
+      "item": {
+        "id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки.",
+            "transcript": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки."
+          }
+        ]
+      }
+    },
+    {
+      "t": 8700,
+      "event_id": "c9263bfc-930a-49fc-b00b-07f54fe49d1b",
+      "type": "response.done",
+      "response": {
+        "id": "7bf09b78-5e4a-4983-9fab-b76111121aef",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки.",
+                "transcript": "Добавлена спальня с юга; +1 кубик (было 6, стало 7; 66 → 77 м²), спальни 2 → 3, окна на юге меньше, терраса 39,4 → 46 м², +1,8 млн ₽ к середине вилки."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 7498,
+          "input_tokens": 7425,
+          "output_tokens": 73,
+          "input_token_details": { "cached_tokens": 4608, "text_tokens": 7425 },
+          "output_token_details": { "text_tokens": 73 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 11434,
+      "event_id": "a735eaee-0123-41bf-85ee-165d6de6a9ce",
+      "type": "conversation.item.added",
+      "previous_item_id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+      "item": {
+        "id": "e9829732-64fa-4e95-b376-a36f0e5e7dc1",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Окна на южном фасаде сделай больше." }]
+      }
+    },
+    {
+      "t": 11434,
+      "event_id": "2a1b385d-3ef0-4e58-931c-dab717d237f1",
+      "type": "conversation.item.done",
+      "previous_item_id": "4f1bb4a7-cc8b-4595-a44a-08a8a3ec64b8",
+      "item": {
+        "id": "e9829732-64fa-4e95-b376-a36f0e5e7dc1",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Окна на южном фасаде сделай больше." }]
+      }
+    },
+    {
+      "t": 11434,
+      "event_id": "1543d5e7-2bc1-4b15-a143-bdc612231373",
+      "type": "response.created",
+      "response": {
+        "id": "2e3b0590-813c-42c3-96b4-161ba009ec8a",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 12356,
+      "event_id": "604c81bb-0ce0-414f-a7de-419b59dc5e87",
+      "type": "response.output_item.added",
+      "response_id": "2e3b0590-813c-42c3-96b4-161ba009ec8a",
+      "output_index": 0,
+      "item": {
+        "id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+        "name": "edit_window",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 12356,
+      "event_id": "b27585cb-7dc9-4716-83e2-5704df592ce8",
+      "type": "conversation.item.added",
+      "previous_item_id": "e9829732-64fa-4e95-b376-a36f0e5e7dc1",
+      "item": {
+        "id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+        "name": "edit_window",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 12434,
+      "event_id": "7463ff44-8f82-44a7-a80c-e53814ba6a62",
+      "type": "response.function_call_arguments.done",
+      "response_id": "2e3b0590-813c-42c3-96b4-161ba009ec8a",
+      "item_id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+      "output_index": 0,
+      "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+      "name": "edit_window",
+      "arguments": "{\"action\":\"enlarge\",\"side\":\"S\"}"
+    },
+    {
+      "t": 12437,
+      "event_id": "f83c7568-9649-4ef1-92bb-af52ef2ac27d",
+      "type": "conversation.item.done",
+      "previous_item_id": "e9829732-64fa-4e95-b376-a36f0e5e7dc1",
+      "item": {
+        "id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+        "name": "edit_window",
+        "arguments": "{\"action\":\"enlarge\",\"side\":\"S\"}"
+      }
+    },
+    {
+      "t": 12437,
+      "event_id": "9f30d5f5-1eda-47a0-ac95-9e1c6867c9e1",
+      "type": "response.output_item.done",
+      "response_id": "2e3b0590-813c-42c3-96b4-161ba009ec8a",
+      "output_index": 0,
+      "item": {
+        "id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+        "name": "edit_window",
+        "arguments": "{\"action\":\"enlarge\",\"side\":\"S\"}"
+      }
+    },
+    {
+      "t": 12440,
+      "event_id": "366bb546-efd0-42e9-8e5b-367212ffd0dc",
+      "type": "response.done",
+      "response": {
+        "id": "2e3b0590-813c-42c3-96b4-161ba009ec8a",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+            "name": "edit_window",
+            "arguments": "{\"action\":\"enlarge\",\"side\":\"S\"}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 7540,
+          "input_tokens": 7517,
+          "output_tokens": 23,
+          "input_token_details": { "cached_tokens": 7168, "text_tokens": 7517 },
+          "output_token_details": { "text_tokens": 23 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 12660,
+      "event_id": "5fe0b372-c848-404e-81c4-f6017320d370",
+      "type": "conversation.item.added",
+      "previous_item_id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+      "item": {
+        "id": "62297ea8-e773-4056-94d9-23588c5bb105",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+        "output": "ГОТОВО, дом изменён: Окна на юге: больше. Изменения: окна на юге больше (остекление 7,5 → 11,2 м²). Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 12660,
+      "event_id": "34cc04fa-2412-472a-85ea-e922413b18e3",
+      "type": "conversation.item.done",
+      "previous_item_id": "0bb22976-2620-408c-8799-b9c10ad18bde",
+      "item": {
+        "id": "62297ea8-e773-4056-94d9-23588c5bb105",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_hTgjfeD5SWzgRuXDFR4FKEm5",
+        "output": "ГОТОВО, дом изменён: Окна на юге: больше. Изменения: окна на юге больше (остекление 7,5 → 11,2 м²). Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 12660,
+      "event_id": "a1145f61-7c45-4fc9-bc66-cebd588bdb90",
+      "type": "response.created",
+      "response": {
+        "id": "487afd12-3ee5-47bf-ad37-be692b1b0a05",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 12707,
+      "event_id": "c54417a0-338a-4a53-a5c8-e16cbcec0a6a",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 12707,
+      "event_id": "755e33cc-b696-41c3-b2e5-02081346afb6",
+      "type": "response.done",
+      "response": {
+        "id": "487afd12-3ee5-47bf-ad37-be692b1b0a05",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 12709,
+      "event_id": "a23c820e-a840-49bd-8cb4-21cd20e6dbdb",
+      "type": "response.created",
+      "response": {
+        "id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 14733,
+      "event_id": "46f2e11c-3a35-492a-a71e-a0ec47bbccfe",
+      "type": "response.output_item.added",
+      "response_id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+      "output_index": 0,
+      "item": {
+        "id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 14734,
+      "event_id": "a3dcd9a5-46fd-4004-b880-0a1396dea266",
+      "type": "conversation.item.added",
+      "previous_item_id": "62297ea8-e773-4056-94d9-23588c5bb105",
+      "item": {
+        "id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 14734,
+      "event_id": "a2219005-1101-46ec-a31e-bed9338961d1",
+      "type": "response.content_part.added",
+      "response_id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+      "item_id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 15065,
+      "event_id": "74d2f61d-8e29-4f16-9a21-294931c08d4a",
+      "type": "response.output_text.done",
+      "response_id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+      "item_id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Окна на юге больше (остекление 7,5 → 11,2 м²)."
+    },
+    {
+      "t": 15065,
+      "event_id": "e434a0a9-5e0f-440c-9e00-f402f76fc31f",
+      "type": "response.content_part.done",
+      "response_id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+      "item_id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text", "text": "Окна на юге больше (остекление 7,5 → 11,2 м²)." }
+    },
+    {
+      "t": 15065,
+      "event_id": "6eb783bf-cb08-4056-b14f-e7cef73eb792",
+      "type": "conversation.item.done",
+      "previous_item_id": "62297ea8-e773-4056-94d9-23588c5bb105",
+      "item": {
+        "id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Окна на юге больше (остекление 7,5 → 11,2 м²).",
+            "transcript": "Окна на юге больше (остекление 7,5 → 11,2 м²)."
+          }
+        ]
+      }
+    },
+    {
+      "t": 15065,
+      "event_id": "1a3a451e-a4d3-45fd-bd07-efac40ef4f87",
+      "type": "response.output_item.done",
+      "response_id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+      "output_index": 0,
+      "item": {
+        "id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Окна на юге больше (остекление 7,5 → 11,2 м²).",
+            "transcript": "Окна на юге больше (остекление 7,5 → 11,2 м²)."
+          }
+        ]
+      }
+    },
+    {
+      "t": 15065,
+      "event_id": "d9fa5d8b-e373-43fe-bedc-44e1e523f2e8",
+      "type": "response.done",
+      "response": {
+        "id": "5e3b0fee-e0fd-4112-af52-a812ef7a1bf8",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Окна на юге больше (остекление 7,5 → 11,2 м²).",
+                "transcript": "Окна на юге больше (остекление 7,5 → 11,2 м²)."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 7638,
+          "input_tokens": 7611,
+          "output_tokens": 27,
+          "input_token_details": { "cached_tokens": 7168, "text_tokens": 7611 },
+          "output_token_details": { "text_tokens": 27 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 17794,
+      "event_id": "3508d73c-24f3-4872-998d-dc07681913c2",
+      "type": "conversation.item.added",
+      "previous_item_id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+      "item": {
+        "id": "70fa7d8d-0596-4003-b840-737ecf2ff0db",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Добавь второй этаж." }]
+      }
+    },
+    {
+      "t": 17794,
+      "event_id": "6a3489bf-dab5-49fe-a763-ff9b1b74ce94",
+      "type": "conversation.item.done",
+      "previous_item_id": "1f8cc92d-d7d7-4fb9-bd78-68223503a061",
+      "item": {
+        "id": "70fa7d8d-0596-4003-b840-737ecf2ff0db",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Добавь второй этаж." }]
+      }
+    },
+    {
+      "t": 17794,
+      "event_id": "798bb7d1-5dd8-47de-991d-663a445683d1",
+      "type": "response.created",
+      "response": {
+        "id": "4fbd2c1f-1c5d-4b87-ae01-c51127de02dc",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 18484,
+      "event_id": "9d0cee06-6fbf-4128-9cb1-ad15bfdb00c5",
+      "type": "response.output_item.added",
+      "response_id": "4fbd2c1f-1c5d-4b87-ae01-c51127de02dc",
+      "output_index": 0,
+      "item": {
+        "id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+        "name": "add_second_tier",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 18484,
+      "event_id": "79ccb231-e321-46be-80b5-90658e3e011e",
+      "type": "conversation.item.added",
+      "previous_item_id": "70fa7d8d-0596-4003-b840-737ecf2ff0db",
+      "item": {
+        "id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+        "name": "add_second_tier",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 18579,
+      "event_id": "ba6ea77f-c17a-437f-adc2-49b9cd0c4f96",
+      "type": "response.function_call_arguments.done",
+      "response_id": "4fbd2c1f-1c5d-4b87-ae01-c51127de02dc",
+      "item_id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+      "output_index": 0,
+      "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+      "name": "add_second_tier",
+      "arguments": "{\"bedrooms\":2}"
+    },
+    {
+      "t": 18692,
+      "event_id": "7be5fd8b-8ba0-4b32-b854-a864a7ad51d4",
+      "type": "conversation.item.done",
+      "previous_item_id": "70fa7d8d-0596-4003-b840-737ecf2ff0db",
+      "item": {
+        "id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+        "name": "add_second_tier",
+        "arguments": "{\"bedrooms\":2}"
+      }
+    },
+    {
+      "t": 18692,
+      "event_id": "3c24f345-c92e-45c3-a058-56997ce9c5a6",
+      "type": "response.output_item.done",
+      "response_id": "4fbd2c1f-1c5d-4b87-ae01-c51127de02dc",
+      "output_index": 0,
+      "item": {
+        "id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+        "name": "add_second_tier",
+        "arguments": "{\"bedrooms\":2}"
+      }
+    },
+    {
+      "t": 18692,
+      "event_id": "e41e7122-aa8c-4ea6-b892-56d0580af791",
+      "type": "response.done",
+      "response": {
+        "id": "4fbd2c1f-1c5d-4b87-ae01-c51127de02dc",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+            "name": "add_second_tier",
+            "arguments": "{\"bedrooms\":2}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 7670,
+          "input_tokens": 7649,
+          "output_tokens": 21,
+          "input_token_details": { "cached_tokens": 7168, "text_tokens": 7649 },
+          "output_token_details": { "text_tokens": 21 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 18912,
+      "event_id": "358b7a8e-32fc-45e2-ab76-f61a7eea2463",
+      "type": "conversation.item.added",
+      "previous_item_id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+      "item": {
+        "id": "b8477778-22a1-4614-825a-48f1df8c5058",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+        "output": "ГОТОВО, дом изменён: Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт). Изменения: +2 кубика (было 7, стало 9; 77 → 98 м²); появился второй ярус; спальня: 3 → 4; холл второго яруса с лестницей: 0 → 1; окна на западе: 3 → 4; терраса 46 → 59,1 м²; +4,2 млн ₽ к середине вилки. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 18912,
+      "event_id": "0749c3d8-a096-47bb-9bf5-950ebb7951cb",
+      "type": "conversation.item.done",
+      "previous_item_id": "8e47333d-a255-440c-8170-f9615bdec6e3",
+      "item": {
+        "id": "b8477778-22a1-4614-825a-48f1df8c5058",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_b3PhlzqFCZJHgbNnE7ebBmOi",
+        "output": "ГОТОВО, дом изменён: Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт). Изменения: +2 кубика (было 7, стало 9; 77 → 98 м²); появился второй ярус; спальня: 3 → 4; холл второго яруса с лестницей: 0 → 1; окна на западе: 3 → 4; терраса 46 → 59,1 м²; +4,2 млн ₽ к середине вилки. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 18912,
+      "event_id": "1c379325-d41a-4bb7-8ef0-2777055e0a7c",
+      "type": "response.created",
+      "response": {
+        "id": "38f5cafa-9bd8-4e57-95fc-9544682f9a05",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 18946,
+      "event_id": "668b2d07-4ef0-45fe-ac8e-a5e2986aec8f",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 18946,
+      "event_id": "1248de95-dd85-484d-8e82-f3f84d1eef28",
+      "type": "response.done",
+      "response": {
+        "id": "38f5cafa-9bd8-4e57-95fc-9544682f9a05",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 18948,
+      "event_id": "d70be136-0759-4cff-aed6-f610f2deafa7",
+      "type": "response.created",
+      "response": {
+        "id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 19938,
+      "event_id": "fc6d3b60-631d-4982-b1b7-f7b1b757e020",
+      "type": "response.output_item.added",
+      "response_id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+      "output_index": 0,
+      "item": {
+        "id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 19938,
+      "event_id": "bc834fcc-5889-4067-b5c2-e7e764142ef7",
+      "type": "conversation.item.added",
+      "previous_item_id": "b8477778-22a1-4614-825a-48f1df8c5058",
+      "item": {
+        "id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 19938,
+      "event_id": "07766aeb-7376-497b-8bf7-0198cec68d95",
+      "type": "response.content_part.added",
+      "response_id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+      "item_id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 20630,
+      "event_id": "a2f7df2f-86eb-419b-b24d-5a5456a5e45c",
+      "type": "response.output_text.done",
+      "response_id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+      "item_id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки."
+    },
+    {
+      "t": 20630,
+      "event_id": "697f04df-e9d7-4cf5-bfff-80c2cabd7ff1",
+      "type": "response.content_part.done",
+      "response_id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+      "item_id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+      "output_index": 0,
+      "content_index": 0,
+      "part": {
+        "type": "text",
+        "text": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки."
+      }
+    },
+    {
+      "t": 20630,
+      "event_id": "f67cb916-9152-455e-a711-6350cf59bd36",
+      "type": "conversation.item.done",
+      "previous_item_id": "b8477778-22a1-4614-825a-48f1df8c5058",
+      "item": {
+        "id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки.",
+            "transcript": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки."
+          }
+        ]
+      }
+    },
+    {
+      "t": 20631,
+      "event_id": "bbd3451c-59cb-401c-91d2-025bbde8d001",
+      "type": "response.output_item.done",
+      "response_id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+      "output_index": 0,
+      "item": {
+        "id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки.",
+            "transcript": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки."
+          }
+        ]
+      }
+    },
+    {
+      "t": 20631,
+      "event_id": "30c64216-919b-4238-af13-f8e85808c5b5",
+      "type": "response.done",
+      "response": {
+        "id": "fe536867-be2e-465d-b6db-6678d13a74fc",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки.",
+                "transcript": "Второй ярус: холл с лестницей над общей комнатой и 1 спальня (больше 1 не встаёт); +2 кубика (было 7, стало 9; 77 → 98 м²), спальня 3 → 4, холл второго яруса 0 → 1, окна на западе 3 → 4, терраса 46 → 59,1 м², +4,2 млн ₽ к середине вилки."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 7921,
+          "input_tokens": 7810,
+          "output_tokens": 111,
+          "input_token_details": { "cached_tokens": 4608, "text_tokens": 7810 },
+          "output_token_details": { "text_tokens": 111 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 23362,
+      "event_id": "23dcaf75-459a-4743-b411-d99c4a226e97",
+      "type": "conversation.item.added",
+      "previous_item_id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+      "item": {
+        "id": "93173b7e-9485-4f3d-972d-17c601f20136",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Отмени последнее." }]
+      }
+    },
+    {
+      "t": 23362,
+      "event_id": "f3f2bc7d-9ec8-4f0c-a030-d0d3209884ff",
+      "type": "conversation.item.done",
+      "previous_item_id": "62b89c65-467d-46bb-83ba-e2be3161c506",
+      "item": {
+        "id": "93173b7e-9485-4f3d-972d-17c601f20136",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Отмени последнее." }]
+      }
+    },
+    {
+      "t": 23362,
+      "event_id": "9efdfeba-2b1b-4942-916d-74235e8657bf",
+      "type": "response.created",
+      "response": {
+        "id": "3bb57af7-a06f-4620-8c24-7d19ea9ad9c8",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 24269,
+      "event_id": "69b1aa36-5585-4981-a538-03472d68f579",
+      "type": "response.output_item.added",
+      "response_id": "3bb57af7-a06f-4620-8c24-7d19ea9ad9c8",
+      "output_index": 0,
+      "item": {
+        "id": "67030e55-aac5-4465-8950-109d41d4de60",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+        "name": "undo",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 24269,
+      "event_id": "6b0b8f10-238d-4cb7-bfa6-390c7e60a031",
+      "type": "conversation.item.added",
+      "previous_item_id": "93173b7e-9485-4f3d-972d-17c601f20136",
+      "item": {
+        "id": "67030e55-aac5-4465-8950-109d41d4de60",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+        "name": "undo",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 24369,
+      "event_id": "0e57c092-59f3-4f3f-9fbd-e65498825f05",
+      "type": "response.function_call_arguments.done",
+      "response_id": "3bb57af7-a06f-4620-8c24-7d19ea9ad9c8",
+      "item_id": "67030e55-aac5-4465-8950-109d41d4de60",
+      "output_index": 0,
+      "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+      "name": "undo",
+      "arguments": "{\"steps\":1}"
+    },
+    {
+      "t": 24369,
+      "event_id": "4141f293-ad21-4052-abbe-b35c16fe84a3",
+      "type": "conversation.item.done",
+      "previous_item_id": "93173b7e-9485-4f3d-972d-17c601f20136",
+      "item": {
+        "id": "67030e55-aac5-4465-8950-109d41d4de60",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+        "name": "undo",
+        "arguments": "{\"steps\":1}"
+      }
+    },
+    {
+      "t": 24369,
+      "event_id": "15b68b8f-64d9-4101-9874-f080e4e02255",
+      "type": "response.output_item.done",
+      "response_id": "3bb57af7-a06f-4620-8c24-7d19ea9ad9c8",
+      "output_index": 0,
+      "item": {
+        "id": "67030e55-aac5-4465-8950-109d41d4de60",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+        "name": "undo",
+        "arguments": "{\"steps\":1}"
+      }
+    },
+    {
+      "t": 24374,
+      "event_id": "ef3ee5a3-c790-41f5-af7d-ef790e18ecc2",
+      "type": "response.done",
+      "response": {
+        "id": "3bb57af7-a06f-4620-8c24-7d19ea9ad9c8",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "67030e55-aac5-4465-8950-109d41d4de60",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+            "name": "undo",
+            "arguments": "{\"steps\":1}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 7949,
+          "input_tokens": 7932,
+          "output_tokens": 17,
+          "input_token_details": { "cached_tokens": 7680, "text_tokens": 7932 },
+          "output_token_details": { "text_tokens": 17 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 24594,
+      "event_id": "8f3c0739-db3c-4d72-bdfe-c4a78217d23d",
+      "type": "conversation.item.added",
+      "previous_item_id": "67030e55-aac5-4465-8950-109d41d4de60",
+      "item": {
+        "id": "9adc448e-31ce-4639-a7ac-53483ecafc56",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+        "output": "ГОТОВО, дом изменён: последняя правка отменена."
+      }
+    },
+    {
+      "t": 24594,
+      "event_id": "57f7db9d-b645-4cee-af2f-533f51b205f5",
+      "type": "conversation.item.done",
+      "previous_item_id": "67030e55-aac5-4465-8950-109d41d4de60",
+      "item": {
+        "id": "9adc448e-31ce-4639-a7ac-53483ecafc56",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_GG26tEoPqRYdExciLUcpZeJs",
+        "output": "ГОТОВО, дом изменён: последняя правка отменена."
+      }
+    },
+    {
+      "t": 24594,
+      "event_id": "11c9c22d-2607-417e-af9d-f7a6e2d0deb2",
+      "type": "response.created",
+      "response": {
+        "id": "8d6c715c-64a9-4a3a-b2f1-ff24929c583f",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 24629,
+      "event_id": "40035643-20ba-48c2-b75a-05cfba7ee6f0",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 24629,
+      "event_id": "e3aba5c3-09d9-4970-a89c-fbdef4005f69",
+      "type": "response.done",
+      "response": {
+        "id": "8d6c715c-64a9-4a3a-b2f1-ff24929c583f",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 24631,
+      "event_id": "c289afdd-ad54-491c-8a8c-2d1c34bac0a4",
+      "type": "response.created",
+      "response": {
+        "id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 25281,
+      "event_id": "a75fd9cc-7275-4db7-abef-3d3b9ae19cba",
+      "type": "response.output_item.added",
+      "response_id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+      "output_index": 0,
+      "item": {
+        "id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 25281,
+      "event_id": "8f9fb481-50ec-4b49-bda6-b36bafd9990b",
+      "type": "conversation.item.added",
+      "previous_item_id": "9adc448e-31ce-4639-a7ac-53483ecafc56",
+      "item": {
+        "id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 25281,
+      "event_id": "6a9192f2-6e09-42f1-8dd9-758b83603fbe",
+      "type": "response.content_part.added",
+      "response_id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+      "item_id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 25464,
+      "event_id": "f90c48ab-d61e-41ac-9db8-680ffacc0ab2",
+      "type": "response.output_text.done",
+      "response_id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+      "item_id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Последняя правка отменена."
+    },
+    {
+      "t": 25464,
+      "event_id": "57cf6eb0-e44c-49f7-9dbf-1121f297a440",
+      "type": "response.content_part.done",
+      "response_id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+      "item_id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text", "text": "Последняя правка отменена." }
+    },
+    {
+      "t": 25464,
+      "event_id": "a6c288e0-aa72-42cf-a33e-78bbe8335a66",
+      "type": "conversation.item.done",
+      "previous_item_id": "9adc448e-31ce-4639-a7ac-53483ecafc56",
+      "item": {
+        "id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Последняя правка отменена.",
+            "transcript": "Последняя правка отменена."
+          }
+        ]
+      }
+    },
+    {
+      "t": 25465,
+      "event_id": "923439df-cb84-4312-b4ad-c0bf8a64a73f",
+      "type": "response.output_item.done",
+      "response_id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+      "output_index": 0,
+      "item": {
+        "id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Последняя правка отменена.",
+            "transcript": "Последняя правка отменена."
+          }
+        ]
+      }
+    },
+    {
+      "t": 25465,
+      "event_id": "0179d673-b994-43fa-9ef2-4a3b52a7cd69",
+      "type": "response.done",
+      "response": {
+        "id": "a4c6fcb8-ce79-41b3-8986-fe2c76b03ebc",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Последняя правка отменена.",
+                "transcript": "Последняя правка отменена."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 8005,
+          "input_tokens": 7994,
+          "output_tokens": 11,
+          "input_token_details": { "cached_tokens": 7168, "text_tokens": 7994 },
+          "output_token_details": { "text_tokens": 11 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 28187,
+      "event_id": "af2c5d84-bda5-46c6-bdf1-a14517d90144",
+      "type": "conversation.item.added",
+      "previous_item_id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+      "item": {
+        "id": "153fbb76-489c-4652-9704-244fc9ab6641",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Сделай дом больше на двадцать квадратов." }]
+      }
+    },
+    {
+      "t": 28187,
+      "event_id": "4a9abec4-9a71-4a7c-bc95-d3916ac4a9c4",
+      "type": "conversation.item.done",
+      "previous_item_id": "5b52d9f1-c2af-49fd-a16a-666af1dbd2b3",
+      "item": {
+        "id": "153fbb76-489c-4652-9704-244fc9ab6641",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Сделай дом больше на двадцать квадратов." }]
+      }
+    },
+    {
+      "t": 28188,
+      "event_id": "5d272df0-9b09-42f0-8a5b-70dd31160a6f",
+      "type": "response.created",
+      "response": {
+        "id": "656612a7-f7e2-4c58-89ce-9ce73525cbe2",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 29189,
+      "event_id": "4a31625d-ec2c-46b9-9479-44a7412f8baf",
+      "type": "response.output_item.added",
+      "response_id": "656612a7-f7e2-4c58-89ce-9ce73525cbe2",
+      "output_index": 0,
+      "item": {
+        "id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+        "name": "resize_house",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 29189,
+      "event_id": "bb4062dc-560d-4766-82d4-591a52a18a6c",
+      "type": "conversation.item.added",
+      "previous_item_id": "153fbb76-489c-4652-9704-244fc9ab6641",
+      "item": {
+        "id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+        "name": "resize_house",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 29319,
+      "event_id": "1de4cf86-fc9e-48b7-aca5-0e8d43391be5",
+      "type": "response.function_call_arguments.done",
+      "response_id": "656612a7-f7e2-4c58-89ce-9ce73525cbe2",
+      "item_id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+      "output_index": 0,
+      "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+      "name": "resize_house",
+      "arguments": "{\"deltaM2\":20}"
+    },
+    {
+      "t": 29342,
+      "event_id": "2189df78-939a-4096-bbd9-2d78ff2f6772",
+      "type": "conversation.item.done",
+      "previous_item_id": "153fbb76-489c-4652-9704-244fc9ab6641",
+      "item": {
+        "id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+        "name": "resize_house",
+        "arguments": "{\"deltaM2\":20}"
+      }
+    },
+    {
+      "t": 29342,
+      "event_id": "f235981c-4e65-40b2-b9db-26a7a7ace368",
+      "type": "response.output_item.done",
+      "response_id": "656612a7-f7e2-4c58-89ce-9ce73525cbe2",
+      "output_index": 0,
+      "item": {
+        "id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+        "name": "resize_house",
+        "arguments": "{\"deltaM2\":20}"
+      }
+    },
+    {
+      "t": 29342,
+      "event_id": "c0516542-79a5-4a08-bb7a-617e9e35ca43",
+      "type": "response.done",
+      "response": {
+        "id": "656612a7-f7e2-4c58-89ce-9ce73525cbe2",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+            "name": "resize_house",
+            "arguments": "{\"deltaM2\":20}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 8042,
+          "input_tokens": 8022,
+          "output_tokens": 20,
+          "input_token_details": { "cached_tokens": 7680, "text_tokens": 8022 },
+          "output_token_details": { "text_tokens": 20 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 29563,
+      "event_id": "d7445f3f-902b-45f4-83a9-1ec33ab382f5",
+      "type": "conversation.item.added",
+      "previous_item_id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+      "item": {
+        "id": "e3328a4b-b4ce-4dac-b32d-c4fe1c74e68c",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+        "output": "НЕ СДЕЛАНО: Увеличить дом и остаться в правилах не получилось. Дом НЕ менялся — не говори, что сделал."
+      }
+    },
+    {
+      "t": 29563,
+      "event_id": "27cae077-573b-4cf1-b4cd-7a84779e00b2",
+      "type": "conversation.item.done",
+      "previous_item_id": "2e726581-b4f9-428f-b91e-2601a1cd9272",
+      "item": {
+        "id": "e3328a4b-b4ce-4dac-b32d-c4fe1c74e68c",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_1U1be5ma6xfBJ5j6QeIdiYnz",
+        "output": "НЕ СДЕЛАНО: Увеличить дом и остаться в правилах не получилось. Дом НЕ менялся — не говори, что сделал."
+      }
+    },
+    {
+      "t": 29563,
+      "event_id": "d60718b5-3159-48a7-a16c-60de15f6132a",
+      "type": "response.created",
+      "response": {
+        "id": "961f16ee-9574-4dfa-89f2-2fb9579ab307",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 29595,
+      "event_id": "ccc51733-7ecb-4298-8530-827e423b46c8",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 29595,
+      "event_id": "95850347-a2ad-4dc6-b04d-525be075a760",
+      "type": "response.done",
+      "response": {
+        "id": "961f16ee-9574-4dfa-89f2-2fb9579ab307",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 29597,
+      "event_id": "8d6ab039-9b54-460f-b068-13c2902cd82c",
+      "type": "response.created",
+      "response": {
+        "id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 30566,
+      "event_id": "3f8b15d0-6b99-47d6-8d9d-76ab7e126cd6",
+      "type": "response.output_item.added",
+      "response_id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+      "output_index": 0,
+      "item": {
+        "id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 30566,
+      "event_id": "fdf01913-b3a8-4cb6-82e1-9f1227796ad5",
+      "type": "conversation.item.added",
+      "previous_item_id": "e3328a4b-b4ce-4dac-b32d-c4fe1c74e68c",
+      "item": {
+        "id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 30566,
+      "event_id": "fecf3ad6-7832-4805-a748-8be4d2c76d09",
+      "type": "response.content_part.added",
+      "response_id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+      "item_id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 30858,
+      "event_id": "f41321d1-c802-4bbe-8e97-0f241937f4ae",
+      "type": "response.output_text.done",
+      "response_id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+      "item_id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь."
+    },
+    {
+      "t": 30858,
+      "event_id": "d3b6e410-4c62-4eeb-af73-a2278f498c97",
+      "type": "response.content_part.done",
+      "response_id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+      "item_id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+      "output_index": 0,
+      "content_index": 0,
+      "part": {
+        "type": "text",
+        "text": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь."
+      }
+    },
+    {
+      "t": 30859,
+      "event_id": "b3338e73-45fb-402a-ac17-2f9d52842071",
+      "type": "conversation.item.done",
+      "previous_item_id": "e3328a4b-b4ce-4dac-b32d-c4fe1c74e68c",
+      "item": {
+        "id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь.",
+            "transcript": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь."
+          }
+        ]
+      }
+    },
+    {
+      "t": 30859,
+      "event_id": "3965bb80-e3b2-48fa-897d-80ab4aad9640",
+      "type": "response.output_item.done",
+      "response_id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+      "output_index": 0,
+      "item": {
+        "id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь.",
+            "transcript": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь."
+          }
+        ]
+      }
+    },
+    {
+      "t": 30859,
+      "event_id": "854bd29e-cbf6-49c4-af13-0eac2c8bd723",
+      "type": "response.done",
+      "response": {
+        "id": "bd7452bf-2a45-4f2d-b55c-c308e0bfa0f9",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь.",
+                "transcript": "Увеличить дом и остаться в правилах не получилось; могу добавить один заводской модуль, если хочешь."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 8116,
+          "input_tokens": 8086,
+          "output_tokens": 30,
+          "input_token_details": { "cached_tokens": 7680, "text_tokens": 8086 },
+          "output_token_details": { "text_tokens": 30 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 33853,
+      "event_id": "ed9b00d1-32de-40c7-ba2b-5260cc7991fa",
+      "type": "conversation.item.added",
+      "previous_item_id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+      "item": {
+        "id": "0a952073-6445-4587-b939-d67acb710a06",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Перенеси вход на восток." }]
+      }
+    },
+    {
+      "t": 33853,
+      "event_id": "c4e3cf0a-d4aa-4bee-88e6-bbb538718e00",
+      "type": "conversation.item.done",
+      "previous_item_id": "cab22015-2df1-4afe-9269-4a96111ddcb7",
+      "item": {
+        "id": "0a952073-6445-4587-b939-d67acb710a06",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "user",
+        "content": [{ "type": "input_text", "text": "Перенеси вход на восток." }]
+      }
+    },
+    {
+      "t": 33853,
+      "event_id": "6b3a85b5-4fc4-495b-98e3-a2b60bca24f3",
+      "type": "response.created",
+      "response": {
+        "id": "e0624292-6d66-4efc-bfb9-3dffec71f6e1",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 34347,
+      "event_id": "8893b465-2d12-4a53-92dc-f0d6356c2df8",
+      "type": "response.output_item.added",
+      "response_id": "e0624292-6d66-4efc-bfb9-3dffec71f6e1",
+      "output_index": 0,
+      "item": {
+        "id": "8833b967-6c09-4a69-b265-06daada3c168",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+        "name": "edit_door",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 34347,
+      "event_id": "5290f205-bbac-4b40-a16a-4eda77e2cab2",
+      "type": "conversation.item.added",
+      "previous_item_id": "0a952073-6445-4587-b939-d67acb710a06",
+      "item": {
+        "id": "8833b967-6c09-4a69-b265-06daada3c168",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "content": [],
+        "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+        "name": "edit_door",
+        "arguments": ""
+      }
+    },
+    {
+      "t": 34494,
+      "event_id": "393fdaf0-212f-42d3-98c6-335862d815d6",
+      "type": "response.function_call_arguments.done",
+      "response_id": "e0624292-6d66-4efc-bfb9-3dffec71f6e1",
+      "item_id": "8833b967-6c09-4a69-b265-06daada3c168",
+      "output_index": 0,
+      "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+      "name": "edit_door",
+      "arguments": "{\"action\":\"move\",\"side\":\"E\"}"
+    },
+    {
+      "t": 34496,
+      "event_id": "c1c1058d-41e5-437e-bd9c-d5179397bfba",
+      "type": "conversation.item.done",
+      "previous_item_id": "0a952073-6445-4587-b939-d67acb710a06",
+      "item": {
+        "id": "8833b967-6c09-4a69-b265-06daada3c168",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+        "name": "edit_door",
+        "arguments": "{\"action\":\"move\",\"side\":\"E\"}"
+      }
+    },
+    {
+      "t": 34496,
+      "event_id": "64191297-5196-46fd-be58-11cc57810a23",
+      "type": "response.output_item.done",
+      "response_id": "e0624292-6d66-4efc-bfb9-3dffec71f6e1",
+      "output_index": 0,
+      "item": {
+        "id": "8833b967-6c09-4a69-b265-06daada3c168",
+        "type": "function_call",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": [],
+        "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+        "name": "edit_door",
+        "arguments": "{\"action\":\"move\",\"side\":\"E\"}"
+      }
+    },
+    {
+      "t": 34502,
+      "event_id": "13b64e6c-298b-4b3b-8e83-db651ec4249f",
+      "type": "response.done",
+      "response": {
+        "id": "e0624292-6d66-4efc-bfb9-3dffec71f6e1",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "8833b967-6c09-4a69-b265-06daada3c168",
+            "type": "function_call",
+            "object": "realtime.item",
+            "status": "completed",
+            "content": [],
+            "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+            "name": "edit_door",
+            "arguments": "{\"action\":\"move\",\"side\":\"E\"}"
+          }
+        ],
+        "usage": {
+          "total_tokens": 8153,
+          "input_tokens": 8130,
+          "output_tokens": 23,
+          "input_token_details": { "cached_tokens": 7680, "text_tokens": 8130 },
+          "output_token_details": { "text_tokens": 23 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    },
+    {
+      "t": 34741,
+      "event_id": "ad03e256-a8cb-4ff1-b9ff-955dfe719bf4",
+      "type": "conversation.item.added",
+      "previous_item_id": "8833b967-6c09-4a69-b265-06daada3c168",
+      "item": {
+        "id": "bd03f604-2b77-4de7-85b2-8c32f38ddcf4",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+        "output": "ГОТОВО, дом изменён: Вход на востоке. Изменения: вход: на севере → на востоке. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 34741,
+      "event_id": "057858f1-fe3b-4ef2-97b8-f77a7e79aa97",
+      "type": "conversation.item.done",
+      "previous_item_id": "8833b967-6c09-4a69-b265-06daada3c168",
+      "item": {
+        "id": "bd03f604-2b77-4de7-85b2-8c32f38ddcf4",
+        "type": "function_call_output",
+        "object": "realtime.item",
+        "status": "completed",
+        "content": null,
+        "call_id": "call_sa2lfCHRIXPDDFY9DqqYGzh1",
+        "output": "ГОТОВО, дом изменён: Вход на востоке. Изменения: вход: на севере → на востоке. Скажи человеку одной короткой фразой только это — ничего сверх списка изменений."
+      }
+    },
+    {
+      "t": 34741,
+      "event_id": "3ce630de-7037-4f89-b336-39b283cb63f9",
+      "type": "response.created",
+      "response": {
+        "id": "e51c7426-15ff-49ec-aacd-ddc75bc89b68",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 34778,
+      "event_id": "58391793-3cf3-493e-a4fb-cf1b6526aae6",
+      "type": "session.updated",
+      "session": {
+        "tools": [
+          { "name": "undo" },
+          { "name": "redo" },
+          { "name": "accept_offer" },
+          { "name": "show_variants" },
+          { "name": "set_scenario" },
+          { "name": "select_variant" },
+          { "name": "what_if" },
+          { "name": "confirm_step" },
+          { "name": "show_options" },
+          { "name": "apply_options" },
+          { "name": "design_variants" },
+          { "name": "critic_review" },
+          { "name": "offer_change" },
+          { "name": "add_room" },
+          { "name": "remove_room" },
+          { "name": "move_room" },
+          { "name": "resize_room" },
+          { "name": "add_cube" },
+          { "name": "remove_cube" },
+          { "name": "add_module" },
+          { "name": "remove_module" },
+          { "name": "add_second_tier" },
+          { "name": "remove_second_tier" },
+          { "name": "resize_house" },
+          { "name": "rotate_house" },
+          { "name": "orient_house" },
+          { "name": "edit_window" },
+          { "name": "edit_door" },
+          { "name": "edit_terrace" },
+          { "name": "carport" },
+          { "name": "support_overhang" },
+          { "name": "set_overhang" },
+          { "name": "shift_upper_tier" },
+          { "name": "set_style" },
+          { "name": "set_finish" },
+          { "name": "describe_style" },
+          { "name": "place_house" }
+        ]
+      }
+    },
+    {
+      "t": 34778,
+      "event_id": "9b58d384-6e78-406d-9142-f3ada12e0039",
+      "type": "response.done",
+      "response": {
+        "id": "e51c7426-15ff-49ec-aacd-ddc75bc89b68",
+        "object": "realtime.response",
+        "status": "cancelled",
+        "status_details": { "type": "cancelled", "reason": "superseded" },
+        "output": [],
+        "usage": { "total_tokens": 0, "input_tokens": 0, "output_tokens": 0 }
+      }
+    },
+    {
+      "t": 34780,
+      "event_id": "92153e63-6f20-498e-96eb-23e2eefce640",
+      "type": "response.created",
+      "response": {
+        "id": "7b409940-6321-47c3-b537-7a31df3436c5",
+        "object": "realtime.response",
+        "status": "in_progress",
+        "output": []
+      }
+    },
+    {
+      "t": 35427,
+      "event_id": "65209c17-0c2c-4d45-bc6b-607bbbdc37c8",
+      "type": "response.output_item.added",
+      "response_id": "7b409940-6321-47c3-b537-7a31df3436c5",
+      "output_index": 0,
+      "item": {
+        "id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 35427,
+      "event_id": "07b23a38-1ea1-4f60-abec-214c9b4ce53d",
+      "type": "conversation.item.added",
+      "previous_item_id": "bd03f604-2b77-4de7-85b2-8c32f38ddcf4",
+      "item": {
+        "id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "in_progress",
+        "role": "assistant",
+        "content": []
+      }
+    },
+    {
+      "t": 35427,
+      "event_id": "03743112-8c75-4054-b27f-bdc689558184",
+      "type": "response.content_part.added",
+      "response_id": "7b409940-6321-47c3-b537-7a31df3436c5",
+      "item_id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text" }
+    },
+    {
+      "t": 35582,
+      "event_id": "43616d90-4090-4cbe-a695-945c5d42188e",
+      "type": "response.output_text.done",
+      "response_id": "7b409940-6321-47c3-b537-7a31df3436c5",
+      "item_id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+      "output_index": 0,
+      "content_index": 0,
+      "text": "Вход: на севере → на востоке."
+    },
+    {
+      "t": 35582,
+      "event_id": "dd3f76cd-9746-4ca5-839a-cab65a506b1a",
+      "type": "response.content_part.done",
+      "response_id": "7b409940-6321-47c3-b537-7a31df3436c5",
+      "item_id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+      "output_index": 0,
+      "content_index": 0,
+      "part": { "type": "text", "text": "Вход: на севере → на востоке." }
+    },
+    {
+      "t": 35582,
+      "event_id": "f6111092-7a12-4ca7-8f5f-98c8db096744",
+      "type": "conversation.item.done",
+      "previous_item_id": "bd03f604-2b77-4de7-85b2-8c32f38ddcf4",
+      "item": {
+        "id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Вход: на севере → на востоке.",
+            "transcript": "Вход: на севере → на востоке."
+          }
+        ]
+      }
+    },
+    {
+      "t": 35582,
+      "event_id": "0cd0cf49-150b-4283-88a2-f69f3c488332",
+      "type": "response.output_item.done",
+      "response_id": "7b409940-6321-47c3-b537-7a31df3436c5",
+      "output_index": 0,
+      "item": {
+        "id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+        "type": "message",
+        "object": "realtime.item",
+        "status": "completed",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Вход: на севере → на востоке.",
+            "transcript": "Вход: на севере → на востоке."
+          }
+        ]
+      }
+    },
+    {
+      "t": 35582,
+      "event_id": "4bab8f04-3523-4671-af3e-45e93c6dfe2d",
+      "type": "response.done",
+      "response": {
+        "id": "7b409940-6321-47c3-b537-7a31df3436c5",
+        "object": "realtime.response",
+        "status": "completed",
+        "output": [
+          {
+            "id": "94261e5d-901d-4cdd-8dfc-0df0fb181065",
+            "type": "message",
+            "object": "realtime.item",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Вход: на севере → на востоке.",
+                "transcript": "Вход: на севере → на востоке."
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "total_tokens": 8228,
+          "input_tokens": 8212,
+          "output_tokens": 16,
+          "input_token_details": { "cached_tokens": 4608, "text_tokens": 8212 },
+          "output_token_details": { "text_tokens": 16 },
+          "llm": { "model": "openai/gpt-5.4-mini" }
+        }
+      }
+    }
+  ]
+}

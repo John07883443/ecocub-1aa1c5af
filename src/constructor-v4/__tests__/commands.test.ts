@@ -65,10 +65,18 @@ test("«добавь спальню» пристраивает модуль к �
 });
 
 test("«перенеси террасу на юг» и стиль словами", () => {
-  const t = applyCommand(singleTier(), { op: "move_terrace", side: "S" });
-  assert.ok(t.ok && t.project.terrace.side === "S");
-  const s = applyCommand(singleTier(), { op: "set_style", style: "скандинавский" });
-  assert.ok(s.ok && s.project.finishes.styleId === "scandi");
+  const p0 = singleTier();
+  const to = p0.terrace.side === "S" ? "N" : "S";
+  const t = applyCommand(p0, { op: "move_terrace", side: to });
+  assert.ok(t.ok && t.project.terrace.side === to);
+  // Туда, где она уже есть, — не «сделано», а честное «так уже есть».
+  const same = applyCommand(p0, { op: "move_terrace", side: p0.terrace.side });
+  assert.equal(same.ok, false);
+  const s = applyCommand(singleTier(), { op: "set_style", style: "японский" });
+  assert.ok(s.ok && s.project.finishes.styleId === "japandi");
+  // Фирменный ЭкоКуб — белая штукатурка, а не тёмный планкен.
+  const e = applyCommand(singleTier(), { op: "set_style", style: "светлый фирменный" });
+  assert.ok(e.ok && e.project.finishes.facade === "plaster-white");
   assert.equal(applyCommand(singleTier(), { op: "set_style", style: "барокко" }).ok, false);
 });
 

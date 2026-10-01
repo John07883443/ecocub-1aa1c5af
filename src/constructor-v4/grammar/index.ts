@@ -5,7 +5,8 @@
 import modulesJson from "./modules.json" with { type: "json" };
 import finishesJson from "./finishes.json" with { type: "json" };
 
-export type RoomType = "bedroom" | "kitchen-living" | "wet-core" | "study" | "hall" | "corridor";
+export type RoomType =
+  "bedroom" | "kitchen-living" | "wet-core" | "study" | "storage" | "hall" | "corridor";
 export type Confidence = "album" | "owner" | "derived" | "assumption";
 export type FinishCategory = "facade" | "roof" | "windowFrames" | "interior";
 
@@ -111,6 +112,8 @@ export interface StyleSpec {
   windows: "standard" | "large" | "floor-to-ceiling";
   /** Чего стиль у нас не получит из-за конструктива (скатная кровля и т. п.). */
   constraintNote?: string;
+  /** Акцент на фасаде: вертикальные ламели из лиственницы (фирменный стиль). */
+  accent?: "larch-slats";
 }
 
 export interface FinishCatalog {

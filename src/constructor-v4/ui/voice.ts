@@ -4,6 +4,7 @@
  * Протокол и приёмы — как в МедиаМашине (LiveVoiceSession.tsx), без её UI.
  */
 import { PILOT } from "../pilot.config.ts";
+import { RealtimeToolRouter, stripToolLeak } from "./voice-events.ts";
 
 export type VoiceState =
   "idle" | "connecting" | "ready" | "listening" | "thinking" | "speaking" | "closed";
@@ -28,6 +29,8 @@ export interface VoiceHandlers {
   onAssistantText: (t: string) => void;
   /** Вызов инструмента: вернуть строку-результат для модели. */
   onToolCall: (name: string, args: unknown) => Promise<string>;
+  /** Отладка (?debug=voice): типы событий, вызовы, что ушло модели. */
+  onDebug?: (kind: "event" | "tool" | "send" | "leak", text: string) => void;
 }
 
 const OUTPUT_RATE = 24000;
@@ -47,11 +50,14 @@ export class VoiceSession {
   private stream: MediaStream | null = null;
   private nextPlay = 0;
   private sending = false;
-  private handledCalls = new Set<string>();
+  private router: RealtimeToolRouter;
+  private known: Set<string>;
   private greeted = false;
   private lastActivity = Date.now();
   private idleTimer: ReturnType<typeof setInterval> | null = null;
   private speaking = false;
+  private spoken = new Set<string>();
+  private nudgeText: string | null = null;
 
   constructor(
     private url: string,
@@ -65,7 +71,12 @@ export class VoiceSession {
       /** LLM внутри InWorld Realtime (с сервера: PILOT_REALTIME_MODEL). */
       model?: string;
     },
-  ) {}
+  ) {
+    this.known = new Set(
+      (opts.tools as { name?: string }[]).map((t) => String(t.name ?? "")).filter(Boolean),
+    );
+    this.router = new RealtimeToolRouter(this.known);
+  }
 
   private touch() {
     this.lastActivity = Date.now();
@@ -160,6 +171,11 @@ registerProcessor('pcm',P)`;
     this.h.onState("thinking");
   }
 
+  /** Поправка модели после ответа («сказал, но не сделал»): уходит, когда ответ закончится. */
+  nudge(text: string) {
+    this.nudgeText = text;
+  }
+
   /** Служебное сообщение модели (например, «человек нажал кнопку X»). */
   notify(text: string) {
     this.send({
@@ -200,7 +216,30 @@ registerProcessor('pcm',P)`;
     this.nextPlay += buf.duration;
   }
 
+  /** Исполнить вызов и, когда ответ модели закончится, вернуть результаты одним пакетом. */
+  private async exec(callId: string, name: string, args: unknown, via: string) {
+    this.h.onDebug?.("tool", `${name} ${JSON.stringify(args)} (${via})`);
+    let output: string;
+    try {
+      output = await this.h.onToolCall(name, args);
+    } catch (e) {
+      output = `НЕ СДЕЛАНО: ошибка инструмента ${(e as Error).message}. Дом НЕ менялся.`;
+    }
+    this.router.complete(callId, output);
+    this.flush();
+  }
+
+  private flush() {
+    // Свежие инструкции (дом поменялся) уходят вместе с результатами — до response.create.
+    for (const m of this.router.flush(this.opts.instructions())) {
+      this.h.onDebug?.("send", (m as { type: string }).type);
+      this.send(m);
+    }
+  }
+
   private async onMessage(msg: Record<string, unknown> & { type?: string }) {
+    if (msg.type && !/delta$/.test(msg.type)) this.h.onDebug?.("event", msg.type);
+    for (const c of this.router.ingest(msg)) void this.exec(c.callId, c.name, c.args, c.via);
     switch (msg.type) {
       case "session.created":
         this.send({
@@ -226,6 +265,8 @@ registerProcessor('pcm',P)`;
               output: { model: PILOT.architect.ttsModel, voice: PILOT.architect.voice, speed: 1 },
             },
             tools: this.opts.tools,
+            // rgrouter и InWorld: только "auto"/"required", не принудительная функция (PR #38).
+            tool_choice: "auto",
             providerData: {
               tts: {
                 delivery_mode: "STABLE",
@@ -270,9 +311,28 @@ registerProcessor('pcm',P)`;
         break;
       case "response.output_audio_transcript.done":
       case "response.audio_transcript.done":
-        if (typeof msg.transcript === "string") this.h.onAssistantText(msg.transcript);
+      case "response.output_text.done": {
+        // Текст ответа приходит и транскриптом аудио, и текстом — берём первый, дубль пропускаем.
+        const raw = String(msg.transcript ?? msg.text ?? "");
+        const id = String(msg.item_id ?? "");
+        if (!raw || (id && this.spoken.has(id))) break;
+        if (id) this.spoken.add(id);
+        for (const c of this.router.leakedCalls(raw)) {
+          this.h.onDebug?.("leak", c.name);
+          void this.exec(c.callId, c.name, c.args, c.via);
+        }
+        const clean = stripToolLeak(raw, this.known);
+        if (clean) this.h.onAssistantText(clean);
         break;
+      }
       case "response.done":
+        this.flush();
+        if (this.nudgeText && !this.router.pending) {
+          const t = this.nudgeText;
+          this.nudgeText = null;
+          this.notify(t);
+          this.send({ type: "response.create" });
+        }
         this.touch();
         // Ответ дозвучит из буфера; сразу снова слушаем (в режиме без кнопки).
         this.speaking = false;
@@ -293,24 +353,6 @@ registerProcessor('pcm',P)`;
         this.stopSpeech();
         this.h.onState("listening");
         break;
-      case "response.function_call_arguments.done": {
-        const callId = String(msg.call_id ?? "");
-        if (!callId || this.handledCalls.has(callId)) break;
-        this.handledCalls.add(callId);
-        let args: unknown = {};
-        try {
-          args = JSON.parse(String(msg.arguments ?? "{}"));
-        } catch {
-          args = {};
-        }
-        const output = await this.h.onToolCall(String(msg.name ?? ""), args);
-        this.send({
-          type: "conversation.item.create",
-          item: { type: "function_call_output", call_id: callId, output },
-        });
-        this.send({ type: "response.create" });
-        break;
-      }
       case "error":
         this.h.onState("ready", `InWorld: ${JSON.stringify(msg.error ?? msg).slice(0, 160)}`);
         break;

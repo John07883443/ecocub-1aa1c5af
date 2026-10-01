@@ -35,11 +35,16 @@ export function PlanSvg({
   tier,
   selectedRoomId,
   onPickRoom,
+  highlight,
+  highlightKey,
 }: {
   project: Project;
   tier: number;
   selectedRoomId?: string | null;
   onPickRoom?: (roomId: string) => void;
+  /** Кубики, которые только что поменялись (подсветка правки). */
+  highlight?: string[];
+  highlightKey?: number;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [pxPerMm, setPxPerMm] = useState(0);
@@ -251,6 +256,24 @@ export function PlanSvg({
       >
         ↑ С
       </text>
+      {/* Подсветка правки: только что добавленные/изменённые кубики */}
+      {highlight?.length ? (
+        <g key={`hl-${highlightKey ?? 0}`} pointerEvents="none">
+          <style>{`@keyframes plan-hl{0%{opacity:1}100%{opacity:0}}`}</style>
+          {mods
+            .filter((m) => highlight.includes(m.id))
+            .map((m) => (
+              <rect
+                key={m.id}
+                {...R(footprint(m))}
+                fill="rgba(245,158,11,0.28)"
+                stroke="#d97706"
+                strokeWidth={90}
+                style={{ animation: "plan-hl 2.4s ease-out forwards" }}
+              />
+            ))}
+        </g>
+      ) : null}
     </svg>
   );
 }

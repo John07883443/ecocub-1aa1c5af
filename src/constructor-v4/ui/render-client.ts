@@ -10,6 +10,8 @@ export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 export interface RenderShot {
   id: string;
   prompt: string;
+  /** Стадия 2: 3D-снимок для image-to-image (за флагом, см. render-plan.ts STAGE2). */
+  image?: string;
 }
 
 export interface RenderFrame {

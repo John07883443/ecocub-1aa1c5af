@@ -6,11 +6,15 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyCommand,
+  parseCommand,
   removeRoomGuard,
   toolCallToCommand,
   DOOR_PRESETS,
   type EditorCommand,
 } from "../engine/commands.ts";
+import { formatResult } from "./tool-result.ts";
+import { ECOCUB_FINISHES } from "../engine/house-style.ts";
+import { TurnLedger } from "./truth.ts";
 import { WINDOW_PRESETS, type WindowPreset } from "../engine/derive.ts";
 import { factoryModules, trucksForCubes } from "../engine/factory.ts";
 import { buildPassport } from "../engine/passport.ts";
@@ -249,6 +253,36 @@ export function PilotApp() {
   const optionsRef = useRef<OptionCard[] | null>(null);
   const [flash, setFlash] = useState(0);
   const [aiBusy, setAiBusy] = useState("");
+  /** Один дом по умолчанию; три варианта — только по «покажи варианты». */
+  const [showVariants, setShowVariants] = useState(false);
+  /** Подсветка последней правки: какие кубики и ключ анимации. */
+  const [hl, setHl] = useState<{ ids: string[]; key: number }>({ ids: [], key: 0 });
+  const [redoStack, setRedoStack] = useState<Project[]>([]);
+  const historyRef = useRef<Project[]>([]);
+  const redoRef = useRef<Project[]>([]);
+  /** Открытое предложение кнопкой — короткое «да» применяет именно его. */
+  const pendingOffer = useRef<{ text: string; command: EditorCommand } | null>(null);
+  /** Дом уже правили — анкета больше не пересобирает его молча. */
+  const editedRef = useRef(false);
+  const recentRef = useRef<string[]>([]);
+  /** «Сказал — сделал»: что применено в этом ходе. */
+  const ledger = useRef(new TurnLedger());
+  const toolLog = useRef<
+    { t: number; via: string; name: string; args: unknown; ok: boolean; out: string }[]
+  >([]);
+  const lastLev = useRef("");
+  const [debugLines, setDebugLines] = useState<string[]>([]);
+  const flags = useMemo(() => {
+    const q = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    return { debugVoice: q?.get("debug") === "voice", qa: !!q?.has("qa") };
+  }, []);
+  const debug = useCallback(
+    (line: string) => {
+      if (!flags.debugVoice) return;
+      setDebugLines((d) => [...d.slice(-40), `${new Date().toLocaleTimeString("ru-RU")} ${line}`]);
+    },
+    [flags.debugVoice],
+  );
 
   useEffect(() => {
     fetch(`${API}/health`)
@@ -258,10 +292,51 @@ export function PilotApp() {
   }, []);
 
   const setCurrent = useCallback((p: Project | null, pushHistory = true) => {
-    if (pushHistory && currentRef.current)
-      setHistory((h) => [...h.slice(-30), currentRef.current!]);
+    if (pushHistory && currentRef.current) {
+      historyRef.current = [...historyRef.current.slice(-40), currentRef.current];
+      setHistory(historyRef.current);
+      // Новая правка — отменённые больше не вернуть.
+      redoRef.current = [];
+      setRedoStack([]);
+    }
     currentRef.current = p;
     setCurrentState(p);
+  }, []);
+
+  /** Отмена и возврат — один стек для голоса, текста и кнопок. */
+  const undoSteps = useCallback((steps = 1): string => {
+    let n = 0;
+    while (n < steps && historyRef.current.length && currentRef.current) {
+      redoRef.current = [...redoRef.current, currentRef.current];
+      const prev = historyRef.current[historyRef.current.length - 1];
+      historyRef.current = historyRef.current.slice(0, -1);
+      currentRef.current = prev;
+      n++;
+    }
+    setHistory(historyRef.current);
+    setRedoStack(redoRef.current);
+    if (!n) return "НЕ СДЕЛАНО: отменять нечего. Дом НЕ менялся.";
+    setCurrentState(currentRef.current);
+    setHl((h) => ({ ids: currentRef.current?.modules.map((m) => m.id) ?? [], key: h.key + 1 }));
+    const text = `ГОТОВО, дом изменён: отменено правок: ${n}. Дом как был до них.`;
+    ledger.current.record("undo", true, text);
+    setComments([`↶ Отменено правок: ${n}.`]);
+    return text;
+  }, []);
+  const redoStep = useCallback((): string => {
+    const next = redoRef.current[redoRef.current.length - 1];
+    if (!next || !currentRef.current) return "НЕ СДЕЛАНО: возвращать нечего. Дом НЕ менялся.";
+    redoRef.current = redoRef.current.slice(0, -1);
+    historyRef.current = [...historyRef.current, currentRef.current];
+    currentRef.current = next;
+    setHistory(historyRef.current);
+    setRedoStack(redoRef.current);
+    setCurrentState(next);
+    setHl((h) => ({ ids: next.modules.map((m) => m.id), key: h.key + 1 }));
+    const text = "ГОТОВО, дом изменён: отменённая правка возвращена.";
+    ledger.current.record("redo", true, text);
+    setComments(["↷ Правка возвращена."]);
+    return text;
   }, []);
 
   const say = (role: ChatMsg["role"], text: string) => setChat((c) => [...c, { role, text }]);
@@ -295,6 +370,9 @@ export function PilotApp() {
       const check = checkArea(s);
       setArea(check);
       const r = solve(briefFromScenario(s));
+      // Без пожеланий по стилю — фирменный ЭкоКуб (как дома слайдера и каталога), а не планкен солвера.
+      if (!s.styleHints?.length)
+        for (const v of r.variants) v.project = { ...v.project, finishes: { ...ECOCUB_FINISHES } };
       setVariants(r.variants);
       setElapsed(Math.round(performance.now() - t));
       const before = currentRef.current;
@@ -334,18 +412,45 @@ export function PilotApp() {
   const run = useCallback(
     (cmd: EditorCommand): string => {
       const p = currentRef.current;
-      if (!p) return "Дом ещё не собран — сначала соберите варианты.";
+      if (!p) return "НЕ СДЕЛАНО: дом ещё не собран. Дом НЕ менялся.";
       const res = applyCommand(p, cmd);
+      const text = formatResult(res);
+      ledger.current.record(cmd.op, res.ok, text);
       if (res.ok) {
-        const c = commentOn(p, res.project);
+        const c = commentOn(p, res.project).filter((x) => x.startsWith("⚠"));
         setCurrent(res.project);
-        setComments([res.message, ...c]);
-        return [res.message, ...c].join(" ");
+        editedRef.current = true;
+        recentRef.current = [...recentRef.current.slice(-5), res.diff.summary];
+        setHl((h) => ({ ids: res.diff.highlight, key: h.key + 1 }));
+        setComments([res.message, `Изменения: ${res.diff.summary}.`, ...c.slice(0, 1)]);
+        if (
+          pendingOffer.current &&
+          JSON.stringify(pendingOffer.current.command) === JSON.stringify(cmd)
+        )
+          pendingOffer.current = null;
+        return text;
       }
-      const text = [`Нельзя: ${res.reason}.`, ...res.violations.slice(0, 2), res.suggestion ?? ""]
-        .filter(Boolean)
-        .join(" ");
-      setComments([text]);
+      setComments(
+        [
+          `Не сделал: ${res.reason.replace(/\.$/, "")}.`,
+          ...res.violations.slice(0, 2),
+          res.suggestion ?? "",
+        ].filter(Boolean),
+      );
+      // Ближайшая допустимая альтернатива — кнопкой; «да» применяет её.
+      const alt = res.alternative ? parseCommand(res.alternative.command) : null;
+      if (res.alternative && alt?.ok) {
+        pendingOffer.current = { text: res.alternative.text, command: alt.command };
+        setChat((c) => [
+          ...c,
+          {
+            role: "assistant",
+            text: res.alternative!.text,
+            kind: "offer",
+            offer: { text: res.alternative!.text, command: alt.command, state: "open" },
+          },
+        ]);
+      }
       return text;
     },
     [setCurrent],
@@ -354,15 +459,50 @@ export function PilotApp() {
   const runTool = useCallback(
     async (name: string, args: unknown): Promise<string> => {
       const a = (args ?? {}) as Record<string, unknown>;
+      if (name === "undo") return undoSteps(Math.max(1, Math.min(10, Number(a.steps) || 1)));
+      if (name === "redo") return redoStep();
+      if (name === "accept_offer") {
+        const o = pendingOffer.current;
+        if (!o) return "НЕ СДЕЛАНО: открытого предложения нет. Дом НЕ менялся.";
+        const out = run(o.command);
+        setChat((c) =>
+          c.map((x) =>
+            x.offer && x.offer.state === "open" && x.offer.text === o.text
+              ? { ...x, offer: { ...x.offer, state: "done" } }
+              : x,
+          ),
+        );
+        pendingOffer.current = null;
+        return out;
+      }
+      if (name === "show_variants") {
+        setShowVariants(true);
+        return `Показал варианты: ${variantsRef.current.map((v, i) => `${i + 1}) ${v.summary}`).join(" | ")}. Выбор — select_variant.`;
+      }
       if (name === "set_scenario") {
         const s = mergeScenario(scenarioRef.current, a);
         scenarioRef.current = s;
         setScenario(s);
         setInterview((i) => answerStep(i, stepsForFields(Object.keys(a))));
+        // Бюджет, стиль и участок дом не перестраивают; после первой правки — только по просьбе.
+        const shapeFields = Object.keys(a).filter(
+          (k) => !["budgetMaxRub", "style", "rebuild", "desiredAreaMaxM2"].includes(k),
+        );
+        if (
+          (editedRef.current && a.rebuild !== true) ||
+          !shapeFields.length ||
+          !currentRef.current
+        ) {
+          if (!currentRef.current) build(s);
+          ledger.current.record(name, false, "анкета записана, дом не менялся");
+          return `Анкета записана: ${Object.keys(a).join(", ")}. Дом НЕ пересобирался${editedRef.current ? " — его уже правили; менять дом — командами (add_room и т. п.) или set_scenario с rebuild: true по прямой просьбе «собери заново»" : ""}.`;
+        }
+        const before = currentRef.current;
         const { check, r, summary } = build(s);
-        return `${summary ? `Дом пересобран: ${summary}. ` : ""}${check.message} Собрано вариантов: ${r.variants.length}. ${r.variants
-          .map((v, i) => `${i + 1}) ${v.summary}; ${v.rank?.why ?? ""}`)
-          .join(" ")} Опции: ${check.options.map((o) => `${o.label} — ${o.reason}`).join("; ")}`;
+        editedRef.current = false;
+        if (before && currentRef.current && currentRef.current !== before)
+          ledger.current.record(name, true, summary || "дом пересобран");
+        return `${summary ? `ГОТОВО, дом пересобран под анкету: ${summary}. ` : "Дом пересобран, заметных изменений нет. "}${check.message} ${r.variants[0] ? `Сейчас на экране: ${r.variants[0].summary}.` : ""}`;
       }
       if (name === "what_if") return whatIf(currentRef.current, a);
       if (name === "confirm_step") {
@@ -380,8 +520,10 @@ export function PilotApp() {
         const parsed = toolCallToCommand(
           String((a.command as { op?: string })?.op ?? ""),
           a.command,
+          currentRef.current?.plot?.northDeg ?? 0,
         );
         if (!parsed.ok) return `Не понял правку для кнопки: ${parsed.error}`;
+        pendingOffer.current = { text: String(a.text ?? ""), command: parsed.command };
         setChat((c) => [
           ...c,
           {
@@ -395,16 +537,38 @@ export function PilotApp() {
       }
       if (name === "select_variant") {
         const v = variantsRef.current[Number(a.index) - 1];
-        if (!v) return "Такого варианта нет.";
+        if (!v) return "НЕ СДЕЛАНО: такого варианта нет.";
         setCurrent(v.project);
-        return `Выбран вариант ${a.index}: ${v.summary}`;
+        setShowVariants(false);
+        editedRef.current = false;
+        setHl((h) => ({ ids: v.project.modules.map((m) => m.id), key: h.key + 1 }));
+        ledger.current.record(name, true, v.summary);
+        return `ГОТОВО, дом изменён: на экране вариант ${a.index}: ${v.summary}`;
       }
-      const parsed = toolCallToCommand(name, a);
-      if (!parsed.ok) return `Команда не распознана: ${parsed.error}`;
+      const parsed = toolCallToCommand(name, a, currentRef.current?.plot?.northDeg ?? 0);
+      if (!parsed.ok) {
+        const text = `НЕ СДЕЛАНО: команда не распознана (${parsed.error}). Дом НЕ менялся.`;
+        ledger.current.record(name, false, text);
+        return text;
+      }
       return run(parsed.command);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [build, run, setCurrent],
+    [build, run, setCurrent, undoSteps, redoStep],
+  );
+
+  /** Все вызовы инструментов — в журнал (отладка ?debug=voice и QA ?qa=1). */
+  const runLogged = useCallback(
+    async (via: string, name: string, args: unknown): Promise<string> => {
+      const out = await runTool(name, args);
+      toolLog.current = [
+        ...toolLog.current.slice(-60),
+        { t: Date.now(), via, name, args, ok: out.startsWith("ГОТОВО"), out: out.slice(0, 400) },
+      ];
+      debug(`⚙ ${via}: ${name} ${JSON.stringify(args).slice(0, 120)} → ${out.slice(0, 80)}`);
+      return out;
+    },
+    [runTool, debug],
   );
 
   const context = () => {
@@ -415,6 +579,12 @@ export function PilotApp() {
       scenario: scenarioRef.current,
       interview: interviewContext(interviewRef.current, scenarioRef.current),
       options: optionsContext(optionsRef.current),
+      pendingOffer: pendingOffer.current
+        ? `«${pendingOffer.current.text}» — команда ${JSON.stringify(pendingOffer.current.command)}`
+        : undefined,
+      recent: recentRef.current,
+      canUndo: historyRef.current.length > 0,
+      canRedo: redoRef.current.length > 0,
     });
   };
 
@@ -508,9 +678,8 @@ export function PilotApp() {
             API,
             "design",
             { brief, intent, style: scenarioRef.current.styleHints?.[0] },
-            {
-              session: SESSION,
-            },
+            // Не держим человека дольше 75 с: не успела нейросеть — остаются варианты солвера.
+            { session: SESSION, timeoutMs: 75_000 },
           ).catch((e: Error) => ({ intent, error: e.message }) as DesignOut & { error: string }),
         ),
       );
@@ -530,7 +699,9 @@ export function PilotApp() {
         };
       });
       setVariants(vs);
+      setShowVariants(true);
       setCurrent(vs[0].project);
+      editedRef.current = false;
       setFlash((x) => x + 1);
       const critic = await criticPass();
       return `${vs.map((v, i) => `${i + 1}) ${v.summary}${ok[i].fallback ? " — нейросеть не уложилась в правила, показал ближайший проверенный" : ""}`).join("; ")}. Критик: ${critic}`;
@@ -555,7 +726,7 @@ export function PilotApp() {
         API,
         "critic",
         { project: p, style: scenarioRef.current.styleHints?.[0], snapshot },
-        { session: SESSION },
+        { session: SESSION, timeoutMs: 45_000 },
       );
       let work = p;
       const done: string[] = [];
@@ -616,23 +787,22 @@ export function PilotApp() {
       case "lifestyle":
         return [confirm("lifestyle")];
       case "style":
-        return [{ label: "Показать варианты A/B/C", run: () => void showOptions() }];
+        return [
+          {
+            label: "Фирменный ЭкоКуб",
+            run: () => {
+              say("user", "Фирменный ЭкоКуб");
+              setInterview((i) => answerStep(i, ["style"]));
+              say("system", `⚙ ${run({ op: "set_style", style: "ecocub" }).slice(0, 200)}`);
+            },
+          },
+        ];
       case "budget":
         return [
           { label: "Пока не знаю", run: () => setInterview((i) => answerStep(i, ["budget"])) },
-          set("До 12 млн", { budgetMaxRub: 12_000_000 }),
         ];
       default:
-        return [
-          {
-            label: "Лев, предложи 3 решения",
-            run: () => void sendChat("Предложи три решения нейросетью"),
-          },
-          {
-            label: "Независимый взгляд",
-            run: () => void criticPass().then((t) => say("assistant", t)),
-          },
-        ];
+        return [];
     }
   })();
 
@@ -645,6 +815,27 @@ export function PilotApp() {
     if (!text.trim() || busy) return;
     setInput("");
     say("user", text);
+    ledger.current.begin();
+    // Без нейросети и мгновенно: «отмени» и короткое «да» на открытое предложение.
+    const t0 = text.trim().toLowerCase().replace(/ё/g, "е");
+    if (/^(отмени|отменить|верни как было|назад|undo)(?![а-яa-z])/.test(t0)) {
+      const out = undoSteps(1);
+      say("system", `⚙ ${out}`);
+      llm.current.push({ role: "user", content: `${text}\n[служебно: уже выполнено: ${out}]` });
+      return;
+    }
+    if (
+      pendingOffer.current &&
+      /^(да|давай|ок|окей|покажи|делай|применяй|согласен|хорошо|конечно)(?![а-яa-z])/.test(t0)
+    ) {
+      const out = await runLogged("chat", "accept_offer", {});
+      say("system", `⚙ ${out.slice(0, 220)}`);
+      llm.current.push({
+        role: "user",
+        content: `${text}\n[служебно: предложение применено: ${out}]`,
+      });
+      return;
+    }
     // Ссылки на карточки A/B/C применяем сразу, Льву — что уже сделано.
     let note = "";
     if (optionsRef.current && parseOptionReply(text).picks.length) {
@@ -656,8 +847,9 @@ export function PilotApp() {
       content: note ? `${text}\n[служебно: выбор по карточкам уже применён: ${note}]` : text,
     });
     setBusy(true);
+    let nudged = false;
     try {
-      for (let round = 0; round < 4; round++) {
+      for (let round = 0; round < 5; round++) {
         const r = await fetch(`${API}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Pilot-Session": SESSION },
@@ -675,8 +867,24 @@ export function PilotApp() {
           tool_calls?: { id: string; function: { name: string; arguments: string } }[];
         };
         llm.current.push({ role: "assistant", content: m.content ?? "", tool_calls: m.tool_calls });
-        if (m.content) say("assistant", m.content);
-        if (!m.tool_calls?.length) break;
+        if (m.content) {
+          say("assistant", m.content);
+          lastLev.current = m.content;
+        }
+        if (!m.tool_calls?.length) {
+          // «Сказал — сделал»: объявил правку без применённой команды — поправка и ещё один круг.
+          const fix = m.content ? ledger.current.check(m.content) : null;
+          if (fix) say("system", `⚠ ${fix}`);
+          if (fix && !nudged) {
+            nudged = true;
+            llm.current.push({
+              role: "user",
+              content: `[служебно: ты сказал, что изменил дом, но ни одна команда не вернула ГОТОВО — дом НЕ менялся (${fix}). Если человек просил правку — вызови нужную команду сейчас; иначе честно скажи, что не сделал.]`,
+            });
+            continue;
+          }
+          break;
+        }
         for (const tc of m.tool_calls) {
           let args: unknown = {};
           try {
@@ -684,7 +892,7 @@ export function PilotApp() {
           } catch {
             args = {};
           }
-          const out = await runTool(tc.function.name, args);
+          const out = await runLogged("chat", tc.function.name, args);
           say("system", `⚙ ${tc.function.name}: ${out.slice(0, 220)}`);
           llm.current.push({ role: "tool", tool_call_id: tc.id, content: out });
         }
@@ -699,6 +907,7 @@ export function PilotApp() {
     }
   };
 
+  const voiceNudged = useRef(false);
   const toggleVoice = async (mode: "dialog" | "ptt" = "dialog") => {
     if (voice) {
       voice.stop();
@@ -758,12 +967,33 @@ export function PilotApp() {
           if (d) setVoiceInfo(d);
           if (s === "closed") setVoice(null);
         },
-        onUserText: (t) => say("user", `🎤 ${t}`),
-        onAssistantText: (t) => say("assistant", t),
+        onUserText: (t) => {
+          ledger.current.begin();
+          voiceNudged.current = false;
+          say("user", `🎤 ${t}`);
+        },
+        onAssistantText: (t) => {
+          say("assistant", t);
+          lastLev.current = t;
+          const fix = ledger.current.check(t);
+          if (fix) {
+            say("system", `⚠ ${fix}`);
+            if (!voiceNudged.current) {
+              voiceNudged.current = true;
+              v.nudge(
+                "Ты сказал, что изменил дом, но ни одна команда не вернула ГОТОВО — дом НЕ менялся. Если человек просил правку, вызови нужную команду сейчас; иначе одной фразой честно скажи, что не сделал.",
+              );
+            }
+          }
+        },
         onToolCall: async (n, a) => {
-          const out = await runTool(n, a);
+          const out = await runLogged("voice", n, a);
           say("system", `⚙ ${n}: ${out.slice(0, 220)}`);
           return out;
+        },
+        onDebug: (kind, text) => {
+          if (kind !== "event" || !/delta|content_part|conversation\.item\.(added|done)/.test(text))
+            debug(`${kind}: ${text}`);
         },
       },
       {
@@ -785,15 +1015,17 @@ export function PilotApp() {
     }
   };
 
-  const doRenders = async () => {
+  const doRenders = async (more = false) => {
     const p = currentRef.current;
     if (!p) return;
     const vs = viewSet(p);
-    const pick = [
-      vs.views.find((v) => v.id === "facade-S"),
-      vs.views.find((v) => v.kind === "aerial"),
-      vs.views.find((v) => v.kind === "interior"),
-    ].filter(Boolean) as typeof vs.views;
+    // Главный кадр — фасад со стороны террасы (там остекление гостиной); ещё два — по кнопке.
+    const hero = vs.views.find((v) => v.id === `facade-${p.terrace.side}`) ?? vs.views[0];
+    const pick = (
+      more
+        ? [vs.views.find((v) => v.kind === "aerial"), vs.views.find((v) => v.kind === "interior")]
+        : [hero]
+    ).filter(Boolean) as typeof vs.views;
     setRenderBusy(true);
     setRenders(pick.map((v) => ({ id: v.id, label: v.label })));
     setRenderStatus(`Рисуем 1 из ${pick.length}…`);
@@ -814,7 +1046,12 @@ export function PilotApp() {
     try {
       const out = await runRenderJob(
         API,
-        pick.map((v) => ({ id: v.id, prompt: promptFor(p, v) })),
+        pick.map((v) => ({
+          id: v.id,
+          prompt: promptFor(p, v),
+          // Стадия 2 (image-to-image по 3D-снимку) — за флагом, пока rgrouter не откроет images/edits.
+          ...(STAGE2.status === "ready" ? { image: snapshotData() } : {}),
+        })),
         {
           session: SESSION,
           onProgress: (pr) => {
@@ -839,6 +1076,15 @@ export function PilotApp() {
     }
   };
 
+  const snapshotData = (): string | undefined => {
+    const c = document.querySelector<HTMLCanvasElement>("#pilot-3d canvas");
+    try {
+      return c ? c.toDataURL("image/jpeg", 0.8) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
   const snapshot = () => {
     const c = document.querySelector<HTMLCanvasElement>("#pilot-3d canvas");
     if (!c) return;
@@ -853,6 +1099,44 @@ export function PilotApp() {
   };
 
   const passport = useMemo(() => (current ? buildPassport(current) : null), [current]);
+
+  // ?qa=1 — прямой вызов инструментов для автотестов: window.__pilotRun("add_room", {room: "bedroom"}).
+  useEffect(() => {
+    if (!flags.qa) return;
+    (window as unknown as { __pilotRun?: unknown }).__pilotRun = (
+      name: string,
+      args: unknown = {},
+    ) => runLogged("qa", name, args);
+  }, [flags.qa, runLogged]);
+
+  // ?qa=1 — состояние для автотестов (Playwright): дом, вызовы инструментов, последняя реплика Льва.
+  useEffect(() => {
+    if (!flags.qa) return;
+    (window as unknown as { __pilotState?: unknown }).__pilotState = {
+      house: current,
+      passport: passport ? { summary: passport.summary, budget: passport.budget.total } : null,
+      lastToolCalls: toolLog.current.slice(-20),
+      lastLev: lastLev.current,
+      comments,
+      chat: chat.slice(-30).map((m) => ({ role: m.role, text: m.text })),
+      variantsShown: showVariants,
+      canUndo: history.length > 0,
+      canRedo: redoStack.length > 0,
+      highlight: hl.ids,
+      voice: voiceState,
+    };
+  }, [
+    flags.qa,
+    current,
+    passport,
+    comments,
+    chat,
+    showVariants,
+    history,
+    redoStack,
+    hl,
+    voiceState,
+  ]);
 
   const sendLead = async () => {
     if (!passport) return;
@@ -902,10 +1186,10 @@ export function PilotApp() {
     current && selectedRoomId ? (current.rooms.find((r) => r.id === selectedRoomId) ?? null) : null;
   const removeBlock = current && selRoom ? removeRoomGuard(current, selRoom.id) : null;
   const undo = () => {
-    const prev = history[history.length - 1];
-    if (!prev) return;
-    setHistory((h) => h.slice(0, -1));
-    setCurrent(prev, false);
+    say("system", `⚙ ${undoSteps(1)}`);
+  };
+  const redo = () => {
+    say("system", `⚙ ${redoStep()}`);
   };
   const removeSelectedRoom = () => {
     if (!selRoom) return;
@@ -947,7 +1231,7 @@ export function PilotApp() {
       <div className="grid gap-3 p-3 lg:grid-cols-[1fr_440px]">
         {/* ── Центр: варианты, 3D, план, паспорт ── */}
         <main className="space-y-3">
-          {variants.length > 0 && (
+          {showVariants && variants.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-3">
               {variants.map((v, i) => {
                 const b = buildPassport(v.project).budget.total;
@@ -961,6 +1245,9 @@ export function PilotApp() {
                       setSelected(null);
                       setSelectedRoomId(null);
                       setComments([v.rank?.why ?? ""]);
+                      setShowVariants(false);
+                      editedRef.current = false;
+                      setHl((h) => ({ ids: v.project.modules.map((m) => m.id), key: h.key + 1 }));
                     }}
                     className={`rounded-lg border p-3 text-left text-sm ${active ? "border-neutral-900 bg-white shadow" : "bg-white/70"}`}
                   >
@@ -997,7 +1284,21 @@ export function PilotApp() {
                 {l}
               </Btn>
             ))}
-            {current && history.length > 0 && <Btn onClick={undo}>↶ Отменить</Btn>}
+            {current && (
+              <>
+                <Btn onClick={undo} disabled={!history.length}>
+                  ↶ Отменить
+                </Btn>
+                <Btn onClick={redo} disabled={!redoStack.length}>
+                  ↷ Вернуть
+                </Btn>
+              </>
+            )}
+            {variants.length > 1 && (
+              <Btn onClick={() => setShowVariants((x) => !x)}>
+                {showVariants ? "Скрыть варианты" : "Покажи варианты"}
+              </Btn>
+            )}
           </div>
 
           <div
@@ -1017,13 +1318,22 @@ export function PilotApp() {
               </div>
             ) : tab === "3d" ? (
               <Suspense fallback={<div className="p-4">Загружаю 3D…</div>}>
-                <HouseScene project={current} selected={selected} onPick={setSelected} shot />
+                <HouseScene
+                  project={current}
+                  selected={selected}
+                  onPick={setSelected}
+                  shot
+                  highlight={hl.ids}
+                  highlightKey={hl.key}
+                />
               </Suspense>
             ) : tab === "plan1" || tab === "plan2" ? (
               <PlanSvg
                 project={current}
                 tier={tab === "plan1" ? 1 : 2}
                 selectedRoomId={selectedRoomId}
+                highlight={hl.ids}
+                highlightKey={hl.key}
                 onPickRoom={(id) => {
                   setSelectedWall(null);
                   setSelectedRoomId((cur) => (cur === id ? null : id));
@@ -1184,9 +1494,12 @@ export function PilotApp() {
               <div className="flex flex-wrap items-center gap-2">
                 <b>Рендеры</b>
                 <Btn onClick={snapshot}>Снимок 3D (стадия 1)</Btn>
-                <Btn kind="primary" disabled={renderBusy} onClick={doRenders}>
-                  {renderBusy ? renderStatus || "Рисую…" : "Фото-рендеры (3 кадра, ~12 ₽)"}
+                <Btn kind="primary" disabled={renderBusy} onClick={() => void doRenders()}>
+                  {renderBusy ? renderStatus || "Рисую…" : "Фото-рендер (~1 мин)"}
                 </Btn>
+                {renders.some((r) => r.src) && !renderBusy && (
+                  <Btn onClick={() => void doRenders(true)}>ещё 2 ракурса</Btn>
+                )}
                 {renderStatus && !renderBusy && (
                   <span className="text-xs text-amber-700">{renderStatus}</span>
                 )}
@@ -1204,7 +1517,10 @@ export function PilotApp() {
                       <div className="p-4 text-xs">{r.error ?? "…"}</div>
                     )}
                     <figcaption className="text-xs text-neutral-500">
-                      {r.label} · визуализация
+                      {r.label} ·{" "}
+                      {r.id.startsWith("clay")
+                        ? "точная геометрия"
+                        : "визуализация, примерно похоже — точная форма в 3D и на плане"}
                     </figcaption>
                   </figure>
                 ))}
@@ -1921,6 +2237,23 @@ export function PilotApp() {
           )}
         </aside>
       </div>
+      {flags.debugVoice && (
+        <div className="fixed bottom-2 left-2 z-50 max-h-[45vh] w-[min(560px,calc(100vw-16px))] overflow-auto rounded-lg bg-black/85 p-2 font-mono text-[11px] leading-snug text-green-200 shadow-xl">
+          <div className="mb-1 flex items-center justify-between text-white">
+            <b>debug=voice · голос: {VOICE_STATE_RU[voiceState]}</b>
+            <span>вызовов: {toolLog.current.length}</span>
+          </div>
+          {debugLines.length ? (
+            debugLines.map((l, i) => (
+              <div key={i} className={l.includes("⚙") ? "text-amber-200" : undefined}>
+                {l}
+              </div>
+            ))
+          ) : (
+            <div className="text-neutral-400">событий пока нет — включите голос</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

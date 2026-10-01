@@ -185,6 +185,19 @@
   },
   "styles": [
     {
+      "id": "ecocub",
+      "label": "Фирменный ЭкоКуб",
+      "aliases": ["фирменн", "экокуб", "эко-куб", "эко куб", "светлый фирменный"],
+      "facade": "plaster-white",
+      "roof": "flat-membrane",
+      "windowFrames": "frame-graphite",
+      "interior": "interior-light-oak",
+      "region": "ЭкоКуб",
+      "palette": ["#F2EFE9", "#B98A5A", "#2B2D2F"],
+      "windows": "floor-to-ceiling",
+      "accent": "larch-slats"
+    },
+    {
       "id": "riga-clean",
       "label": "Рижский без планкена",
       "aliases": ["рижский без планкена", "рижск без планкен"],

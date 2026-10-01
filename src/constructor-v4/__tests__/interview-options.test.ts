@@ -299,9 +299,13 @@ test("фирменный стиль: 7 рендеров слайдера опи�
       FINISHES.categories[cat as "facade"].some((f) => f.id === id),
       id,
     );
-  const p = base();
+  // Фирменная база рендера — когда фасад фирменный (штукатурка/бетон); иначе только «дух» без материалов.
+  const p0 = base();
+  const p = { ...p0, finishes: { ...p0.finishes, facade: "plaster-white" } };
   const v = viewSet(p).views[0];
   assert.ok(promptFor(p, v).includes(RENDER_STYLE_BASELINE));
+  const wood = { ...p0, finishes: { ...p0.finishes, facade: "planken-larch" } };
+  assert.ok(!promptFor(wood, v).includes("white plaster or light concrete walls"));
 });
 
 test("знания под дом: слайдер, паттерны CUBAX, мировые прецеденты; проверка ссылки на прецедент", () => {
@@ -326,7 +330,8 @@ test("промпт Льва: интервью, карточки, знания и
   assert.match(prompt, /Карточки на экране/);
   assert.match(prompt, /Знания под этот дом/);
   assert.match(prompt, /Проект и подключение к сетям/);
-  assert.match(prompt, /кубики × 9,25/);
+  // Цены Лев не считает сам — только из расчёта движка (тот же, что в паспорте).
+  assert.match(prompt, /Сам не считай/);
   const line = budgetFor(p).lines.find((l) => l.id === "project-connection")!;
   assert.equal(line.min, 380_000);
   assert.equal(line.max, 470_000);
