@@ -4,8 +4,9 @@
  * рисуется на плане и в 3D. По нему проверяется маршрут от входа.
  */
 import { contact, footprint } from "./geometry.ts";
-import type { ModulePlacement, Opening, Project, Room } from "./types.ts";
-import { intersect } from "./geometry.ts";
+import type { ModulePlacement, Opening, Project, Room, Side } from "./types.ts";
+import { intersect, type Rect } from "./geometry.ts";
+import { GRAMMAR } from "../grammar/index.ts";
 
 export interface RoomEdge {
   a: string;
@@ -33,6 +34,132 @@ export function moduleBehind(
     const c = contact(footprint(m), footprint(x));
     return !!c && c.faceA === o.face && c.from < s1 && c.to > s0;
   });
+}
+
+/**
+ * Кубик кухонного фронта в кухне-гостиной: первый кубик общей комнаты, в который
+ * не открывается дверь спальни или кабинета. Спальня, открывающаяся прямо к
+ * плите и мойке, — «вход через кухонную зону» (критик, 01.10.2026); план ставит
+ * кухонный фронт сюда же (plan.ts).
+ */
+export function kitchenWorkModuleId(p: Project): string | null {
+  const k = p.rooms.find((r) => r.type === "kitchen-living");
+  if (!k?.moduleIds.length) return null;
+  const privateRooms = new Set(
+    p.rooms.filter((r) => r.type === "bedroom" || r.type === "study").map((r) => r.id),
+  );
+  const fed = new Set<string>();
+  for (const o of p.openings) {
+    if (o.kind !== "internal-door" || !privateRooms.has(o.roomId)) continue;
+    const m = p.modules.find((x) => x.id === o.moduleId);
+    const b = m ? moduleBehind(p, m, o) : undefined;
+    if (b) fed.add(b.id);
+  }
+  return k.moduleIds.find((id) => !fed.has(id)) ?? k.moduleIds[0];
+}
+
+/**
+ * Кухонный фронт (600 мм вдоль стены кубика кухни) и рабочая зона перед ним (+1000 мм).
+ * Стена выбирается так, чтобы в зону не открывалась ни одна дверь: сначала стены без
+ * стыка с соседним кубиком общей комнаты, без дверей и с меньшим остеклением.
+ */
+export function kitchenZone(
+  p: Project,
+): { run: Rect; zone: Rect; moduleId: string; wall: "N" | "E" | "S" | "W" } | null {
+  const id = kitchenWorkModuleId(p);
+  const m = id ? p.modules.find((x) => x.id === id) : undefined;
+  if (!m) return null;
+  const k = p.rooms.find((r) => r.moduleIds.includes(m.id));
+  const r = footprint(m);
+  const w = GRAMMAR.module.wallMm;
+  const c = { x0: r.x0 + w, y0: r.y0 + w, x1: r.x1 - w, y1: r.y1 - w };
+  const D = 600;
+  const Z = 1000;
+  const walls = {
+    W: { run: { x0: c.x0, x1: c.x0 + D, y0: c.y0 + 300, y1: c.y1 - 300 }, dx: Z, dy: 0 },
+    E: { run: { x0: c.x1 - D, x1: c.x1, y0: c.y0 + 300, y1: c.y1 - 300 }, dx: -Z, dy: 0 },
+    N: { run: { x0: c.x0 + 300, x1: c.x1 - 300, y0: c.y1 - D, y1: c.y1 }, dx: 0, dy: -Z },
+    S: { run: { x0: c.x0 + 300, x1: c.x1 - 300, y0: c.y0, y1: c.y0 + D }, dx: 0, dy: Z },
+  } as const;
+  const zoneOf = (wall: keyof typeof walls): Rect => {
+    const { run, dx, dy } = walls[wall];
+    return {
+      x0: Math.min(run.x0, run.x0 + dx),
+      x1: Math.max(run.x1, run.x1 + dx),
+      y0: Math.min(run.y0, run.y0 + dy),
+      y1: Math.max(run.y1, run.y1 + dy),
+    };
+  };
+  // Двери спален и кабинетов в зону — запрет (правило room-doors), остальные двери — терпимо.
+  const landings: { r: Rect; weight: number }[] = [];
+  for (const o of p.openings) {
+    if (o.kind === "window") continue;
+    const om = p.modules.find((x) => x.id === o.moduleId);
+    if (!om || om.tier !== m.tier) continue;
+    if (o.kind === "entrance" && om.id === m.id) {
+      landings.push({ r: entranceLanding(om, o), weight: 1e4 });
+      continue;
+    }
+    const t = p.rooms.find((x) => x.id === o.roomId)?.type;
+    if (om.id !== m.id)
+      landings.push({
+        r: doorLanding(om, o),
+        weight: t === "bedroom" || t === "study" ? 1e6 : 1e4,
+      });
+  }
+  const joint = (face: Side) =>
+    p.modules.some((x) => {
+      if (x.id === m.id || x.tier !== m.tier || !k?.moduleIds.includes(x.id)) return false;
+      const ct = contact(r, footprint(x));
+      return !!ct && ct.faceA === face;
+    });
+  const glass = (face: Side) =>
+    p.openings
+      .filter((o) => o.moduleId === m.id && o.face === face && o.kind === "window")
+      .reduce((a, o) => a + o.widthMm, 0);
+  const order = (["W", "E", "N", "S"] as const)
+    .map((wall, i) => {
+      const z = zoneOf(wall);
+      const conflict = landings.reduce((a, l) => a + (intersect(l.r, z) ? l.weight : 0), 0);
+      return { wall, score: conflict + (joint(wall) ? 1e5 : 0) + glass(wall) + i };
+    })
+    .sort((a, b) => a.score - b.score);
+  const wall = order[0].wall;
+  return { run: walls[wall].run, zone: zoneOf(wall), moduleId: m.id, wall };
+}
+
+/** Входная дверь кубика кухни: полоса на 1 м внутрь от проёма. */
+function entranceLanding(m: ModulePlacement, o: Opening): Rect {
+  const l = doorLanding(m, o);
+  const r = footprint(m);
+  const d = 1000;
+  switch (o.face) {
+    case "N":
+      return { ...l, y0: r.y1 - d, y1: r.y1 };
+    case "S":
+      return { ...l, y0: r.y0, y1: r.y0 + d };
+    case "E":
+      return { ...l, x0: r.x1 - d, x1: r.x1 };
+    case "W":
+      return { ...l, x0: r.x0, x1: r.x0 + d };
+  }
+}
+
+/** Куда ступаешь, войдя в дверь: полоса шириной в проём на 1 м вглубь соседнего кубика. */
+export function doorLanding(m: ModulePlacement, o: Opening): Rect {
+  const r = footprint(m);
+  const [a, b] = openingSpan(m, o);
+  const d = 1000;
+  switch (o.face) {
+    case "N":
+      return { x0: a, x1: b, y0: r.y1, y1: r.y1 + d };
+    case "S":
+      return { x0: a, x1: b, y0: r.y0 - d, y1: r.y0 };
+    case "E":
+      return { x0: r.x1, x1: r.x1 + d, y0: a, y1: b };
+    case "W":
+      return { x0: r.x0 - d, x1: r.x0, y0: a, y1: b };
+  }
 }
 
 export function roomGraph(p: Project): RoomEdge[] {

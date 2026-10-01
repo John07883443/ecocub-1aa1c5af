@@ -135,7 +135,7 @@ export const CATALOG_REFERENCES = [
 
 /** Отделки фирменного стиля (только id из finishes.json). */
 export const ECOCUB_FINISHES: Finishes = {
-  styleId: "riga-planken",
+  styleId: "ecocub",
   facade: "plaster-white",
   roof: "flat-membrane",
   windowFrames: "frame-graphite",

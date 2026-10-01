@@ -23,7 +23,7 @@ import {
 } from "./geometry.ts";
 import type { ModulePlacement, Project, Room, RuleResult, Side } from "./types.ts";
 import { canPair, factoryModules } from "./factory.ts";
-import { checkRoutes, deadEndHalls } from "./graph.ts";
+import { checkRoutes, deadEndHalls, doorLanding, kitchenZone } from "./graph.ts";
 import { tvPlace } from "./tv.ts";
 import { HARMONY, aspectRatio, facadeProfile, fillRatio, outlineCorners } from "./patterns.ts";
 import { PILOT } from "../pilot.config.ts";
@@ -641,6 +641,18 @@ const roomDoors: Check = (p) => {
       return !!c && c.faceA === o.face;
     });
     const behindRoom = behind ? roomOf(p, behind.id) : undefined;
+    const own = roomOf(p, m.id);
+    const kz = own?.type === "bedroom" ? kitchenZone(p) : null;
+    if (own && kz && m.tier === 1 && intersect(doorLanding(m, o), kz.zone))
+      out.push(
+        fail(
+          "room-doors",
+          "hard",
+          "Вход в спальню через кухонную зону: дверь открывается прямо к кухонному фронту. Спальня открывается в холл или в гостиную часть.",
+          "Путь человека: улица → прихожая → общая зона → холл → спальни",
+          own.id,
+        ),
+      );
     if (behindRoom?.type === "bedroom" && behindRoom.id !== o.roomId)
       out.push(
         fail(
@@ -1076,7 +1088,10 @@ export function columnsFor(p: Project): number {
   for (const u of modulesOnTier(p, 2)) {
     const s = supportOf(u, t1);
     for (const side of SIDES)
-      if (s.overhangMm[side] > GRAMMAR.tiers.maxOverhangMm)
+      if (
+        s.overhangMm[side] > GRAMMAR.tiers.maxOverhangMm ||
+        (s.overhangMm[side] > 0 && p.overhangSupports?.includes(side))
+      )
         n += PILOT.structure.columnsPerOverhangSide;
   }
   return n;

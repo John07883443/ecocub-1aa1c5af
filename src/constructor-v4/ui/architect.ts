@@ -10,6 +10,8 @@ import { columnsFor, evaluate, roomClearAreaM2, warmContourM2 } from "../engine/
 import type { Project } from "../engine/types.ts";
 import type { LifeScenario } from "../engine/scenario.ts";
 import { FINISHES, roomSpec } from "../grammar/index.ts";
+import { roomLabel } from "../engine/edit-core.ts";
+import { houseLook } from "../engine/house-look.ts";
 import { tvPlace } from "../engine/tv.ts";
 import { PILOT } from "../pilot.config.ts";
 import { knowledgeFor } from "../engine/knowledge.ts";
@@ -18,7 +20,7 @@ export const SCENARIO_TOOL = {
   type: "function",
   name: "set_scenario",
   description:
-    "Записать в анкету то, что человек рассказал о жизни, и пересобрать 3 варианта дома. Передавай только то, что узнал или что изменилось — остальное в анкете сохранится. Вызывай сразу, как узнал новый факт (кто живёт, питомцы, родители, участок, площадь, бюджет, стиль).",
+    "Записать в анкету факты о жизни (кто живёт, питомцы, родители, участок, площадь, бюджет, стиль). Пока дом не правили — он пересоберётся под анкету; после первой правки дом НЕ пересобирается (только rebuild: true по прямой просьбе «собери заново»). Менять сам дом — командами (add_room, add_module и т. д.), не этим.",
   parameters: {
     type: "object",
     properties: {
@@ -46,6 +48,10 @@ export const SCENARIO_TOOL = {
       desiredAreaMaxM2: { type: "integer" },
       budgetMaxRub: { type: "integer" },
       style: { type: "string", description: "Стиль словами, если назван" },
+      rebuild: {
+        type: "boolean",
+        description: "Собрать дом заново под анкету (только по прямой просьбе)",
+      },
     },
     required: [],
   },
@@ -59,20 +65,68 @@ export const WHAT_IF_TOOL = {
   parameters: {
     type: "object",
     properties: {
-      op: { type: "string", enum: ["remove_room", "add_room", "resize_room"] },
+      op: {
+        type: "string",
+        enum: [
+          "remove_room",
+          "add_room",
+          "resize_room",
+          "add_module",
+          "remove_module",
+          "add_second_tier",
+          "remove_second_tier",
+          "resize_house",
+        ],
+      },
       roomId: { type: "string" },
-      room: { type: "string", enum: ["bedroom", "study", "wet-core"] },
+      room: { type: "string", enum: ["bedroom", "study", "bath", "sauna", "storage", "living"] },
       modules: { type: "integer", minimum: 1, maximum: 5 },
       tier: { type: "integer", enum: [1, 2] },
+      side: { type: "string", enum: ["N", "E", "S", "W"] },
+      deltaM2: { type: "number" },
     },
     required: ["op"],
   },
 } as const;
 
+export const UNDO_TOOL = {
+  type: "function",
+  name: "undo",
+  description:
+    "Отменить последнюю правку дома («отмени», «верни как было»). steps — сколько правок назад.",
+  parameters: {
+    type: "object",
+    properties: { steps: { type: "integer", minimum: 1, maximum: 10 } },
+    required: [],
+  },
+} as const;
+
+export const REDO_TOOL = {
+  type: "function",
+  name: "redo",
+  description: "Вернуть отменённую правку обратно («нет, верни обратно»).",
+  parameters: { type: "object", properties: {}, required: [] },
+} as const;
+
+export const ACCEPT_OFFER_TOOL = {
+  type: "function",
+  name: "accept_offer",
+  description:
+    "Человек согласился с открытым предложением («да», «давай», «покажи», «делай») — применить его. Открытое предложение — в контексте.",
+  parameters: { type: "object", properties: {}, required: [] },
+} as const;
+
+export const SHOW_VARIANTS_TOOL = {
+  type: "function",
+  name: "show_variants",
+  description: "Показать 3 варианта дома (только когда человек сам просит «покажи варианты»).",
+  parameters: { type: "object", properties: {}, required: [] },
+} as const;
+
 export const SELECT_TOOL = {
   type: "function",
   name: "select_variant",
-  description: "Выбрать вариант 1, 2 или 3 для правки.",
+  description: "Выбрать вариант 1, 2 или 3 (после show_variants) — он станет текущим домом.",
   parameters: {
     type: "object",
     properties: { index: { type: "integer", minimum: 1, maximum: 3 } },
@@ -149,6 +203,10 @@ export const OFFER_TOOL = {
 } as const;
 
 export const ALL_TOOLS = [
+  UNDO_TOOL,
+  REDO_TOOL,
+  ACCEPT_OFFER_TOOL,
+  SHOW_VARIANTS_TOOL,
   SCENARIO_TOOL,
   SELECT_TOOL,
   WHAT_IF_TOOL,
@@ -271,7 +329,7 @@ export function scenarioContext(s: LifeScenario | null | undefined): string {
 
 /** «А если…» — применить команду к копии дома и сравнить цифры. Дом не меняется. */
 export function whatIf(p: Project | null, args: Record<string, unknown>): string {
-  if (!p) return "Дом ещё не собран — сначала соберите варианты.";
+  if (!p) return "Дом ещё не собран.";
   const parsed = parseCommand({ ...args });
   if (!parsed.ok) return `Не понял, что посчитать: ${parsed.error}.`;
   const res = applyCommand(p, parsed.command);
@@ -281,10 +339,7 @@ export function whatIf(p: Project | null, args: Record<string, unknown>): string
     const b = budgetFor(q).total;
     return `${q.modules.length} кубиков, ${Math.round(warmContourM2(q))} м², ${trucksForCubes(q.modules.length)} трала, ${fmtMln(b.min)}–${fmtMln(b.max)} млн ₽`;
   };
-  const bb = budgetFor(p).total;
-  const ba = budgetFor(res.project).total;
-  const d = (ba.min + ba.max - bb.min - bb.max) / 2;
-  return `Сейчас: ${fmt(p)}. Если так: ${fmt(res.project)} (${d >= 0 ? "+" : "−"}${fmtMln(Math.abs(d))} млн ₽ к середине вилки, предварительно). Дом не менял — скажите «делаем», и применю.`;
+  return `Сейчас: ${fmt(p)}. Если так: ${fmt(res.project)}; изменится: ${res.diff.summary}. Дом НЕ менял — скажите «делаем», и применю.`;
 }
 
 /** Формат инструментов для chat/completions (OpenAI-совместимый). */
@@ -364,25 +419,22 @@ export const LEV_MISSION =
 export function systemPrompt(context: string): string {
   return `${LEV_MISSION}
 
-Ты — ${PILOT.architect.name}, архитектор компании ЭкоКуб: модульные дома из кубиков 3200 × 3420 мм (заводской модуль — 2 кубика, трал везёт 4 кубика).
-Говоришь по-русски, коротко (1–3 фразы), тепло и по делу, как живой архитектор. Помогаешь обычному человеку собрать реальный дом.
+Ты — ${PILOT.architect.name}, архитектор ЭкоКуба: дома из кубиков 3200 × 3420 мм (заводской модуль — 2 кубика). Говоришь по-русски, коротко (1–2 фразы), тепло и по делу.
 
-Правила:
-- В контексте ниже есть «Анкета» — то, что человек уже заполнил. Не переспрашивай известное: одной фразой подтверди («вижу: вас трое, три кошки, родители приезжают, есть машина») и спроси то, чего не хватает (бюджет, участок, стиль) — по одному вопросу.
-- Узнал новый факт или человек что-то поправил — сразу вызови set_scenario только с изменившимися полями: анкета и варианты обновятся на экране.
-- Вопросы про цифры (кубики, модули, тралы, кран, фундамент, отделка, итог) — отвечай по «Бюджету по статьям» из контекста. «А если убрать/добавить…» — вызови what_if: дом не меняется, пока человек не скажет «делаем».
-- Геометрию сам не придумывай: только вызывай инструменты. Результат инструмента — правда; если отказ — объясни причину человеческим языком и предложи исправление из ответа.
-- Стороны дома: N север, E восток, S юг, W запад. «Здесь / на этой стороне» — смотри «выбранная стена» в контексте.
-- Попроси референсы или скриншоты понравившихся домов и интерьеров — «можно вставить прямо сюда» (разбор картинок появится позже).
-- Не называй точную цену — только вилку «предварительно».
-- В общей комнате всегда есть место под ТВ: глухая стена от 2,4 м, диван в 2,5–3,5 м, без панорамы за спиной зрителя (правило проверяет движок).
-- По умолчанию держимся фирменного стиля ЭкоКуба (рендеры слайдера eco-cub.ru и построенные Weekend One/Two, Family One/Two, Sky River — см. «Знания под этот дом»). Отходи от него осознанно — когда человек сам просит другое. Предлагая решение, называй прецедент: «как в Family One…», «приём CUBAX 74: две спальни спиной к спине…», «как у Muji Hut — веранда под общей крышей».
-- Ведёшь интервью (блок «Интервью» в контексте): один вопрос за раз, после ответа дом пересобирается — одной фразой скажи, что поменялось и почему. На шаге стиля вызови show_options и попроси выбрать или смешать карточки A/B/C; ответ передай в apply_options как есть.
-- Предлагай, а не делай молча: улучшения — через offer_change (кнопки «показать / не надо»). Новые решения целиком — design_variants, свежий взгляд — critic_review; кратко пересказывай, что поправил критик.
-- Площадь по полу ≈ кубики × 9,25 м², тёплый контур — кубики × 10,94 м²; «под ключ» ≈ 150 тыс. ₽/м² (ориентир владельца), материалы чистовой ≈ 15 тыс./м² отдельно, проект и подключение — отдельной строкой.
+Главное — ОДИН дом на экране, человек правит его голосом:
+- Любая просьба изменить дом — сразу вызов инструмента-команды, без переспросов, если понятно что и где: add_room / remove_room / move_room / add_cube / remove_cube / add_module / remove_module / add_second_tier / remove_second_tier / resize_house / rotate_house / orient_house / edit_window / edit_door / edit_terrace / carport / support_overhang / set_style / set_finish / describe_style. Непонятно, какая комната, — один короткий вопрос.
+- Окна: «окна на юге больше» — edit_window с side без комнаты (весь фасад); «панорамные в гостиной» — edit_window set floor-to-ceiling с room living.
+- Ответ инструмента — единственная правда. «ГОТОВО» — перескажи одной фразой только строку «Изменения». «НЕ СДЕЛАНО» — скажи причину и предложи альтернативу из ответа. Никогда не говори «сделал / добавил / поменял», если инструмент не вернул ГОТОВО в этом ходе.
+- «Отмени», «верни как было» — undo; «верни обратно» — redo. Короткое согласие на открытое предложение («да», «давай», «посади на террасу») — accept_offer или ровно та команда, о которой было предложение (см. «Открытое предложение»).
+- Варианты — только по просьбе «покажи варианты» (show_variants); карточки стиля A/B/C — только по просьбе «покажи стили» (show_options).
+- Цены и площади называй только из блока «Бюджет» контекста или из ответа инструмента. Сам не считай. Точную цену не называй — вилка «предварительно».
+- Факты о семье — set_scenario (анкета). Если дом уже правили, он не пересобирается — правь командами.
+- Стороны света: север N, восток E, юг S, запад W. «Здесь / эта стена» — выбранная стена в контексте.
 - Кровля всегда плоская, ярусов не больше двух, свес второго яруса до 1,5 м без колонны и до 3 м с колонной.
+- Пока анкета не заполнена — веди интервью по блоку «Интервью»: один вопрос за раз.
+- По умолчанию держимся фирменного стиля ЭкоКуба (белая штукатурка, ламели из лиственницы, окна в пол, графитовые рамы — дома слайдера eco-cub.ru); отходи осознанно, когда человек просит другое, и называй прецедент («как в Family One…»).
 
-Архитектурные знания (проверяются движком правил — ссылайся на них, когда объясняешь отказ или совет):
+Архитектурные знания (их проверяет движок правил — ссылайся, когда объясняешь отказ):
 ${ARCHITECT_KNOWLEDGE}
 
 Текущее состояние:
@@ -399,6 +451,12 @@ export function projectContext(
     interview?: string;
     /** Карточки A/B/C на экране — структурно, чтобы Лев понимал ссылки на их черты. */
     options?: string;
+    /** Открытое предложение кнопкой (последнее offer_change или альтернатива при отказе). */
+    pendingOffer?: string;
+    /** Последние применённые правки. */
+    recent?: string[];
+    canUndo?: boolean;
+    canRedo?: boolean;
   } = {},
 ): string {
   const form = extra.scenario !== undefined ? scenarioContext(extra.scenario) : "";
@@ -406,7 +464,7 @@ export function projectContext(
   const cubes = p?.modules.length ?? 7;
   const tiers = p ? (Math.max(...p.modules.map((m) => m.tier)) as 1 | 2) : "any";
   const know = `Знания под этот дом:\n${knowledgeFor(cubes, tiers)}`;
-  if (!p) return [...head, "Дом ещё не собран. Варианты: нет.", know].join("\n");
+  if (!p) return [...head, "Дом ещё не собран.", know].join("\n");
   const fm = factoryModules(p);
   const b = budgetFor(p);
   const rooms = p.rooms
@@ -416,25 +474,38 @@ export function projectContext(
           p.openings.filter((o) => o.roomId === r.id && o.kind === "window").map((o) => o.face),
         ),
       ].join("");
-      return `${r.id} (${roomSpec(r.type).label}, ярус ${r.tier}, ${roomClearAreaM2(p, r)} м², окна: ${faces || "нет"})`;
+      return `${r.id} (${roomLabel(r)}, ярус ${r.tier}, ${r.moduleIds.length} куб., ${roomClearAreaM2(p, r)} м², окна: ${faces || "нет"})`;
     })
     .join("; ");
-  const style = FINISHES.styles.find((s) => s.id === p.finishes.styleId)?.label ?? "свой";
+  const win = (["N", "E", "S", "W"] as const)
+    .map((f) => `${f} ${p.openings.filter((o) => o.kind === "window" && o.face === f).length}`)
+    .join(", ");
+  const entrance = [
+    ...new Set(p.openings.filter((o) => o.kind === "entrance").map((o) => o.face)),
+  ].join(", ");
+  const look = houseLook(p);
   const lines = b.lines
     .map(
       (l) =>
-        `${l.label}: ${fmtMln(l.min)}–${fmtMln(l.max)} млн${l.placeholder ? " (черновик)" : ""}${l.basis ? ` — ${l.basis}` : ""}`,
+        `${l.label}: ${fmtMln(l.min)}–${fmtMln(l.max)} млн${l.placeholder ? " (черновик)" : ""}`,
     )
     .join("; ");
   return [
     ...head,
-    extra.variants?.length ? `Варианты: ${extra.variants.join(" | ")}` : "",
-    `Выбранный дом: ${p.modules.length} кубиков (${fm.modules.length} модулей), ${Math.round(warmContourM2(p))} м², ${trucksForCubes(p.modules.length)} трала, стиль ${style}.`,
+    extra.variants?.length
+      ? `Варианты (скрыты, показать — show_variants): ${extra.variants.join(" | ")}`
+      : "",
+    `Дом на экране: ${p.modules.length} кубиков (${fm.modules.length} заводских модулей), ${Math.round(warmContourM2(p))} м², ${tiers === 2 ? "два яруса" : "один ярус"}, ${trucksForCubes(p.modules.length)} трала.`,
     `Помещения: ${rooms}.`,
-    `Терраса: ${p.terrace.totalM2} м² на стороне ${p.terrace.side}.`,
-    `Бюджет предварительно: ${(b.total.min / 1e6).toFixed(1)}–${(b.total.max / 1e6).toFixed(1)} млн ₽.`,
-    `Бюджет по статьям (тот же расчёт, что в «Паспорт и бюджет»): ${lines}.`,
+    `Окна по фасадам: ${win}. Вход: ${entrance || "нет"}. Терраса: ${p.terrace.totalM2} м² ${p.terrace.side}.${p.household?.car ? " Навес для машины есть." : ""}`,
+    `Отделка: фасад ${look.facadeLabel}, кровля ${look.roofLabel}, рамы ${look.framesLabel}, интерьер ${look.interiorLabel}.`,
+    `Бюджет по статьям (тот же расчёт, что в «Паспорт и бюджет»): итого ${fmtMln(b.total.min)}–${fmtMln(b.total.max)} млн ₽ предварительно; ${lines}.`,
     extra.selectedWall ? `Выбранная стена: ${extra.selectedWall}.` : "Стена не выбрана.",
+    extra.pendingOffer
+      ? `Открытое предложение: ${extra.pendingOffer}`
+      : "Открытых предложений нет.",
+    extra.recent?.length ? `Последние правки: ${extra.recent.slice(-3).join(" | ")}` : "",
+    `Отменить можно: ${extra.canUndo ? "да" : "нет"}; вернуть отменённое: ${extra.canRedo ? "да" : "нет"}.`,
     know,
   ]
     .filter(Boolean)

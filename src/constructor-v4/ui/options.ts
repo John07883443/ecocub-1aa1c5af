@@ -57,7 +57,7 @@ export function styleOptions(): OptionCard[] {
       image: hero("hero-1"),
       summary:
         "Белая штукатурка, ламели из лиственницы, окна в пол, навес над террасой во всю длину",
-      styleId: "riga-planken",
+      styleId: "ecocub",
       tags: ["фирменный", "белый", "ламели", "окна в пол"],
       traits: {
         roof: {

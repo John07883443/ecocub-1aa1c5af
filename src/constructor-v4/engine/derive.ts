@@ -204,21 +204,54 @@ export function deriveOpenings(p: Project): Opening[] {
     let placed = false;
     for (const m of modsOf(r)) {
       if (placed) break;
-      for (const o of p.rooms.filter((x) => need.includes(x.type) && x.tier === r.tier)) {
+      // Сначала холл, потом общая комната; в общей комнате — кубик, куда уже открывается
+      // спальня (кухонный фронт уходит в свободный кубик, см. graph.ts kitchenWorkModuleId).
+      const targets = p.rooms
+        .filter((x) => need.includes(x.type) && x.tier === r.tier)
+        .sort((a, b) => Number(a.type === "kitchen-living") - Number(b.type === "kitchen-living"));
+      for (const o of targets) {
         if (placed) break;
-        for (const om of modsOf(o)) {
+        const fed = (om: ModulePlacement) =>
+          work.openings.some(
+            (d) =>
+              d.kind === "internal-door" &&
+              d.roomId !== r.id &&
+              (() => {
+                const dm = p.modules.find((x) => x.id === d.moduleId);
+                const c = dm ? contact(footprint(dm), footprint(om)) : null;
+                return !!c && c.faceA === d.face;
+              })(),
+          );
+        const oms =
+          o.type === "kitchen-living"
+            ? [...modsOf(o)].sort(
+                (a, b) =>
+                  Number(fed(b)) - Number(fed(a)) ||
+                  o.moduleIds.indexOf(b.id) - o.moduleIds.indexOf(a.id),
+              )
+            : modsOf(o);
+        for (const om of oms) {
           const c = contact(footprint(m), footprint(om));
           if (!c || c.lengthMm < GRAMMAR.placement.minContactMm) continue;
+          // Родителям — широкие двери 1000 без порогов.
+          const width = r.purpose ? 1000 : GRAMMAR.openings.internalDoorWidthMm;
+          // В кухню-гостиную по северной/южной стене — к восточному концу стыка, подальше
+          // от кухонного фронта у западной стены (graph.ts kitchenZone).
+          const farEnd =
+            (r.type === "bedroom" || r.type === "study") &&
+            o.type === "kitchen-living" &&
+            (c.faceA === "N" || c.faceA === "S") &&
+            c.to - c.from >= width + 2 * PIER();
+          const from = farEnd ? c.to - PIER() - width : c.from + PIER();
           work.openings.push({
             id: nid("door"),
             moduleId: m.id,
             roomId: r.id,
             face: c.faceA,
             kind: "internal-door",
-            // Родителям — широкие двери 1000 без порогов.
-            widthMm: r.purpose ? 1000 : GRAMMAR.openings.internalDoorWidthMm,
+            widthMm: width,
             heightMm: GRAMMAR.openings.door.heightMm,
-            offsetMm: c.from + PIER() - faceStart(m, c.faceA),
+            offsetMm: from - faceStart(m, c.faceA),
           });
           placed = true;
           break;
@@ -240,8 +273,12 @@ export function deriveTerrace(p: Project, side?: Side): Terrace {
       .filter((o) => o.roomId === kitchen?.id && o.face === f && o.kind === "window")
       .reduce((s, o) => s + o.widthMm, 0);
   const chosen = side ?? [...SIDES].sort((a, c) => glazing(c) - glazing(a))[0];
-  const deck = Math.max(0, 0.6 * warmContourM2(p) - notch);
   const r1 = (x: number) => Math.round(x * 10) / 10;
+  if (p.terraceOff) return { side: chosen, notchM2: 0, deckM2: 0, totalM2: 0 };
+  const deck =
+    p.terraceDeckM2 !== undefined
+      ? Math.max(0, p.terraceDeckM2)
+      : Math.max(0, 0.6 * warmContourM2(p) - notch);
   return { side: chosen, notchM2: r1(notch), deckM2: r1(deck), totalM2: r1(notch + deck) };
 }
 

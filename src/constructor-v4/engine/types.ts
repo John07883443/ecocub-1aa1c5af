@@ -107,6 +107,14 @@ export interface Project {
   styleProfile?: import("./style.ts").StyleProfile;
   /** Кто ещё живёт и что на участке: кошки (лоток на плане), собаки, машина (навес на участке). */
   household?: Household;
+  /** Площадь настила террасы, заданная человеком (м², без вырезов). Нет — считается по дому. */
+  terraceDeckM2?: number;
+  /** Террасу убрали совсем. */
+  terraceOff?: boolean;
+  /** Где поставить навес для машины (сторона дома). Нет — у входа. */
+  carportSide?: Side;
+  /** Стороны свеса второго яруса, под которыми человек попросил колонны (даже если свес ≤ 1,5 м). */
+  overhangSupports?: Side[];
 }
 
 export interface Household {

@@ -13,8 +13,8 @@
  * заблокирована; запасной путь — рендер по промпту с описанием геометрии из
  * паспорта и автопроверкой числа окон на кадре.
  */
-import { RENDER_STYLE_BASELINE } from "./house-style.ts";
-import { GRAMMAR, findFinish, findStyle } from "../grammar/index.ts";
+import { GRAMMAR } from "../grammar/index.ts";
+import { buildRenderPrompt } from "./render-prompt.ts";
 import { bbox, footprint } from "./geometry.ts";
 import type { Project, Side } from "./types.ts";
 
@@ -51,8 +51,22 @@ export interface Stage2Plan {
   maxRunsPerSession: number;
 }
 
+/**
+ * Стадия 2 (image-to-image по 3D-снимку) — за флагом: когда rgrouter откроет
+ * /v1/images/edits, ставим VITE_PILOT_STAGE2=1 (клиент) и PILOT_IMAGE_EDITS=1 (сервер).
+ */
+const stage2On = (() => {
+  try {
+    return (
+      (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_PILOT_STAGE2 === "1"
+    );
+  } catch {
+    return false;
+  }
+})();
+
 export const STAGE2: Stage2Plan = {
-  status: "blocked",
+  status: stage2On ? "ready" : "blocked",
   endpoint: "rgrouter /v1/images/edits",
   reason:
     "Для нашего ключа /v1/images/edits отвечает 501; моделей, принимающих входное изображение, в каталоге нет.",
@@ -122,33 +136,11 @@ export function viewSet(p: Project): ViewSet {
   };
 }
 
-/** Промпт запасного пути стадии 2: геометрия словами из модели + отделки + окружение участка. */
+/** Промпт запасного пути стадии 2: точная геометрия дома словами (render-prompt.ts). */
 export function promptFor(
   p: Project,
   view: CameraView,
   context: { timeOfDay?: string; season?: string } = {},
 ): string {
-  const tiers = Math.max(...p.modules.map((m) => m.tier));
-  const style = p.finishes.styleId ? findStyle(p.finishes.styleId) : undefined;
-  const fin = (c: "facade" | "roof" | "windowFrames" | "interior") =>
-    findFinish(c, p.finishes[c])?.label ?? "";
-  const glass =
-    view.kind === "interior"
-      ? `${view.expectedWindows} window(s) in this room`
-      : `exactly ${view.expectedWindows} window(s) on this facade, no more`;
-  return [
-    `Photorealistic architectural photo, ${view.label}.`,
-    `Modular house of ${p.modules.length} rectangular modules 3.2 × 3.42 m, ${tiers} storey(s), flat roof, no pitched roof.`,
-    `${glass}; opening heights only 2.1 / 2.5 / 2.8 / 3.15 m.`,
-    `Facade: ${fin("facade")}; window frames: ${fin("windowFrames")}; roof: ${fin("roof")}.`,
-    view.kind === "interior"
-      ? `Interior palette: ${fin("interior")}.`
-      : `Terrace deck ${p.terrace.totalM2} m² on the ${p.terrace.side} side, garden, path to entrance, fence.`,
-    // Фирменный вектор ЭкоКуба — база; выбранный стиль и отделки выше его уточняют.
-    RENDER_STYLE_BASELINE,
-    style ? `Style: ${style.label}.` : "",
-    `${context.timeOfDay ?? "golden hour"}, ${context.season ?? "summer"}.`,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  return buildRenderPrompt(p, view, context);
 }

@@ -33,7 +33,7 @@ export function carportPlace(p: Project): Carport | null {
   const t1 = p.modules.filter((m) => m.tier === 1);
   const b = bbox((t1.length ? t1 : p.modules).map(footprint));
   const entrance = p.openings.find((o) => o.kind === "entrance");
-  const order: Side[] = [entrance?.face ?? "S", "S", "E", "W", "N"].filter(
+  const order: Side[] = [p.carportSide ?? entrance?.face ?? "S", "S", "E", "W", "N"].filter(
     (s, i, a) => a.indexOf(s) === i,
   ) as Side[];
   const { widthMm: w, depthMm: d, gapMm: g } = CARPORT;

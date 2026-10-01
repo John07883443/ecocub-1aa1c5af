@@ -200,7 +200,7 @@ test("дверь: перенос входа, ширина из каталога,
   }
   const blocked = applyCommand(p, { op: "door", action: "add", side: "E", roomId: "bed1" });
   assert.equal(blocked.ok, false);
-  if (!blocked.ok) assert.match(blocked.suggestion ?? "", /стороне/);
+  if (!blocked.ok) assert.match(blocked.suggestion ?? "", /получится|стороне/);
   const entrance = p.openings.find((o) => o.kind === "entrance")!;
   const room = p.rooms.find((r) => r.id === entrance.roomId)!;
   const removeLast = applyCommand(p, {

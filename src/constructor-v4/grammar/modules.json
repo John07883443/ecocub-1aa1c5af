@@ -167,6 +167,19 @@
       "evidence": ["bedroom-is-one-module", "rooms-align-to-modules"]
     },
     {
+      "id": "storage",
+      "label": "Кладовая и постирочная",
+      "modules": {
+        "min": 1,
+        "max": 1
+      },
+      "needs": {
+        "adjacentTo": ["kitchen-living", "hall", "corridor"]
+      },
+      "evidence": ["service-rooms-share-a-module"],
+      "reviewNote": "Кладовая-постирочная отдельным кубиком — тип из сценария «много хранения», проверяет проектировщик"
+    },
+    {
       "id": "hall",
       "label": "Холл второго яруса с лестницей",
       "modules": {

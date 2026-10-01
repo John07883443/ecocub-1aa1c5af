@@ -141,7 +141,7 @@ export async function pilotChat(input: unknown, session: string): Promise<PilotR
   return { status: 200, body: { message: choices?.[0]?.message ?? {}, usage: out.usage ?? null } };
 }
 
-type Shot = { id: string; prompt: string };
+type Shot = { id: string; prompt: string; image?: string };
 type ShotResult = { id: string; url?: string | null; b64?: string | null; error?: string };
 
 /** Проверка лимитов и списание одного прогона. null — можно рисовать. */
@@ -172,11 +172,53 @@ function parseShots(input: unknown): Shot[] {
   return (Array.isArray(shots) ? shots : [])
     .slice(0, 3)
     .filter((s): s is Shot => !!s && typeof (s as Shot).id === "string")
-    .map((s) => ({ id: String(s.id).slice(0, 60), prompt: String(s.prompt ?? "").slice(0, 4000) }));
+    .map((s) => ({
+      id: String(s.id).slice(0, 60),
+      prompt: String(s.prompt ?? "").slice(0, 4000),
+      image:
+        typeof s.image === "string" &&
+        /^data:image\/(png|jpeg|webp);base64,/.test(s.image) &&
+        s.image.length < 6_000_000
+          ? s.image
+          : undefined,
+    }));
+}
+
+/**
+ * Стадия 2: image-to-image по 3D-снимку через /images/edits. У rgrouter для нашего
+ * ключа сейчас 501 — включается флагом PILOT_IMAGE_EDITS=1, когда откроют; при
+ * ошибке кадр рисуется обычным путём по промпту.
+ */
+async function renderEdit(s: Shot): Promise<ShotResult | null> {
+  const c = cfg();
+  if (env().PILOT_IMAGE_EDITS !== "1" || !s.image) return null;
+  try {
+    const [, mime, b64] = s.image.match(/^data:(image\/\w+);base64,(.*)$/) ?? [];
+    if (!b64) return null;
+    const bin = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    const form = new FormData();
+    form.set("model", c.imageModel);
+    form.set("prompt", s.prompt);
+    form.set("size", "1536x1024");
+    form.set("image", new Blob([bin], { type: mime }), "massing.png");
+    const r = await fetch(`${c.rgBase}/images/edits`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${c.rgKey}` },
+      body: form,
+    });
+    if (!r.ok) return null;
+    const out = (await r.json()) as { data?: { url?: string; b64_json?: string }[] };
+    const d = out.data?.[0] ?? {};
+    return { id: s.id, url: d.url ?? null, b64: d.b64_json ?? null };
+  } catch {
+    return null;
+  }
 }
 
 async function renderShot(s: Shot): Promise<ShotResult> {
   const c = cfg();
+  const edited = await renderEdit(s);
+  if (edited) return edited;
   try {
     const out = await rg("/images/generations", {
       model: c.imageModel,
