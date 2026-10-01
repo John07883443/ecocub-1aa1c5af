@@ -174,7 +174,10 @@ export async function designLayout(
       model,
       messages,
       tools: [LAYOUT_TOOL],
-      tool_choice: { type: "function", function: { name: "propose_layout" } },
+      // rgrouter (01.10.2026) отклоняет принудительный выбор конкретной функции
+      // (400 unsupported_request) на всех маршрутах; "required" проходит, а
+      // функция у нас одна — поведение то же.
+      tool_choice: "required",
       temperature: 0.5,
     });
     tokens += Number((out.usage as { total_tokens?: number } | undefined)?.total_tokens ?? 0);
