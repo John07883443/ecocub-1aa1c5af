@@ -32,6 +32,7 @@ import { analytics } from "@/lib/analytics";
 import { buildAttribution, attributionSummary } from "@/lib/attribution";
 import { seedFromQuiz } from "@/lib/dreamProfile";
 import { site } from "@/lib/site";
+import { HoneypotField, useAntiSpam } from "@/components/Honeypot";
 
 /**
  * HouseQuiz — нативный квиз подбора проекта.
@@ -175,6 +176,7 @@ export function HouseQuiz() {
   const [errors, setErrors] = useState<{ name?: string; phone?: string; consent?: string }>({});
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const spam = useAntiSpam();
 
   const startedRef = useRef(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -255,6 +257,7 @@ export function HouseQuiz() {
             estimate: { area: estArea, price: estPrice },
           },
           attributionSummary: attributionSummary(attribution),
+          ...spam.fields(),
         }),
       });
       if (!res.ok) throw new Error("Сервер не принял заявку");
@@ -274,7 +277,8 @@ export function HouseQuiz() {
   };
 
   return (
-    <div className="rounded-sm border border-border bg-card shadow-sm">
+    <div className="relative rounded-sm border border-border bg-card shadow-sm">
+      <HoneypotField inputRef={spam.honeypotRef} />
       {/* Прогресс */}
       <div className="border-b border-border px-6 py-4 md:px-8">
         <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-muted-foreground">

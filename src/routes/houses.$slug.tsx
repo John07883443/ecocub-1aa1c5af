@@ -142,6 +142,16 @@ function HousePage() {
             <h1 className="mt-4 text-3xl font-bold uppercase tracking-tight md:text-5xl">
               {project.title}
             </h1>
+            {/* Цена — на первом экране: на телефоне блок цены ниже уходил за
+                3D-сцену и четыре карточки характеристик, до него не доскролливали. */}
+            {price && (
+              <p className="mt-3 text-2xl font-semibold md:text-3xl">
+                от {price}
+                <span className="ml-2 align-middle text-xs font-normal text-muted-foreground">
+                  ориентир, точная смета — по участку
+                </span>
+              </p>
+            )}
             {project.description && (
               <p className="mt-4 max-w-2xl text-base text-muted-foreground">
                 {project.description}
@@ -165,6 +175,7 @@ function HousePage() {
                 <img
                   src={project.publication.coverImage}
                   alt={project.title}
+                  fetchPriority="high"
                   className="h-full w-full object-cover"
                 />
               ) : null}
@@ -197,15 +208,6 @@ function HousePage() {
                   </p>
                 )}
               </div>
-
-              {price && (
-                <p className="text-2xl font-semibold">
-                  от {price}
-                  <span className="ml-2 align-middle text-xs font-normal text-muted-foreground">
-                    ориентир, точная смета — по участку
-                  </span>
-                </p>
-              )}
 
               <div className="flex flex-wrap gap-2">
                 <Button asChild size="lg">

@@ -52,6 +52,7 @@ import {
   type DreamAnswers,
 } from "@/lib/dreamProfile";
 import { site } from "@/lib/site";
+import { HoneypotField, useAntiSpam } from "@/components/Honeypot";
 
 /**
  * DreamHouseBuilder — второй уровень воронки: «Собрать дом мечты».
@@ -654,6 +655,7 @@ export function DreamHouseBuilder() {
   const [errors, setErrors] = useState<{ name?: string; phone?: string; consent?: string }>({});
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const spam = useAntiSpam();
   const [prefilled, setPrefilled] = useState(false);
   const [sotki, setSotki] = useState(10); // размер участка для превью размещения
   const [orient, setOrient] = useState(0); // поворот дома на участке (0..3)
@@ -828,6 +830,7 @@ export function DreamHouseBuilder() {
             preferredChannel: channel,
           },
           attributionSummary: attributionSummary(attribution),
+          ...spam.fields(),
         }),
       });
       if (!res.ok) throw new Error("Сервер не принял заявку");
@@ -844,7 +847,8 @@ export function DreamHouseBuilder() {
   };
 
   return (
-    <div className="rounded-sm border border-border bg-card shadow-sm">
+    <div className="relative rounded-sm border border-border bg-card shadow-sm">
+      <HoneypotField inputRef={spam.honeypotRef} />
       {/* Прогресс */}
       <div className="rounded-t-sm border-b border-border px-6 py-4 md:px-8">
         <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider text-muted-foreground">

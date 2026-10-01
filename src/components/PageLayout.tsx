@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ScrollProgress } from "@/components/motion/ScrollProgress";
+import { StickyMessengers } from "@/components/StickyMessengers";
 
 export function PageLayout({
   children,
@@ -15,6 +16,7 @@ export function PageLayout({
       <Header variant={headerVariant} />
       <main className="flex-1">{children}</main>
       <Footer />
+      <StickyMessengers />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Container, Section } from "@/components/Container";
 import { HouseBuilder } from "@/components/constructor/HouseBuilder";
 import { ContactForm } from "@/components/ContactForm";
 import { site } from "@/lib/site";
+import { aiConstructorLine } from "@/lib/seo";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { fetchPublishedHouse } from "@/lib/house-projects";
 import { seedsFromModel } from "@/lib/house-project/adapters";
@@ -89,6 +90,9 @@ function ConstructorPage() {
             <h1 className="mt-3 text-3xl font-bold uppercase tracking-tight md:text-5xl">
               Соберите свой дом из модулей
             </h1>
+            <p className="mt-3 text-base font-semibold text-accent md:text-lg">
+              {aiConstructorLine}
+            </p>
             <p className="mt-4 text-muted-foreground">
               Базовый модуль EcoCub — кубик 3 × 3 м, высота 3,15 м. Складывайте из них дома любой
               формы — одноэтажные, двухэтажные, Г- и П-образные, со ступенчатыми фасадами и
@@ -111,6 +115,7 @@ function ConstructorPage() {
             basePricePerM2={site.basePricePerM2}
             onRequestQuote={handleQuote}
             initialSeeds={initialSeeds}
+            sourceTitle={source?.title}
           />
         </Container>
       </Section>
