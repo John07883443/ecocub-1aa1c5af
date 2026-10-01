@@ -12,7 +12,7 @@ import type { RoomType } from "../grammar/index.ts";
 import { bbox, contact, exteriorFaces, footprint } from "./geometry.ts";
 import { buildProject, defaultFinishes } from "./derive.ts";
 import { evaluate, expectedBathrooms, type Evaluation } from "./rules.ts";
-import type { Brief, ModulePlacement, Project, Room } from "./types.ts";
+import type { Brief, ModulePlacement, Project, Room, RoomPurpose } from "./types.ts";
 import { findStyle } from "../grammar/index.ts";
 import { factoryModules, trucksForCubes } from "./factory.ts";
 import { explainRanks, rankAll, type Rank } from "./ranking.ts";
@@ -57,7 +57,8 @@ export function programFor(brief: Brief, tiers: 1 | 2): Program {
       bathrooms,
     };
   const wet2 = bathrooms >= 2 ? 1 : 0;
-  let b2 = brief.bedrooms;
+  // Комнаты пожилых родителей — только 1-й ярус: наверх уходят остальные спальни.
+  let b2 = Math.max(0, brief.bedrooms - (brief.bedroomPurposes?.length ?? 0));
   const t1 = () => kitchen + (bathrooms - wet2) + study + (brief.bedrooms - b2);
   while (b2 > 0 && 1 + b2 + wet2 > t1()) b2--;
   return {
@@ -236,6 +237,22 @@ function shapeKey(p: Project): string {
   return `${p.modules.some((m) => m.tier === 2) ? 2 : 1}:${b.x1 - b.x0}x${b.y1 - b.y0}`;
 }
 
+/** Назначает комнаты родителям: спальни 1-го яруса, сначала рядом с санузлом. */
+function tagPurposes(a: Assignment, purposes: RoomPurpose[]): Room[] {
+  if (!purposes.length) return a.rooms;
+  const rooms = a.rooms.map((r) => ({ ...r }));
+  const mod = (r: Room) => a.modules.find((m) => m.id === r.moduleIds[0])!;
+  const wet = rooms.filter((r) => r.type === "wet-core" && r.tier === 1).map(mod);
+  const nearWet = (r: Room) => wet.some((w) => touches(mod(r), w));
+  const free = rooms
+    .filter((r) => r.type === "bedroom" && r.tier === 1)
+    .sort((x, y) => Number(nearWet(y)) - Number(nearWet(x)));
+  purposes.forEach((p, i) => {
+    if (free[i]) free[i].purpose = p;
+  });
+  return rooms;
+}
+
 export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
   const seed = opts.seed ?? 1;
   const max = opts.maxVariants ?? 3;
@@ -272,7 +289,8 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
         roomId: "",
       }));
       for (const a1 of assignTier1(cells, prog.tier1, rnd))
-        for (const a of addTier2(a1, prog.tier2, rnd)) {
+        for (const a0 of addTier2(a1, prog.tier2, rnd)) {
+          const a = { ...a0, rooms: tagPurposes(a0, brief.bedroomPurposes ?? []) };
           let project = buildProject({
             id: `v-${seed}-${valid.length + rejected + 1}`,
             modules: a.modules,
@@ -301,6 +319,8 @@ export function solve(brief: Brief, opts: SolveOptions = {}): SolveResult {
             rejected++;
             continue;
           }
+          if (brief.recommendations?.length)
+            project = { ...project, recommendations: brief.recommendations };
           valid.push({ project, evaluation: ev, score: ev.softScore, tiers, summary: "" });
         }
     }

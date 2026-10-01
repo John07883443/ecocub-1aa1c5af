@@ -425,6 +425,18 @@ const adjacency: Check = (p) => {
         ),
       );
   }
+  // Пожилые родители — только 1-й ярус (без лестницы).
+  for (const r of p.rooms.filter((x) => x.purpose))
+    if (r.tier !== 1)
+      out.push(
+        fail(
+          "elderly-ground-floor",
+          "hard",
+          "Комната пожилых родителей должна быть на первом ярусе — без лестницы.",
+          "Сценарий владельца 01.10.2026",
+          r.id,
+        ),
+      );
   // Второй ярус требует холла с лестницей.
   if (modulesOnTier(p, 2).length && !p.rooms.some((r) => r.type === "hall" && r.tier === 2))
     out.push(fail("stairs", "hard", "На втором ярусе нужен холл с лестницей.", SRC_ALBUM));
@@ -746,6 +758,28 @@ export function columnsFor(p: Project): number {
   return n;
 }
 
+const elderlyNearBath: Check = (p) => {
+  const wet = p.rooms.filter((r) => r.type === "wet-core" && r.tier === 1);
+  return p.rooms
+    .filter((r) => r.purpose === "elderly")
+    .map((r) =>
+      wet.some((w) => roomsTouch(p, r, w))
+        ? pass(
+            "elderly-near-bath",
+            "soft",
+            "У спальни родителей свой санузел рядом.",
+            "Сценарий владельца",
+          )
+        : fail(
+            "elderly-near-bath",
+            "soft",
+            "Санузел далеко от спальни родителей — ночью идти через общую комнату.",
+            "Сценарий владельца",
+            r.id,
+          ),
+    );
+};
+
 const reviewItems: Check = (p) => {
   const out: RuleResult[] = [];
   const cols = columnsFor(p);
@@ -806,6 +840,7 @@ export const SOFT_CHECKS: Check[] = [
   livingFacesSouth,
   compactFootprint,
   cubesPairIntoModules,
+  elderlyNearBath,
   reviewItems,
 ];
 

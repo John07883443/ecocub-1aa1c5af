@@ -22,7 +22,16 @@ export interface Room {
   tier: number;
   /** Что помещается внутри модуля перегородками 125 (санузел, бойлер, тамбур). */
   subRooms?: string[];
+  /** Для кого комната: пожилые родители живут с нами / приезжают в гости. Только 1-й ярус. */
+  purpose?: RoomPurpose;
 }
+
+export type RoomPurpose = "elderly" | "elderly-guest";
+
+export const PURPOSE_LABEL: Record<RoomPurpose, string> = {
+  elderly: "для пожилых родителей",
+  "elderly-guest": "гостевая для родителей, трансформируемая",
+};
 
 export type OpeningKind = "window" | "entrance" | "internal-door";
 
@@ -90,6 +99,8 @@ export interface Project {
   placementLocked?: boolean;
   finishes: Finishes;
   yearRound: boolean;
+  /** Рекомендации из сценария жизни: питомцы, доступность, участок. */
+  recommendations?: string[];
   /** Материалы чистовой отделки: включить в расчёт (≈15 тыс./м²) или свои. По умолчанию — включены. */
   finishingMaterials?: "included" | "own";
   /** Профиль стиля из слов и референсов человека (см. style.ts). */
@@ -108,6 +119,10 @@ export interface Brief {
   styleHints?: string[];
   mustHave?: string[];
   notes?: string;
+  /** Спальни с назначением — всегда на 1-м ярусе (пожилые родители). */
+  bedroomPurposes?: RoomPurpose[];
+  /** Рекомендации из сценария (питомцы, доступность) — уходят в паспорт. */
+  recommendations?: string[];
 }
 
 export type RuleLevel = "hard" | "soft" | "info";

@@ -212,6 +212,10 @@
     {
       "id": "cubes-pair-into-modules",
       "weight": 2
+    },
+    {
+      "id": "elderly-near-bath",
+      "weight": 3
     }
   ],
   "terminology": {

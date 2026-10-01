@@ -17,6 +17,7 @@ import { modulesOnTier, warmContourM2 } from "../engine/rules.ts";
 import {
   briefFromScenario,
   checkArea,
+  programFromScenario,
   type AreaCheck,
   type LifeScenario,
 } from "../engine/scenario.ts";
@@ -234,7 +235,17 @@ export function PilotApp() {
           adults: Number(a.adults ?? scenario.adults),
           kids: Number(a.kids ?? scenario.kids),
           kidsShareRoom: Boolean(a.kidsShareRoom ?? scenario.kidsShareRoom),
-          pets: { dogs: Number(a.dogs ?? scenario.pets?.dogs ?? 0) },
+          pets: {
+            dogs: Number(a.dogs ?? scenario.pets?.dogs ?? 0),
+            cats: Number(a.cats ?? scenario.pets?.cats ?? 0),
+            other: Number(a.otherPets ?? scenario.pets?.other ?? 0),
+          },
+          elderly:
+            a.elderly === "live" || a.elderly === "visit"
+              ? { mode: a.elderly, count: Number(a.elderlyCount ?? 1) === 2 ? 2 : 1 }
+              : a.elderly === "none"
+                ? undefined
+                : scenario.elderly,
           workFromHome: Number(a.workFromHome ?? scenario.workFromHome ?? 0),
           guestsOften: Boolean(a.guestsOften ?? scenario.guestsOften),
           sauna: Boolean(a.sauna ?? scenario.sauna),
@@ -327,6 +338,31 @@ export function PilotApp() {
     if (voice) {
       voice.stop();
       setVoice(null);
+      return;
+    }
+    // Никакой тишины: каждая причина, почему голос не стартует, — словами.
+    if (!window.isSecureContext) {
+      setVoiceInfo(
+        "Микрофон работает только по https или на localhost. Откройте пилот на этом компьютере: http://localhost:8080/pilot",
+      );
+      setVoiceState("closed");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setVoiceInfo("Браузер не даёт доступ к микрофону.");
+      setVoiceState("closed");
+      return;
+    }
+    try {
+      const h = await fetch(`${API}/health`).then((r) => r.json());
+      if (!h.inworld) {
+        setVoiceInfo("Голос не настроен: нет ключа InWorld (.env.pilot.local).");
+        setVoiceState("closed");
+        return;
+      }
+    } catch {
+      setVoiceInfo("Сервер пилота не отвечает — запущен ли npm run pilot?");
+      setVoiceState("closed");
       return;
     }
     const v = new VoiceSession(
@@ -508,8 +544,42 @@ export function PilotApp() {
               label="Собаки"
               value={s.pets?.dogs ?? 0}
               max={5}
-              onChange={(n) => setScenario({ ...s, pets: { dogs: n } })}
+              onChange={(n) => setScenario({ ...s, pets: { ...s.pets, dogs: n } })}
             />
+            <Num
+              label="Кошки"
+              value={s.pets?.cats ?? 0}
+              max={5}
+              onChange={(n) => setScenario({ ...s, pets: { ...s.pets, cats: n } })}
+            />
+            <Num
+              label="Другие питомцы"
+              value={s.pets?.other ?? 0}
+              max={5}
+              onChange={(n) => setScenario({ ...s, pets: { ...s.pets, other: n } })}
+            />
+            <label className="flex items-center justify-between gap-2 text-sm">
+              Пожилые родители
+              <select
+                className="rounded border px-2 py-1"
+                value={s.elderly ? `${s.elderly.mode}-${s.elderly.count}` : "none"}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "none") return setScenario({ ...s, elderly: undefined });
+                  const [mode, count] = v.split("-");
+                  setScenario({
+                    ...s,
+                    elderly: { mode: mode as "live" | "visit", count: Number(count) as 1 | 2 },
+                  });
+                }}
+              >
+                <option value="none">нет</option>
+                <option value="live-1">живёт с нами: 1</option>
+                <option value="live-2">живут с нами: 2</option>
+                <option value="visit-1">приезжает в гости: 1</option>
+                <option value="visit-2">приезжают в гости: 2</option>
+              </select>
+            </label>
             <Num
               label="Работают из дома"
               value={s.workFromHome ?? 0}
@@ -572,6 +642,11 @@ export function PilotApp() {
             {area && (
               <div className={`rounded p-2 text-sm ${area.fits ? "bg-green-50" : "bg-amber-50"}`}>
                 <p>{area.message}</p>
+                {programFromScenario(s).recommendations.map((r) => (
+                  <p key={r} className="mt-1 text-xs">
+                    • {r}
+                  </p>
+                ))}
                 {area.options.map((o) => (
                   <p key={o.id} className="mt-1 text-xs">
                     • <b>{o.label}</b> — {o.reason}
@@ -790,6 +865,16 @@ export function PilotApp() {
                       </li>
                     ))}
                   </ul>
+                  {passport.recommendations.length > 0 && (
+                    <>
+                      <h4 className="mt-3 font-semibold">Учесть в доме</h4>
+                      <ul className="list-disc pl-5 text-xs">
+                        {passport.recommendations.map((x) => (
+                          <li key={x}>{x}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                   <h4 className="mt-3 font-semibold">Проверить проектировщику</h4>
                   <ul className="list-disc pl-5 text-xs">
                     {passport.verifyByDesigner.map((x) => (

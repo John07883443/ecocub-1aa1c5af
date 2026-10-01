@@ -214,7 +214,8 @@ export function deriveOpenings(p: Project): Opening[] {
             roomId: r.id,
             face: c.faceA,
             kind: "internal-door",
-            widthMm: GRAMMAR.openings.door.widthMm,
+            // Родителям — широкие двери 1000 без порогов.
+            widthMm: r.purpose ? 1000 : GRAMMAR.openings.door.widthMm,
             heightMm: GRAMMAR.openings.door.heightMm,
             offsetMm: c.from + PIER() - faceStart(m, c.faceA),
           });

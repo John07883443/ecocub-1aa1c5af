@@ -16,6 +16,7 @@ import {
   warmContourM2,
   type Evaluation,
 } from "./rules.ts";
+import { PURPOSE_LABEL } from "./types.ts";
 import type { Opening, Project, RuleResult, Side } from "./types.ts";
 
 export interface PassportModule {
@@ -77,6 +78,8 @@ export interface ProjectPassport {
   rules: { hardOk: boolean; soft: RuleResult[] };
   assumptions: string[];
   verifyByDesigner: string[];
+  /** Рекомендации из сценария жизни: питомцы, доступность, участок. */
+  recommendations: string[];
   budget: Budget;
 }
 
@@ -92,7 +95,7 @@ export function buildPassport(
   const rooms: PassportRoom[] = p.rooms.map((r) => ({
     id: r.id,
     type: r.type,
-    label: roomSpec(r.type).label,
+    label: roomSpec(r.type).label + (r.purpose ? ` (${PURPOSE_LABEL[r.purpose]})` : ""),
     tier: r.tier,
     modules: r.moduleIds.length,
     clearAreaM2: roomClearAreaM2(p, r),
@@ -140,6 +143,9 @@ export function buildPassport(
     ...(FINISHES.status === "PLACEHOLDER" ? ["Каталог отделок и надбавки — PLACEHOLDER"] : []),
   ];
   const verify = [
+    ...(p.rooms.some((r) => r.purpose)
+      ? ["Комната родителей: без порогов, поручни в санузле и у входа, двери 1000, душ без поддона"]
+      : []),
     ...ev.review.map((r) => r.message),
     "Посадка на участок: ПЗЗ, красные линии, сети, подъезд трала и крана",
     "Геология и тип фундамента",
@@ -184,6 +190,7 @@ export function buildPassport(
     rules: { hardOk: ev.valid, soft: ev.results.filter((r) => r.level === "soft") },
     assumptions,
     verifyByDesigner: [...new Set(verify)],
+    recommendations: p.recommendations ?? [],
     budget: budgetFor(p, budgetOpts),
   };
 }

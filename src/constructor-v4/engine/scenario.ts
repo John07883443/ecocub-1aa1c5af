@@ -8,14 +8,16 @@
  */
 import { GRAMMAR } from "../grammar/index.ts";
 import { quickBudgetRange } from "./price.ts";
-import type { Brief, Plot, Range } from "./types.ts";
+import type { Brief, Plot, Range, RoomPurpose } from "./types.ts";
 
 export interface LifeScenario {
   adults: number;
   kids: number;
   /** Дети делят комнату (до школы — часто так). */
   kidsShareRoom?: boolean;
-  pets?: { dogs?: number; cats?: number };
+  pets?: { dogs?: number; cats?: number; other?: number };
+  /** Пожилые родители: живут с нами или приезжают в гости, 1 или 2 человека. */
+  elderly?: { mode: "live" | "visit"; count: 1 | 2 };
   /** Сколько человек работает из дома. */
   workFromHome?: number;
   guestsOften?: boolean;
@@ -41,6 +43,8 @@ export interface ProgramItem {
   /** Без этого можно обойтись (комфорт, а не минимум). */
   optional: boolean;
   review?: string;
+  /** Назначение комнаты (родители) — солвер ставит её только на 1-й ярус. */
+  purpose?: RoomPurpose;
 }
 
 export interface RoomProgram {
@@ -50,6 +54,8 @@ export interface RoomProgram {
   /** Вне модулей: навес для машины, вольер, дровник — посадка на участке. */
   plotItems: string[];
   notes: string[];
+  /** Что учесть в доме: питомцы, доступность для родителей. Уходит в паспорт. */
+  recommendations: string[];
 }
 
 export interface AreaOption {
@@ -147,7 +153,34 @@ export function programFromScenario(s: LifeScenario): RoomProgram {
       optional: false,
     });
   }
-  if (s.guestsOften && !s.workFromHome)
+  const elderly = s.elderly;
+  if (elderly?.mode === "live") {
+    items.push({
+      room: "bedroom",
+      modules: 1,
+      label: "Спальня родителей (1-й ярус)",
+      why: `${elderly.count === 2 ? "Двое пожилых родителей" : "Пожилой родитель"} живут с вами: без лестницы, рядом свой санузел`,
+      optional: false,
+      purpose: "elderly",
+    });
+    items.push({
+      room: "wet-core",
+      modules: 1,
+      label: "Санузел у спальни родителей",
+      why: "Свой санузел рядом: душ без поддона, поручни",
+      optional: false,
+    });
+  } else if (elderly?.mode === "visit") {
+    items.push({
+      room: "bedroom",
+      modules: 1,
+      label: "Гостевая для родителей (1-й ярус)",
+      why: `Родители приезжают в гости (${elderly.count} чел.): комната на 1-м ярусе, можно трансформируемая`,
+      optional: false,
+      purpose: "elderly-guest",
+    });
+  }
+  if (s.guestsOften && !s.workFromHome && elderly?.mode !== "visit")
     items.push({
       room: "bedroom",
       modules: 1,
@@ -180,12 +213,35 @@ export function programFromScenario(s: LifeScenario): RoomProgram {
       "Постирочная-кладовая: тип помещения в солвере появится на неделе 2, пока учтена в площади.",
     );
   if (s.car) plotItems.push("Навес для машины — на участке, вне модулей");
-  if (dogs) plotItems.push("Вольер или площадка для собаки — на участке");
+  if (dogs) plotItems.push("Огороженная площадка для собаки — на участке");
+  const recommendations: string[] = [];
+  const cats = s.pets?.cats ?? 0;
+  const other = s.pets?.other ?? 0;
+  if (dogs)
+    recommendations.push(
+      `Собака${dogs > 1 ? ` (${dogs})` : ""}: тамбур-грязевая с мойкой лап у входа; место под лежанку в общей комнате у глухой стены, не на проходе; дверца для собаки в тамбуре; огороженная площадка на участке.`,
+    );
+  if (cats)
+    recommendations.push(
+      `Кошка${cats > 1 ? ` (${cats})` : ""}: ниша под лоток в техблоке или кладовой с вытяжкой; зона кормления у кухни, подальше от лотка; когтеточка у входа в общую комнату.`,
+    );
+  if (other)
+    recommendations.push(
+      `Другие питомцы (${other}): место под клетку или террариум в общей комнате, не у окна на юг и не у отопления.`,
+    );
+  if (elderly?.mode === "live")
+    recommendations.push(
+      "Родители живут с вами: спальня только на 1-м ярусе рядом со своим санузлом; без порогов; поручни в санузле и у входа; двери 1000 мм; душ без поддона; вход без ступеней или с пандусом.",
+    );
+  if (elderly?.mode === "visit")
+    recommendations.push(
+      "Родители в гостях: гостевая на 1-м ярусе — можно трансформируемая (кабинет или гостиная со складной кроватью); санузел рядом; без порогов.",
+    );
   if (s.terrace !== false) notes.push("Терраса — настил вне модулей, считается отдельно.");
 
   const minModules = items.filter((i) => !i.optional).reduce((s2, i) => s2 + i.modules, 0);
   const recommendedModules = items.reduce((s2, i) => s2 + i.modules, 0);
-  return { items, minModules, recommendedModules, plotItems, notes };
+  return { items, minModules, recommendedModules, plotItems, notes, recommendations };
 }
 
 /** Минимальная программа → бриф для солвера. Помещения utility пока не строим — пометка. */
@@ -207,6 +263,8 @@ export function briefFromScenario(
     yearRound: s.yearRound ?? true,
     plot: s.plot,
     styleHints: s.styleHints,
+    bedroomPurposes: use.filter((i) => i.purpose).map((i) => i.purpose!),
+    recommendations: [...program.recommendations, ...program.plotItems],
   };
 }
 
