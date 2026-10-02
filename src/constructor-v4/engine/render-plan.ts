@@ -6,15 +6,15 @@
  * Детерминированно, бесплатно, геометрия точная. Здесь — только описание
  * камер и проходов; снимает их клиентский рендерер.
  *
- * Стадия 2 — фотореализм поверх видов стадии 1 (отделка, мебель, озеленение,
- * свет) через image-to-image со структурным контролем. Нужен эндпоинт,
- * принимающий входное изображение. У rgrouter `/v1/images/edits` для нашего
- * ключа закрыт (501), в каталоге только rg-gpt-image-2 / 2.5 — стадия 2
- * заблокирована; запасной путь — рендер по промпту с описанием геометрии из
- * паспорта и автопроверкой числа окон на кадре.
+ * Стадия 2 — фотореализм поверх видов стадии 1 (отделка, озеленение, свет):
+ * снимок 3D с камеры кадра уходит в rgrouter `/v1/images/edits`
+ * (rg-google-gemini-3.1-flash-image, открыт 02.10.2026) вместе с промптом по
+ * точному дому — модель сохраняет геометрию снимка. Это путь по умолчанию;
+ * запасной — рендер по промпту (если edits упал или выключен на сервере
+ * PILOT_IMAGE_EDITS=0). Интерьеры снимком не снимаются — только по промпту.
  */
 import { GRAMMAR } from "../grammar/index.ts";
-import { buildRenderPrompt } from "./render-prompt.ts";
+import { buildEditPrompt, buildRenderPrompt } from "./render-prompt.ts";
 import { bbox, footprint } from "./geometry.ts";
 import type { Project, Side } from "./types.ts";
 
@@ -43,37 +43,33 @@ export interface ViewSet {
 }
 
 export interface Stage2Plan {
-  status: "blocked" | "ready";
+  status: "ready";
   endpoint: string;
-  reason: string;
   fallback: string;
   model: string;
   maxRunsPerSession: number;
 }
 
-/**
- * Стадия 2 (image-to-image по 3D-снимку) — за флагом: когда rgrouter откроет
- * /v1/images/edits, ставим VITE_PILOT_STAGE2=1 (клиент) и PILOT_IMAGE_EDITS=1 (сервер).
- */
-const stage2On = (() => {
-  try {
-    return (
-      (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_PILOT_STAGE2 === "1"
-    );
-  } catch {
-    return false;
-  }
-})();
-
+/** Стадия 2 включена всегда; выключатель — только на сервере (PILOT_IMAGE_EDITS=0). */
 export const STAGE2: Stage2Plan = {
-  status: stage2On ? "ready" : "blocked",
+  status: "ready",
   endpoint: "rgrouter /v1/images/edits",
-  reason:
-    "Для нашего ключа /v1/images/edits отвечает 501; моделей, принимающих входное изображение, в каталоге нет.",
-  fallback: "Рендер по промпту с геометрией из паспорта + автопроверка числа окон моделью зрения.",
-  model: "rg-gpt-image-2.5",
+  fallback: "Рендер по промпту с геометрией из паспорта, если images/edits не ответил.",
+  model: "rg-google-gemini-3.1-flash-image",
   maxRunsPerSession: 2,
 };
+
+export type EditAspect = "16:9" | "3:2";
+
+/** Пропорции кадра стадии 2: фасад 16:9, вид сверху 3:2; интерьер — без снимка (null). */
+export function aspectFor(view: CameraView): EditAspect | null {
+  return view.kind === "facade" ? "16:9" : view.kind === "aerial" ? "3:2" : null;
+}
+
+/** Размер снимка 3D под пропорции (≈1K по длинной стороне, как resolution=1K). */
+export function snapshotSize(aspect: EditAspect): { w: number; h: number } {
+  return aspect === "16:9" ? { w: 1344, h: 756 } : { w: 1248, h: 832 };
+}
 
 const EYE = 1700;
 
@@ -136,11 +132,20 @@ export function viewSet(p: Project): ViewSet {
   };
 }
 
-/** Промпт запасного пути стадии 2: точная геометрия дома словами (render-prompt.ts). */
+/** Промпт запасного пути: точная геометрия дома словами (render-prompt.ts). */
 export function promptFor(
   p: Project,
   view: CameraView,
   context: { timeOfDay?: string; season?: string } = {},
 ): string {
   return buildRenderPrompt(p, view, context);
+}
+
+/** Промпт стадии 2: «сохрани геометрию снимка» + описание точного дома. */
+export function editPromptFor(
+  p: Project,
+  view: CameraView,
+  context: { timeOfDay?: string; season?: string } = {},
+): string {
+  return buildEditPrompt(p, view, context);
 }

@@ -11,7 +11,10 @@
  * PILOT_TELEGRAM_CHAT_ID (запасной вариант — TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID сайта),
  * необязательные: PILOT_VOICE_URL (wss://…/pilot-voice), PILOT_CHAT_MODEL,
  * PILOT_IMAGE_MODEL, PILOT_REALTIME_MODEL (LLM голосовой сессии InWorld), PILOT_RENDER_RUNS,
- * PILOT_RENDER_DAILY_CAP, PILOT_CHAT_PER_SESSION.
+ * PILOT_RENDER_DAILY_CAP, PILOT_CHAT_PER_SESSION,
+ * PILOT_EDIT_MODEL (стадия 2, image-to-image; по умолчанию rg-google-gemini-3.1-flash-image),
+ * PILOT_IMAGE_EDITS=0 — аварийный выключатель стадии 2 (тогда всё рисуется по промпту),
+ * PILOT_EDIT_RUB_PER_FRAME / PILOT_IMAGE_RUB_PER_FRAME — оценка цены кадра для подписи.
  */
 
 type Env = Record<string, string | undefined>;
@@ -40,6 +43,10 @@ function cfg() {
     tgChat: e.PILOT_TELEGRAM_CHAT_ID || e.TELEGRAM_CHAT_ID || "",
     chatModel: e.PILOT_CHAT_MODEL ?? "rg-google-gemini-3.8-flash",
     imageModel: e.PILOT_IMAGE_MODEL ?? "rg-gpt-image-2.5",
+    editModel: e.PILOT_EDIT_MODEL || "rg-google-gemini-3.1-flash-image",
+    imageEdits: e.PILOT_IMAGE_EDITS !== "0",
+    editRubPerFrame: num(e.PILOT_EDIT_RUB_PER_FRAME, 5),
+    imageRubPerFrame: num(e.PILOT_IMAGE_RUB_PER_FRAME, 3.8),
     realtimeModel: e.PILOT_REALTIME_MODEL ?? "",
     renderRuns: num(e.PILOT_RENDER_RUNS, 2),
     renderDailyCap: num(e.PILOT_RENDER_DAILY_CAP, 150),
@@ -66,6 +73,8 @@ export function pilotHealth(opts: { localVoice?: boolean } = {}): PilotResult {
       telegram: !!(c.tgToken && c.tgChat),
       chatModel: c.chatModel,
       imageModel: c.imageModel,
+      editModel: c.editModel,
+      imageEdits: c.imageEdits,
       realtimeModel: c.realtimeModel || null,
     },
   };
@@ -141,8 +150,24 @@ export async function pilotChat(input: unknown, session: string): Promise<PilotR
   return { status: 200, body: { message: choices?.[0]?.message ?? {}, usage: out.usage ?? null } };
 }
 
-type Shot = { id: string; prompt: string; image?: string };
-type ShotResult = { id: string; url?: string | null; b64?: string | null; error?: string };
+export type EditAspect = "16:9" | "3:2" | "1:1";
+const ASPECTS: EditAspect[] = ["16:9", "3:2", "1:1"];
+
+export type Shot = { id: string; prompt: string; image?: string; aspect?: EditAspect };
+export type ShotResult = {
+  id: string;
+  url?: string | null;
+  b64?: string | null;
+  error?: string;
+  /** edit — фото поверх 3D-снимка (стадия 2), text — по промпту (запасной путь). */
+  mode?: "edit" | "text";
+  /** Почему стадия 2 не сработала и кадр нарисован по промпту. */
+  fallbackReason?: string;
+  ms?: number;
+  /** Цена кадра в ₽: из usage апстрима, если он её отдал, иначе оценка. */
+  costRub?: number;
+  costEstimated?: boolean;
+};
 
 /** Проверка лимитов и списание одного прогона. null — можно рисовать. */
 function takeRenderRun(session: string): PilotResult | null {
@@ -181,55 +206,137 @@ function parseShots(input: unknown): Shot[] {
         s.image.length < 6_000_000
           ? s.image
           : undefined,
+      aspect: ASPECTS.includes((s as Shot).aspect as EditAspect)
+        ? ((s as Shot).aspect as EditAspect)
+        : undefined,
     }));
 }
 
+/** data:image/...;base64 → Blob (Node 18+ и браузер). null — не картинка. */
+export function dataUrlToBlob(dataUrl: string): Blob | null {
+  const m = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
+  if (!m) return null;
+  const bin =
+    typeof Buffer !== "undefined"
+      ? Uint8Array.from(Buffer.from(m[2], "base64"))
+      : Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
+  return new Blob([bin], { type: m[1] });
+}
+
 /**
- * Стадия 2: image-to-image по 3D-снимку через /images/edits. У rgrouter для нашего
- * ключа сейчас 501 — включается флагом PILOT_IMAGE_EDITS=1, когда откроют; при
- * ошибке кадр рисуется обычным путём по промпту.
+ * Multipart-тело для rgrouter POST /v1/images/edits (проверено 02.10.2026 с VPS):
+ * model, prompt, image (PNG), aspect_ratio, resolution=1K, response_format=b64_json.
  */
-async function renderEdit(s: Shot): Promise<ShotResult | null> {
+export function buildEditForm(s: Shot, model: string): FormData | null {
+  if (!s.image) return null;
+  const blob = dataUrlToBlob(s.image);
+  if (!blob) return null;
+  const ext = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : "png";
+  const form = new FormData();
+  form.set("model", model);
+  form.set("prompt", s.prompt);
+  form.set("image", blob, `massing.${ext}`);
+  form.set("aspect_ratio", s.aspect ?? "16:9");
+  form.set("resolution", "1K");
+  form.set("response_format", "b64_json");
+  return form;
+}
+
+type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
+
+/** Цена из usage апстрима, если он её прислал (разные роутеры кладут по-разному). */
+function usageCost(usage: unknown): number | null {
+  if (!usage || typeof usage !== "object") return null;
+  const u = usage as Record<string, unknown>;
+  for (const k of ["cost_rub", "cost", "total_cost"]) {
+    const v = Number(u[k]);
+    if (Number.isFinite(v) && v > 0) return Math.round(v * 100) / 100;
+  }
+  return null;
+}
+
+const firstImage = (out: { data?: { url?: string; b64_json?: string }[] }) => {
+  const d = out.data?.[0] ?? {};
+  return { url: d.url ?? null, b64: d.b64_json ?? null };
+};
+
+/**
+ * Стадия 2: фото поверх 3D-снимка через /images/edits. Включена по умолчанию,
+ * PILOT_IMAGE_EDITS=0 — выключатель. Ошибка → { fail }, вызывающий рисует по промпту.
+ */
+async function renderEdit(
+  s: Shot,
+  f: Fetch,
+): Promise<{ ok: ShotResult } | { fail: string } | null> {
   const c = cfg();
-  if (env().PILOT_IMAGE_EDITS !== "1" || !s.image) return null;
+  if (!c.imageEdits || !s.image) return null;
+  const form = buildEditForm(s, c.editModel);
+  if (!form) return { fail: "снимок 3D не распознан" };
+  const t0 = Date.now();
   try {
-    const [, mime, b64] = s.image.match(/^data:(image\/\w+);base64,(.*)$/) ?? [];
-    if (!b64) return null;
-    const bin = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-    const form = new FormData();
-    form.set("model", c.imageModel);
-    form.set("prompt", s.prompt);
-    form.set("size", "1536x1024");
-    form.set("image", new Blob([bin], { type: mime }), "massing.png");
-    const r = await fetch(`${c.rgBase}/images/edits`, {
+    const r = await f(`${c.rgBase}/images/edits`, {
       method: "POST",
       headers: { Authorization: `Bearer ${c.rgKey}` },
       body: form,
     });
-    if (!r.ok) return null;
-    const out = (await r.json()) as { data?: { url?: string; b64_json?: string }[] };
-    const d = out.data?.[0] ?? {};
-    return { id: s.id, url: d.url ?? null, b64: d.b64_json ?? null };
-  } catch {
-    return null;
+    if (!r.ok) return { fail: `images/edits ${r.status}` };
+    const out = (await r.json()) as {
+      data?: { url?: string; b64_json?: string }[];
+      usage?: unknown;
+    };
+    const img = firstImage(out);
+    if (!img.url && !img.b64) return { fail: "images/edits без картинки" };
+    const cost = usageCost(out.usage);
+    return {
+      ok: {
+        id: s.id,
+        ...img,
+        mode: "edit",
+        ms: Date.now() - t0,
+        costRub: cost ?? c.editRubPerFrame,
+        costEstimated: cost === null,
+      },
+    };
+  } catch (e) {
+    return { fail: `images/edits: ${String((e as Error).message ?? e).slice(0, 120)}` };
   }
 }
 
-async function renderShot(s: Shot): Promise<ShotResult> {
+/** Кадр: сначала стадия 2 по снимку, при любой её ошибке — по промпту. fetch подменяется в тестах. */
+export async function renderShot(s: Shot, f: Fetch = (u, i) => fetch(u, i)): Promise<ShotResult> {
   const c = cfg();
-  const edited = await renderEdit(s);
-  if (edited) return edited;
+  const edited = await renderEdit(s, f);
+  if (edited && "ok" in edited) return edited.ok;
+  const fallbackReason = edited && "fail" in edited ? edited.fail : undefined;
+  const t0 = Date.now();
   try {
-    const out = await rg("/images/generations", {
-      model: c.imageModel,
-      prompt: s.prompt,
-      size: "1536x1024",
-      n: 1,
+    const r = await f(`${c.rgBase}/images/generations`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${c.rgKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: c.imageModel, prompt: s.prompt, size: "1536x1024", n: 1 }),
     });
-    const d = (out.data as { url?: string; b64_json?: string }[] | undefined)?.[0] ?? {};
-    return { id: s.id, url: d.url ?? null, b64: d.b64_json ?? null };
+    const text = await r.text();
+    if (!r.ok) throw new Error(`rgrouter ${r.status}: ${text.slice(0, 300)}`);
+    const out = JSON.parse(text) as {
+      data?: { url?: string; b64_json?: string }[];
+      usage?: unknown;
+    };
+    const cost = usageCost(out.usage);
+    return {
+      id: s.id,
+      ...firstImage(out),
+      mode: "text",
+      ...(fallbackReason ? { fallbackReason } : {}),
+      ms: Date.now() - t0,
+      costRub: cost ?? c.imageRubPerFrame,
+      costEstimated: cost === null,
+    };
   } catch (e) {
-    return { id: s.id, error: String((e as Error).message ?? e) };
+    return {
+      id: s.id,
+      error: String((e as Error).message ?? e),
+      ...(fallbackReason ? { fallbackReason } : {}),
+    };
   }
 }
 
@@ -238,7 +345,7 @@ export async function pilotRender(input: unknown, session: string): Promise<Pilo
   const denied = takeRenderRun(session);
   if (denied) return denied;
   const c = cfg();
-  const results = await Promise.all(parseShots(input).map(renderShot));
+  const results = await Promise.all(parseShots(input).map((s) => renderShot(s)));
   return {
     status: 200,
     body: { results, runsLeft: Math.max(0, c.renderRuns - (renderRuns.get(session) ?? 0)) },
@@ -271,7 +378,7 @@ function sweepJobs(now = Date.now()) {
 export function pilotRenderStart(
   input: unknown,
   session: string,
-  render: (s: Shot) => Promise<ShotResult> = renderShot,
+  render: (s: Shot) => Promise<ShotResult> = (s) => renderShot(s),
 ): PilotResult {
   sweepJobs();
   const shots = parseShots(input);

@@ -151,7 +151,7 @@ test("2D-план совпадает с моделью и паспортом", (
   }
 });
 
-test("паспорт объекта: 4 фасада, вид сверху, интерьеры, 4 прохода; стадия 2 заблокирована", () => {
+test("паспорт объекта: 4 фасада, вид сверху, интерьеры, 4 прохода; стадия 2 включена", () => {
   const p = singleTier();
   const vs = viewSet(p);
   assert.equal(vs.views.filter((v) => v.kind === "facade").length, 4);
@@ -159,7 +159,7 @@ test("паспорт объекта: 4 фасада, вид сверху, инт
   assert.equal(vs.views.filter((v) => v.kind === "interior").length, 3);
   assert.deepEqual(vs.passes, ["clay", "depth", "edges", "segmentation"]);
   assert.deepEqual(viewSet(p), vs, "детерминированно");
-  assert.equal(STAGE2.status, "blocked");
+  assert.equal(STAGE2.status, "ready");
   const s = vs.views.find((v) => v.id === "facade-S")!;
   assert.equal(
     s.expectedWindows,

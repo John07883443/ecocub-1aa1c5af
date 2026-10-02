@@ -10,8 +10,10 @@ export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 export interface RenderShot {
   id: string;
   prompt: string;
-  /** Стадия 2: 3D-снимок для image-to-image (за флагом, см. render-plan.ts STAGE2). */
+  /** Стадия 2: PNG-снимок 3D с камеры кадра для images/edits (render-plan.ts STAGE2). */
   image?: string;
+  /** Пропорции кадра стадии 2: фасад 16:9, вид сверху 3:2. */
+  aspect?: "16:9" | "3:2";
 }
 
 export interface RenderFrame {
@@ -19,6 +21,27 @@ export interface RenderFrame {
   url?: string | null;
   b64?: string | null;
   error?: string;
+  mode?: "edit" | "text";
+  fallbackReason?: string;
+  ms?: number;
+  costRub?: number;
+  costEstimated?: boolean;
+}
+
+/** Подпись под кадром: как нарисован, сколько ждали и сколько стоил. */
+export function frameNote(f: RenderFrame): string {
+  const parts: string[] = [];
+  if (f.mode === "edit") parts.push("фото по 3D-снимку — геометрия как в 3D");
+  else if (f.mode === "text")
+    parts.push(
+      f.fallbackReason
+        ? `по описанию (снимок не принят: ${f.fallbackReason}) — примерно похоже`
+        : "по описанию — примерно похоже, точная форма в 3D и на плане",
+    );
+  if (typeof f.ms === "number") parts.push(`${Math.max(1, Math.round(f.ms / 1000))} с`);
+  if (typeof f.costRub === "number")
+    parts.push(`${f.costEstimated ? "≈" : ""}${f.costRub.toLocaleString("ru-RU")} ₽`);
+  return parts.join(" · ");
 }
 
 export interface RenderProgress {
