@@ -1,5 +1,6 @@
 /**
- * Промпт рендера по ТОЧНОМУ дому, пока у rgrouter закрыт images/edits (501):
+ * Промпт рендера по ТОЧНОМУ дому (и для стадии 2 поверх 3D-снимка, и для запасного
+ * пути по одному тексту):
  * пятно застройки в метрах, ярусы, консоли, окна по фасадам слева направо так,
  * как их видит камера, материалы из отделок (house-look.ts), терраса и навес,
  * простая ортогональная схема кубиков сверху и ближайший дом-образец из
@@ -290,4 +291,21 @@ export function buildRenderPrompt(
   );
   lines.push(`${context.timeOfDay ?? "golden hour"}, ${context.season ?? "summer"}.`);
   return lines.join(" ").slice(0, 3900);
+}
+
+/** Инструкция стадии 2: снимок 3D — основа, менять только «материал картинки». */
+export const EDIT_INSTRUCTION =
+  "Сохрани геометрию, пропорции, окна и консоли точно как на снимке; сделай фотореалистичный рендер этого дома. " +
+  "The attached image is an exact 3D massing snapshot of the house: keep the camera angle, every volume, " +
+  "proportions, window and door positions and counts, cantilevers and columns exactly as in the snapshot; " +
+  "do not add, remove or move any volume or opening. Only turn it into a photorealistic architectural photo: " +
+  "real materials, glass reflections, soft shadows, landscaping and sky.";
+
+/** Промпт стадии 2 (images/edits): инструкция + описание точного дома для материалов и окружения. */
+export function buildEditPrompt(
+  p: Project,
+  view: CameraView,
+  context: { timeOfDay?: string; season?: string } = {},
+): string {
+  return `${EDIT_INSTRUCTION} ${buildRenderPrompt(p, view, context)}`.slice(0, 3990);
 }
