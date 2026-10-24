@@ -5,7 +5,7 @@ date: 2025-12-30
 category: cases
 tags: ["участок", "коммуникации"]
 excerpt: "'Поэтапная оплата"
-cover: /images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet.png
+cover: /images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet.webp
 readingTime: 5
 seoTitle: "Поэтапная оплата строительства: гарантия прозрачности"
 seoDescription: "Поэтапная оплата строительства дома: принципы, этапы, привязка платежей к актам приёмки. Как избежать финансовых рисков, проверить качество и сохранить доверие на всех стадиях — от фундамента до сдачи «под ключ»."

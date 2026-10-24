@@ -5,7 +5,7 @@ date: 2026-02-13
 category: cases
 tags: ["участок", "коммуникации"]
 excerpt: "'Как проходит монтаж"
-cover: /images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli.jpg
+cover: /images/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli.webp
 readingTime: 4
 seoTitle: "Монтаж модульного дома: как перевозят бетонные модули?"
 seoDescription: "Как проходит монтаж модульного дома и каким образом организуется перевозка бетонных модулей? Подробно разбираем логистику, подготовку участка, работу кранов и этап установки."
