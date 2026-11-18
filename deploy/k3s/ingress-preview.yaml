@@ -1,0 +1,17 @@
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata: {name: ecocub-preview, namespace: ecocub}
+spec:
+  ingressClassName: nginx
+  host: ecocub.139.100.213.97.nip.io
+  tls:
+    secret: ecocub-preview-tls
+    redirect: {enable: true, code: 308}
+    cert-manager: {issuer: letsencrypt}
+  upstreams:
+    - name: web
+      service: ecocub-web
+      port: 3000
+  routes:
+    - path: /
+      action: {pass: web}

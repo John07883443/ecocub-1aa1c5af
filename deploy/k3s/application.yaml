@@ -1,0 +1,51 @@
+# Секрет ecocub-env создаётся deploy.sh из ~/.claude/secrets/ecocub_prod.env (в git не лежит).
+# SQLite (заявки, проекты CAD) -> PVC; реплика одна, стратегия Recreate (RWO + SQLite).
+apiVersion: v1
+kind: Service
+metadata: {name: ecocub-web, namespace: ecocub}
+spec:
+  selector: {app: ecocub-web}
+  ports: [{port: 3000, targetPort: 3000}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ecocub-web, namespace: ecocub}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: ecocub-web}
+  template:
+    metadata:
+      labels: {app: ecocub-web}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: web
+          image: ECOCUB_WEB_IMAGE
+          imagePullPolicy: IfNotPresent
+          ports: [{containerPort: 3000}]
+          envFrom: [{secretRef: {name: ecocub-env}}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 50m, memory: 192Mi}
+            limits: {cpu: "1", memory: 768Mi}
+          readinessProbe: {httpGet: {path: /robots.txt, port: 3000}, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /robots.txt, port: 3000}, initialDelaySeconds: 20, periodSeconds: 20, failureThreshold: 4}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/ecocub}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: ecocub-data}
+        - name: tmp
+          emptyDir: {}
