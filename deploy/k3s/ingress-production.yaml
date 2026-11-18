@@ -1,0 +1,186 @@
+# Нужен DNS: A @ и www -> 139.100.213.97. Редиректы /tpost/* из deploy_redirects_tpost.conf (старый nginx).
+# Файл сгенерирован gen_production.py
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata: {name: ecocub-production, namespace: ecocub}
+spec:
+  ingressClassName: nginx
+  host: eco-cub.ru
+  tls:
+    secret: ecocub-production-tls
+    redirect: {enable: true, code: 301}
+    cert-manager: {issuer: letsencrypt}
+  upstreams:
+    - name: web
+      service: ecocub-web
+      port: 3000
+  routes:
+    - path: "~ ^/tpost/r927e1s201"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/arhitektura-modulnih-domov-glavnie-trendi-2025-goda
+          code: 301
+    - path: "~ ^/tpost/8blycyi3i1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/arhitektura-uverennosti-pochemu-betonnie-kubi-menyayut-rinok
+          code: 301
+    - path: "~ ^/tpost/3mc11xdbe1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/betonnii-modulnii-dom-vs-gazobeton-i-derevo-chestnoe-sravnen
+          code: 301
+    - path: "~ ^/tpost/5rv2ugasv1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/chem-modulnii-betonnii-dom-otlichaetsya-ot-panelnogo
+          code: 301
+    - path: "~ ^/tpost/msm8eb51i1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/dom-pod-klyuch-za-5-dnei-pravda-ili-marketing
+          code: 301
+    - path: "~ ^/tpost/1ee8n5fiz1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/dom-s-terrasoi-i-panoramnimi-oknami-komfort-tehnologii-i-sti
+          code: 301
+    - path: "~ ^/tpost/dboux4zeu1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/doma-s-nizkim-energopotrebleniem-stoit-li-pereplachivat
+          code: 301
+    - path: "~ ^/tpost/i64c6rn391"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/ekonomika-kvadratnogo-metra-kvartira-ili-modulnii-dom
+          code: 301
+    - path: "~ ^/tpost/sneexr14a1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/energoeffektivnost-modulnih-domov-skolko-mozhno-sekonomit
+          code: 301
+    - path: "~ ^/tpost/4ye4o3ymj1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/investitsii-v-betonnii-modulnii-dom-likvidnost-i-kapitalizat
+          code: 301
+    - path: "~ ^/tpost/p382vfb931"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/kak-vibrat-uchastok-pod-modulnii-dom-7-pravil
+          code: 301
+    - path: "~ ^/tpost/9l0sc2gaa1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/modulnie-betonnie-doma-dlya-kruglogodichnogo-prozhivaniya-ra
+          code: 301
+    - path: "~ ^/tpost/9ximpp2p31"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/modulnie-doma-na-2-semi-primeri-planirovok
+          code: 301
+    - path: "~ ^/tpost/andy0i1gi1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/modulnii-dom-dlya-semi-svoboda-i-komfort
+          code: 301
+    - path: "~ ^/tpost/3u2aaceit1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/modulnii-dom-iz-betona-ili-karkasnii-sravnenie-i-vibor
+          code: 301
+    - path: "~ ^/tpost/3dpgb2pns1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/modulnii-dom-v-podmoskove-osobennosti-i-tseni
+          code: 301
+    - path: "~ ^/tpost/llarvh9ft1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/monolitno-modulnii-dom-vs-benpan-pochemu-zhelezobetonnii-mod
+          code: 301
+    - path: "~ ^/tpost/sbp66522t1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/montazh-modulnogo-doma-kak-perevozyat-betonnie-moduli
+          code: 301
+    - path: "~ ^/tpost/0dc4flz1u1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/mozhno-li-zhit-v-modulnom-dome-kruglii-god
+          code: 301
+    - path: "~ ^/tpost/yjr6kyao71"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/nuzhen-li-uklon-uchastka-dlya-panoramnogo-doma
+          code: 301
+    - path: "~ ^/tpost/9z2x1dxem1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/ot-80-tysyach-za-metr-mif
+          code: 301
+    - path: "~ ^/tpost/4cdokpuh71"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/ot-kanadi-do-brazilii-mirovie-idei-v-podmoskovnom-dome-skyri
+          code: 301
+    - path: "~ ^/tpost/svupmtgvl1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/podklyuchenie-kommunikatsii-k-domu-chto-uchest-zaranee
+          code: 301
+    - path: "~ ^/tpost/lhai82diu1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet
+          code: 301
+    - path: "~ ^/tpost/ojo5tdxj41"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/skolko-stoit-modulnii-dom-v-podmoskove
+          code: 301
+    - path: "~ ^/tpost/fneanppm41"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/sovremennie-doma-hai-tek-minimalizm-i-panoramnie-okna
+          code: 301
+    - path: "~ ^/tpost/drjrpr9u41"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/sovremennii-minimalizm-zahvatil-novuyu-rigu
+          code: 301
+    - path: "~ ^/tpost/2gls4odln1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/villa-iz-monolitnogo-betona-pod-klyuch-deshevle-rinka-preimu
+          code: 301
+    - path: "~ ^/tpost/nhx6al42j1"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog/zhizn-v-kube-dom-bez-dolgov-i-ipotechnih-riskov
+          code: 301
+    - path: "~ ^/tpost/"
+      action:
+        redirect:
+          url: https://eco-cub.ru/blog
+          code: 301
+    - path: /
+      action: {pass: web}
+---
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata: {name: ecocub-www, namespace: ecocub}
+spec:
+  ingressClassName: nginx
+  host: www.eco-cub.ru
+  tls:
+    secret: ecocub-www-tls
+    redirect: {enable: true, code: 301}
+    cert-manager: {issuer: letsencrypt}
+  routes:
+    - path: /
+      action:
+        redirect:
+          url: https://eco-cub.ru${request_uri}
+          code: 301

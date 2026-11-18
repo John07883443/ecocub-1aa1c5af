@@ -1,0 +1,7 @@
+node_modules
+.output
+.git
+.build
+.env*
+!.env.example
+supabase/.temp
