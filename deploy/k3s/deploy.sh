@@ -13,7 +13,7 @@ if [ "${2:-}" != "--no-build" ]; then
   git archive --format=tar.gz -o "${TMPDIR:-/tmp}/ecocub-src.tgz" HEAD
   ssh "${KEY[@]}" $HOST "mkdir -p $D/src $D/images && rm -rf $D/src/*"
   scp -q "${KEY[@]}" "${TMPDIR:-/tmp}/ecocub-src.tgz" $HOST:$D/
-  ssh "${KEY[@]}" $HOST "cd $D/src && tar xzf ../ecocub-src.tgz && buildah --storage-driver overlay bud --isolation chroot -q -t $IMG . && buildah --storage-driver overlay push $IMG oci-archive:$D/images/web.tar:$IMG && k3s ctr images import $D/images/web.tar >/dev/null && echo imported"
+  ssh "${KEY[@]}" $HOST "cd $D/src && tar xzf ../ecocub-src.tgz && buildah --storage-driver overlay bud --isolation chroot --ulimit nofile=65536:65536 -q -t $IMG . && buildah --storage-driver overlay push $IMG oci-archive:$D/images/web.tar:$IMG && k3s ctr images import $D/images/web.tar >/dev/null && echo imported"
 fi
 sed "s#ECOCUB_WEB_IMAGE#$IMG#" deploy/k3s/application.yaml > "${TMPDIR:-/tmp}/ecocub-app.yaml"
 scp -q "${KEY[@]}" "${TMPDIR:-/tmp}/ecocub-app.yaml" deploy/k3s/namespace.yaml deploy/k3s/ingress-preview.yaml deploy/k3s/ingress-production.yaml $HOST:$D/
