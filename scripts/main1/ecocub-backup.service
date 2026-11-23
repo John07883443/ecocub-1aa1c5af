@@ -1,0 +1,8 @@
+[Unit]
+Description=EcoCub: копия баз заявок и проектов (SQLite)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ecocub-backup
+Nice=10
+IOSchedulingClass=idle
