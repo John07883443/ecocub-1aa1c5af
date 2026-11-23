@@ -17,6 +17,7 @@
 | `PILOT_TELEGRAM_BOT_TOKEN`, `PILOT_TELEGRAM_CHAT_ID` | заявка с паспортом в Telegram | запасной вариант — `TELEGRAM_*` сайта; заявка в любом случае пишется в базу |
 | `PILOT_VOICE_URL` | адрес голосового релея, например `wss://eco-cub.ru/pilot-voice` | голос выключен с понятным сообщением |
 | необязательные | `PILOT_CHAT_MODEL`, `PILOT_IMAGE_MODEL`, `PILOT_RENDER_RUNS` (2), `PILOT_RENDER_DAILY_CAP` (150), `PILOT_CHAT_PER_SESSION` (60) | значения по умолчанию |
+| стадия 2 рендеров | `PILOT_EDIT_MODEL` (`rg-google-gemini-3.1-flash-image`), `PILOT_IMAGE_EDITS=0` — аварийно выключить фото по 3D-снимку (rgrouter `/v1/images/edits`), `PILOT_EDIT_RUB_PER_FRAME` (5) / `PILOT_IMAGE_RUB_PER_FRAME` (3.8) — оценка цены кадра в подписи | по умолчанию фото рисуется поверх снимка 3D, при ошибке — по промпту; снимок до ~3 МБ в теле `POST /api/pilot/render`, nginx `client_max_body_size` ≥ 8m |
 
 CI (`.github/workflows/deploy.yml`) этих переменных не требует. Сборка и проверка запуска проходят без них, это проверено локально: `/`, `/portfolio`, `/concrete`, `/blog`, `/sitemap.xml`, `/constructor`, `/api/pilot/health` отвечают 200.
 

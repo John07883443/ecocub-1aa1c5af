@@ -27,7 +27,13 @@ import {
   type LifeScenario,
 } from "../engine/scenario.ts";
 import { solve, type Variant } from "../engine/solver.ts";
-import { promptFor, viewSet, STAGE2 } from "../engine/render-plan.ts";
+import {
+  aspectFor,
+  editPromptFor,
+  promptFor,
+  snapshotSize,
+  viewSet,
+} from "../engine/render-plan.ts";
 import { rederive } from "../engine/derive.ts";
 import type { Project, Side } from "../engine/types.ts";
 import { FINISHES, roomSpec } from "../grammar/index.ts";
@@ -43,7 +49,8 @@ import {
   whatIf,
 } from "./architect.ts";
 import { VOICE_STATE_RU, VoiceSession, type VoiceState } from "./voice.ts";
-import { readJson, runJob, runRenderJob } from "./render-client.ts";
+import { frameNote, readJson, runJob, runRenderJob, type RenderFrame } from "./render-client.ts";
+import { shootView } from "./view-shot.ts";
 import {
   choiceToCommands,
   mergeChoice,
@@ -233,7 +240,7 @@ export function PilotApp() {
   const [voiceInfo, setVoiceInfo] = useState("");
   const [continuous, setContinuous] = useState(false);
   const [renders, setRenders] = useState<
-    { id: string; label: string; src?: string; error?: string }[]
+    { id: string; label: string; src?: string; error?: string; note?: string }[]
   >([]);
   const [renderBusy, setRenderBusy] = useState(false);
   const [renderStatus, setRenderStatus] = useState("");
@@ -1029,9 +1036,7 @@ export function PilotApp() {
     setRenderBusy(true);
     setRenders(pick.map((v) => ({ id: v.id, label: v.label })));
     setRenderStatus(`Рисуем 1 из ${pick.length}…`);
-    const apply = (
-      results: { id: string; url?: string | null; b64?: string | null; error?: string }[],
-    ) =>
+    const apply = (results: RenderFrame[]) =>
       setRenders(
         pick.map((v) => {
           const res = results.find((x) => x.id === v.id);
@@ -1040,28 +1045,27 @@ export function PilotApp() {
             label: v.label,
             src: res?.b64 ? `data:image/png;base64,${res.b64}` : (res?.url ?? undefined),
             error: res?.error,
+            note: res ? frameNote(res) : undefined,
           };
         }),
       );
+    // Стадия 2: снимок 3D с камеры каждого кадра (фасад 16:9, сверху 3:2) → images/edits.
+    // Нет снимка (3D не открыт) или интерьер — кадр по промпту.
+    const shots = pick.map((v) => {
+      const aspect = aspectFor(v);
+      const image = aspect ? (shootView(v, snapshotSize(aspect)) ?? undefined) : undefined;
+      return image && aspect
+        ? { id: v.id, prompt: editPromptFor(p, v), image, aspect }
+        : { id: v.id, prompt: promptFor(p, v) };
+    });
     try {
-      const out = await runRenderJob(
-        API,
-        pick.map((v) => ({
-          id: v.id,
-          prompt: promptFor(p, v),
-          // Стадия 2 (image-to-image по 3D-снимку) — за флагом, пока rgrouter не откроет images/edits.
-          ...(STAGE2.status === "ready" ? { image: snapshotData() } : {}),
-        })),
-        {
-          session: SESSION,
-          onProgress: (pr) => {
-            apply(pr.results);
-            setRenderStatus(
-              pr.done < pr.total ? `Рисуем ${pr.done + 1} из ${pr.total}…` : "Готово",
-            );
-          },
+      const out = await runRenderJob(API, shots, {
+        session: SESSION,
+        onProgress: (pr) => {
+          apply(pr.results);
+          setRenderStatus(pr.done < pr.total ? `Рисуем ${pr.done + 1} из ${pr.total}…` : "Готово");
         },
-      );
+      });
       apply(out.results);
       setRenderStatus(
         out.results.some((r) => r.error)
@@ -1073,15 +1077,6 @@ export function PilotApp() {
       setRenderStatus("");
     } finally {
       setRenderBusy(false);
-    }
-  };
-
-  const snapshotData = (): string | undefined => {
-    const c = document.querySelector<HTMLCanvasElement>("#pilot-3d canvas");
-    try {
-      return c ? c.toDataURL("image/jpeg", 0.8) : undefined;
-    } catch {
-      return undefined;
     }
   };
 
@@ -1495,7 +1490,7 @@ export function PilotApp() {
                 <b>Рендеры</b>
                 <Btn onClick={snapshot}>Снимок 3D (стадия 1)</Btn>
                 <Btn kind="primary" disabled={renderBusy} onClick={() => void doRenders()}>
-                  {renderBusy ? renderStatus || "Рисую…" : "Фото-рендер (~1 мин)"}
+                  {renderBusy ? renderStatus || "Рисую…" : "Фото-рендер (~20 с, ≈5 ₽)"}
                 </Btn>
                 {renders.some((r) => r.src) && !renderBusy && (
                   <Btn onClick={() => void doRenders(true)}>ещё 2 ракурса</Btn>
@@ -1504,8 +1499,9 @@ export function PilotApp() {
                   <span className="text-xs text-amber-700">{renderStatus}</span>
                 )}
                 <span className="text-xs text-neutral-500">
-                  Стадия 2 по 3D-снимку:{" "}
-                  {STAGE2.status === "blocked" ? "ждёт images/edits у rgrouter" : "готова"}
+                  {tab === "3d"
+                    ? "Фото рисуется поверх снимка 3D — геометрия, окна и консоли как в модели."
+                    : "Откройте 3D — тогда фото нарисуется поверх снимка модели, иначе по описанию."}
                 </span>
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
@@ -1520,7 +1516,7 @@ export function PilotApp() {
                       {r.label} ·{" "}
                       {r.id.startsWith("clay")
                         ? "точная геометрия"
-                        : "визуализация, примерно похоже — точная форма в 3D и на плане"}
+                        : r.note || "визуализация — точная форма в 3D и на плане"}
                     </figcaption>
                   </figure>
                 ))}

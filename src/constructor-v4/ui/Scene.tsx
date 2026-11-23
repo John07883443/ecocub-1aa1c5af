@@ -33,6 +33,7 @@ import { planFromProject } from "../engine/plan.ts";
 import { carportPlace } from "../engine/site.ts";
 import { houseLook, type HouseLook } from "../engine/house-look.ts";
 import { PILOT } from "../pilot.config.ts";
+import { registerViewShooter } from "./view-shot.ts";
 
 export interface WallPick {
   moduleId: string;
@@ -475,6 +476,41 @@ function AmbientOcclusion() {
   return null;
 }
 
+/**
+ * Съёмка кадра стадии 2: отдельная камера ровно в точке вида из render-plan
+ * (мм → метры сцены), PNG нужного размера. Камера пользователя не трогается.
+ */
+function ViewShooterHost({ ox, oz }: { ox: number; oz: number }) {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    const at = (p: [number, number, number]) =>
+      new THREE.Vector3(p[0] / 1000 - ox, p[2] / 1000, -p[1] / 1000 + oz);
+    registerViewShooter((view, { w, h }) => {
+      const cam = new THREE.PerspectiveCamera(view.fovDeg, w / h, 0.3, 600);
+      cam.position.copy(at(view.position));
+      cam.lookAt(at(view.target));
+      const prev = gl.getSize(new THREE.Vector2());
+      const ratio = gl.getPixelRatio();
+      try {
+        gl.setPixelRatio(1);
+        gl.setSize(w, h, false);
+        gl.render(scene, cam);
+        const png = gl.domElement.toDataURL("image/png");
+        // PNG обычно ~1–2 МБ; если тяжелее — JPEG, чтобы запрос не упёрся в лимит тела nginx.
+        return png.length < 3_000_000 ? png : gl.domElement.toDataURL("image/jpeg", 0.92);
+      } finally {
+        gl.setPixelRatio(ratio);
+        gl.setSize(prev.x, prev.y, false);
+        gl.render(scene, camera);
+      }
+    });
+    return () => registerViewShooter(null);
+  }, [gl, scene, camera, ox, oz]);
+  return null;
+}
+
 export function HouseScene({
   project,
   selected,
@@ -845,6 +881,7 @@ export function HouseScene({
         </Cube>
       ))}
       {q === "high" && <AmbientOcclusion />}
+      {shot && <ViewShooterHost ox={ox} oz={oz} />}
       <OrbitControls
         makeDefault
         maxPolarAngle={Math.PI / 2.05}

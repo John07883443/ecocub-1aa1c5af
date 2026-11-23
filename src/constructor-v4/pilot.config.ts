@@ -30,8 +30,10 @@ export const PILOT = {
     chat: "rg-openai-gpt-5.6-luna",
     /** Разбор референсов (на неделе 3). */
     vision: "rg-google-gemini-3.8-flash",
-    /** Рендеры по промпту: ~3,8 ₽ за кадр. images/edits у rgrouter закрыт (501). */
+    /** Запасной рендер по промпту: ~3,8 ₽ за кадр. */
     image: "rg-gpt-image-2.5",
+    /** Стадия 2 — фото поверх 3D-снимка (rgrouter images/edits, ~17 с, ≈5 ₽ — оценка). */
+    edit: "rg-google-gemini-3.1-flash-image",
   },
   limits: {
     renderRunsPerSession: 2,
