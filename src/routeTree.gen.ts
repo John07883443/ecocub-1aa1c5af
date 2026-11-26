@@ -18,6 +18,7 @@ import { Route as DesignRouteImport } from './routes/design'
 import { Route as PilotRouteImport } from './routes/pilot'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as PresentationRouteImport } from './routes/presentation'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TechnologyRouteImport } from './routes/technology'
@@ -91,6 +92,11 @@ const PortfolioRoute = PortfolioRouteImport.update({
 const PresentationRoute = PresentationRouteImport.update({
   id: '/presentation',
   path: '/presentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RssDotxmlRoute = RssDotxmlRouteImport.update({
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/pilot': typeof PilotRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/pilot': typeof PilotRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/pilot': typeof PilotRoute
   '/portfolio': typeof PortfolioRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/technology': typeof TechnologyRoute
@@ -372,6 +381,7 @@ export interface FileRouteTypes {
     | '/pilot'
     | '/portfolio'
     | '/presentation'
+    | '/privacy'
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/pilot'
     | '/portfolio'
     | '/presentation'
+    | '/privacy'
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/pilot'
     | '/portfolio'
     | '/presentation'
+    | '/privacy'
     | '/rss.xml'
     | '/sitemap.xml'
     | '/technology'
@@ -493,6 +505,7 @@ export interface RootRouteChildren {
   PilotRoute: typeof PilotRoute
   PortfolioRoute: typeof PortfolioRoute
   PresentationRoute: typeof PresentationRoute
+  PrivacyRoute: typeof PrivacyRoute
   RssDotxmlRoute: typeof RssDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TechnologyRoute: typeof TechnologyRoute
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       path: '/presentation'
       fullPath: '/presentation'
       preLoaderRoute: typeof PresentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rss.xml': {
@@ -827,6 +847,7 @@ const rootRouteChildren: RootRouteChildren = {
   PilotRoute: PilotRoute,
   PortfolioRoute: PortfolioRoute,
   PresentationRoute: PresentationRoute,
+  PrivacyRoute: PrivacyRoute,
   RssDotxmlRoute: RssDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TechnologyRoute: TechnologyRoute,

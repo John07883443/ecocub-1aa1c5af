@@ -650,8 +650,10 @@ export function DreamHouseBuilder() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [channel, setChannel] = useState(CHANNELS[2].value); // Telegram по умолчанию — под воронку
   const [consent, setConsent] = useState(false);
+  const [contactConsent, setContactConsent] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; phone?: string; consent?: string }>({});
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
@@ -817,8 +819,10 @@ export function DreamHouseBuilder() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formType: "dream",
+          contactConsent,
           name: name.trim(),
           phone: phone.trim(),
+          email: email.trim() || undefined,
           message,
           sourcePage: typeof window !== "undefined" ? window.location.pathname : undefined,
           payload: {
@@ -910,14 +914,18 @@ export function DreamHouseBuilder() {
               answers={answers}
               name={name}
               phone={phone}
+              email={email}
               channel={channel}
               consent={consent}
+              contactConsent={contactConsent}
               errors={errors}
               pending={pending}
               onName={setName}
               onPhone={setPhone}
+              onEmail={setEmail}
               onChannel={setChannel}
               onConsent={setConsent}
+              onContactConsent={setContactConsent}
               onBack={back}
               onSubmit={submit}
             />
@@ -1150,28 +1158,36 @@ function ResultStep({
   answers,
   name,
   phone,
+  email,
   channel,
   consent,
+  contactConsent,
   errors,
   pending,
   onName,
   onPhone,
+  onEmail,
   onChannel,
   onConsent,
+  onContactConsent,
   onBack,
   onSubmit,
 }: {
   answers: Answers;
   name: string;
   phone: string;
+  email: string;
   channel: string;
   consent: boolean;
+  contactConsent: boolean;
   errors: { name?: string; phone?: string; consent?: string };
   pending: boolean;
   onName: (v: string) => void;
   onPhone: (v: string) => void;
+  onEmail: (v: string) => void;
   onChannel: (v: string) => void;
   onConsent: (v: boolean) => void;
+  onContactConsent: (v: boolean) => void;
   onBack: () => void;
   onSubmit: () => void;
 }) {
@@ -1251,6 +1267,10 @@ function ResultStep({
           />
           {errors.phone && <p className="mt-1 text-xs text-destructive">{errors.phone}</p>}
         </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-sm font-medium">Email — пришлём подборку проектов (необязательно)</label>
+          <Input type="email" inputMode="email" value={email} onChange={(e) => onEmail(e.target.value)} placeholder="you@example.com" />
+        </div>
       </div>
 
       <div className="mt-4">
@@ -1287,10 +1307,22 @@ function ResultStep({
           onChange={(e) => onConsent(e.target.checked)}
         />
         <span className="text-xs text-muted-foreground">
-          Согласен на обработку персональных данных
+          Согласен на обработку{" "}
+          <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2" onClick={(e) => e.stopPropagation()}>
+            персональных данных
+          </a>
         </span>
       </label>
       {errors.consent && <p className="mt-1 text-xs text-destructive">{errors.consent}</p>}
+      <label className="mt-2 flex cursor-pointer items-start gap-2">
+        <input
+          type="checkbox"
+          className="mt-1 size-4 rounded border-input"
+          checked={contactConsent}
+          onChange={(e) => onContactConsent(e.target.checked)}
+        />
+        <span className="text-xs text-muted-foreground">Согласен на звонок и сообщения, в том числе от ИИ-помощника ЭкоКуба (необязательно)</span>
+      </label>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <Button

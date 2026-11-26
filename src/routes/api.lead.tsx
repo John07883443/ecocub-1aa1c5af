@@ -27,6 +27,8 @@ type LeadPayload = {
   sourcePage?: string;
   projectSlug?: string;
   payload?: unknown;
+  /** Отдельное необязательное согласие на звонки и сообщения, в т.ч. от ИИ-помощника. */
+  contactConsent?: unknown;
   /** Honeypot: человек его не видит и оставляет пустым. */
   website?: unknown;
   /** Миллисекунды от отрисовки формы до отправки. */
@@ -59,6 +61,7 @@ async function notifyTelegram(p: LeadPayload, name: string, phone: string): Prom
   if (p.projectSlug) lines.push(`Проект: ${esc(p.projectSlug.toString().slice(0, 100))}`);
   if (p.sourcePage) lines.push(`Страница: ${esc(p.sourcePage.toString().slice(0, 200))}`);
   if (p.message) lines.push(`Сообщение: ${esc(p.message.toString().slice(0, 500))}`);
+  lines.push(`Согласие на звонок и сообщения (в т.ч. ИИ): ${p.contactConsent === true ? "да" : "нет"}`);
   if (p.attributionSummary)
     lines.push(`Источник: ${esc(p.attributionSummary.toString().slice(0, 300))}`);
 
@@ -110,7 +113,11 @@ export const Route = createFileRoute("/api/lead")({
             message: p.message ?? null,
             projectSlug: p.projectSlug ?? null,
             sourcePage: p.sourcePage ?? null,
-            payload: p.payload,
+            payload: {
+              ...(p.payload && typeof p.payload === "object" ? (p.payload as object) : {}),
+              contactConsent: p.contactConsent === true,
+              contactConsentText: "Согласен на звонок и сообщения, в том числе от ИИ-помощника ЭкоКуба",
+            },
           }),
           notifyTelegram(p, name, phone),
         ]);

@@ -31,7 +31,7 @@ export type LeadInput = {
 };
 
 /** Типы форм на сайте. Всё, чего нет в списке, записывается как 'other'. */
-const FORM_TYPES = ["contact", "project", "presentation", "callback", "quiz"] as const;
+const FORM_TYPES = ["contact", "project", "presentation", "callback", "quiz", "dream"] as const;
 
 const DEFAULT_DB_PATH = "/var/lib/ecocub/leads.db";
 

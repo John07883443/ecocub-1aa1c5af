@@ -30,6 +30,8 @@ const schema = z.object({
   email: z.union([z.email("Неверный email").max(200), z.literal("")]).optional(),
   message: z.string().trim().max(2000).optional(),
   consent: z.literal(true, { error: "Нужно согласие" }),
+  /** Необязательное отдельное согласие на звонки и сообщения, в т.ч. от ИИ-помощника (24.11.2026). */
+  contactConsent: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -99,6 +101,7 @@ export function ContactForm({
       email: "",
       message: defaultMessage ?? "",
       consent: false as unknown as true,
+      contactConsent: false,
     },
   });
 
@@ -135,6 +138,7 @@ export function ContactForm({
           sourcePage:
             sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : undefined),
           payload: attribution,
+          contactConsent: !!values.contactConsent,
           attributionSummary: attributionSummary(attribution),
           ...spam.fields(),
         }),
@@ -211,7 +215,7 @@ export function ContactForm({
             name="email"
             render={({ field }) => (
               <FormItem className="mt-4">
-                <FormLabel className={isDark ? "text-white" : ""}>Email (необязательно)</FormLabel>
+                <FormLabel className={isDark ? "text-white" : ""}>Email — пришлём подборку проектов (необязательно)</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -261,16 +265,42 @@ export function ContactForm({
                   checked={!!field.value}
                   onChange={(e) => field.onChange(e.target.checked)}
                 />
+
                 <span
                   className={isDark ? "text-xs text-white/70" : "text-xs text-muted-foreground"}
                 >
-                  Согласен на обработку персональных данных
+                  Согласен на обработку{" "}
+                  <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2" onClick={(e) => e.stopPropagation()}>
+                    персональных данных
+                  </a>
                 </span>
               </label>
               <FormMessage />
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="contactConsent"
+          render={({ field }) => (
+            <FormItem className="mt-2">
+              <label className="flex cursor-pointer items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 rounded border-input"
+                  checked={!!field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+                <span
+                  className={isDark ? "text-xs text-white/70" : "text-xs text-muted-foreground"}
+                >
+                  Согласен на звонок и сообщения, в том числе от ИИ-помощника ЭкоКуба (необязательно)
+                </span>
+              </label>
+            </FormItem>
+          )}
+        />
+
 
         <Button
           type="submit"
