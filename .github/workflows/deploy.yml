@@ -1,13 +1,17 @@
-# Автодеплой EcoCub на VPS.
+# Автодеплой EcoCub на main-1 (178.130.63.130, systemd-служба ecocub).
 #
-# Сборка идёт здесь, а не на сервере. Причина: у VPS 2 ГБ памяти, из которых
-# сборка забирала 1.5 ГБ и уходила в подкачку — запас был на исходе, и однажды
-# она упала бы прямо на боевой машине. Теперь на сервер приезжает готовый
-# .output, ему нужно только распаковаться и перезапустить процесс.
+# Сборка идёт здесь, а не на сервере: рядом с сайтом на main-1 живут другие
+# службы, а сборке нужно около 1,5 ГБ памяти. На сервер приезжает готовый
+# .output архивом через ssh; релизы, переключение и автооткат делает
+# серверный scripts/main1/ecocub-deploy.
 #
-# Секретов сборке не требуется: адрес и ключ базы читаются на сервере в момент
-# запроса, в бандл ничего не попадает. Ключи VPS — в Settings → Secrets and
-# variables → Actions: VPS_HOST, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
+# Секрет один: MAIN1_DEPLOY_KEY (Settings → Secrets and variables → Actions) —
+# закрытый ключ пользователя deploy-ecocub. Этим ключом можно только
+# выкладывать (принудительная команда ecocub-deploy-ssh), не входить в shell.
+# Ключи сайта (Telegram, Google OAuth, ECOCUB_ADMIN_SECRET) лежат на сервере в
+# /etc/ecocub.env и в workflow больше не передаются.
+#
+# Имя «Deploy to VPS» не менять: на него завязан notify-telegram.yml.
 name: Deploy to VPS
 
 on:
@@ -37,6 +41,8 @@ jobs:
 
       - name: Сборка
         run: npm run build
+        env:
+          NITRO_PRESET: node-server
 
       # Проверка цели сборки. Сервер запускает `node .output/server/index.mjs`,
       # а конфиг Lovable по умолчанию подставляет воркер для Cloudflare —
@@ -65,94 +71,33 @@ jobs:
           kill "$(cat /tmp/srv.pid)" 2>/dev/null || true
           [ "$fail" = "0" ] || { echo "ОШИБКА: собранный сайт отвечает не 200"; exit 1; }
 
+      # Ключ хоста записан прямо здесь: он публичный, а сверка защищает от
+      # подмены сервера. Сменили сервер — обновите строку (ssh-keyscan).
       - name: Ключи SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.MAIN1_DEPLOY_KEY }}
         run: |
+          [ -n "$DEPLOY_KEY" ] || { echo "ОШИБКА: нет секрета MAIN1_DEPLOY_KEY"; exit 1; }
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/main1
+          chmod 600 ~/.ssh/main1
+          echo '178.130.63.130 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0OH8/i1fTjkgyJ6BGdkCLhQlFjndht0Fbjpt/DCEa+' > ~/.ssh/known_hosts
 
-      # rsync, а не scp: картинки занимают большую часть из 67 МБ и меняются
-      # редко, поэтому обычная выкладка передаёт сотни килобайт вместо десятков
-      # мегабайт. Каталог промежуточный — сервер сам переносит его в рабочий,
-      # сохранив предыдущую сборку для отката.
-      # --rsync-path создаёт каталог назначения на сервере: иначе первая же
-      # выкладка на свежей машине падала бы на «нет такого каталога».
-      - name: Отправка сборки на сервер
+      # Код выхода сервера: 0 — релиз работает; 2 — новый не поднялся и сайт
+      # вернулся на прежний (выкладка красная, сайт жив); 3 — нужны руки.
+      - name: Выкладка на main-1
         run: |
-          rsync -az --delete --stats \
-            --rsync-path="mkdir -p /home/deploy/incoming/output && rsync" \
-            -e "ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts" \
-            .output/ deploy@${{ secrets.VPS_HOST }}:/home/deploy/incoming/output/
+          release="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          echo "релиз $release"
+          tar -czf - -C .output . | ssh -i ~/.ssh/main1 \
+            -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes -o ConnectTimeout=20 \
+            deploy-ecocub@178.130.63.130 "deploy $release"
 
-      # Запасной вход в режим проектирования.
-      #
-      # Обычно пароль задаётся прямо в браузере при первом открытии /design и
-      # хранится на сервере хешем. Этот шаг нужен для другого случая: пароль
-      # забыт, либо его успел задать кто-то посторонний. Тогда владелец кладёт
-      # значение в секрет репозитория ECOCUB_ADMIN_SECRET (Settings → Secrets
-      # and variables → Actions), и оно перебивает всё остальное.
-      #
-      # Секрет уходит на сервер через stdin, а не аргументом команды:
-      # аргументы видны в списке процессов на удалённой машине. В логи он не
-      # попадает — GitHub маскирует значения секретов.
-      - name: Запасной пароль режима проектирования
-        env:
-          ADMIN_SECRET: ${{ secrets.ECOCUB_ADMIN_SECRET }}
+      - name: Проверка снаружи
         run: |
-          if [ -z "$ADMIN_SECRET" ]; then
-            echo "ECOCUB_ADMIN_SECRET не задан — пароль задаётся в браузере, шаг пропущен"
-            exit 0
-          fi
-          printf '%s' "$ADMIN_SECRET" | ssh -i ~/.ssh/id_ed25519 \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
-            deploy@${{ secrets.VPS_HOST }} \
-            'set -eu
-             secret=$(cat)
-             f=/home/deploy/ecocub.env
-             touch "$f"; chmod 600 "$f"
-             grep -v "^ECOCUB_ADMIN_SECRET=" "$f" > "$f.tmp" || true
-             printf "ECOCUB_ADMIN_SECRET=%s\n" "$secret" >> "$f.tmp"
-             mv "$f.tmp" "$f"
-             echo "запасной пароль записан в окружение сервера"'
-
-      # Ключи Google OAuth для входа владельца в режим проектирования.
-      #
-      # Завести их секретами репозитория недостаточно: секреты Actions живут
-      # только внутри workflow, а design-google.server.ts читает
-      # process.env.GOOGLE_OAUTH_* на сервере в момент запроса — в бандл они
-      # не попадают. Поэтому значения кладутся в /home/deploy/ecocub.env, и
-      # обязательно ДО шага активации: pm2 перечитывает этот файл только при
-      # reload по конфигу, что и делает deploy.sh следующим шагом.
-      #
-      # Оба значения уходят одним потоком через stdin, а не аргументами:
-      # аргументы видны в списке процессов на удалённой машине. В логи они не
-      # попадают — GitHub маскирует значения секретов.
-      - name: Ключи Google OAuth
-        env:
-          GOOGLE_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
-          GOOGLE_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
-        run: |
-          if [ -z "$GOOGLE_ID" ] || [ -z "$GOOGLE_SECRET" ]; then
-            echo "GOOGLE_OAUTH_* не заданы — вход через Google останется выключенным, шаг пропущен"
-            exit 0
-          fi
-          printf '%s\n%s\n' "$GOOGLE_ID" "$GOOGLE_SECRET" | ssh -i ~/.ssh/id_ed25519 \
-            -o UserKnownHostsFile=~/.ssh/known_hosts \
-            deploy@${{ secrets.VPS_HOST }} \
-            'set -eu
-             read -r id
-             read -r secret
-             f=/home/deploy/ecocub.env
-             touch "$f"; chmod 600 "$f"
-             grep -v -e "^GOOGLE_OAUTH_CLIENT_ID=" \
-                     -e "^GOOGLE_OAUTH_CLIENT_SECRET=" "$f" > "$f.tmp" || true
-             printf "GOOGLE_OAUTH_CLIENT_ID=%s\n"     "$id"     >> "$f.tmp"
-             printf "GOOGLE_OAUTH_CLIENT_SECRET=%s\n" "$secret" >> "$f.tmp"
-             mv "$f.tmp" "$f"
-             echo "ключи Google записаны в окружение сервера"'
-
-      - name: Активация на сервере
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts \
-            deploy@${{ secrets.VPS_HOST }} 'bash /home/deploy/deploy.sh'
+          for path in / /blog /sitemap.xml; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://eco-cub.ru$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done

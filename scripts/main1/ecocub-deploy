@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+#
+# Серверная часть выкладки eco-cub.ru на main-1. Ставится в
+# /usr/local/sbin/ecocub-deploy и работает от root.
+#
+#   ecocub-deploy deploy <релиз>  < сборка.tar.gz   — выложить .output
+#   ecocub-deploy rollback                          — вернуть предыдущий релиз
+#   ecocub-deploy status                            — что работает и что лежит
+#
+# Вызывают его двое:
+#   - GitHub Actions: пользователь deploy-ecocub, ключ которого умеет только
+#     это (ForceCommand → ecocub-deploy-ssh → sudo ecocub-deploy);
+#   - ПК: scripts/deploy-main1.sh по ssh под root.
+#
+# Устройство:
+#   $APP_DIR/releases/<время>-<sha>/   — содержимое .output, по релизу на папку
+#   $APP_DIR/current -> releases/...   — симлинк, его читает служба
+# Подмена симлинка атомарна. Если после перезапуска сайт не отвечает 200 на
+# ключевых страницах, симлинк возвращается на прежний релиз автоматически.
+#
+# Параметры — переменные окружения (для stage-копии). Через sudo окружение
+# не проходит, поэтому у deploy-ecocub всегда боевые значения по умолчанию.
+
+set -euo pipefail
+
+APP_DIR="${ECOCUB_APP_DIR:-/opt/ecocub}"
+SERVICE="${ECOCUB_SERVICE:-ecocub}"
+RUN_USER="${ECOCUB_RUN_USER:-ecocub}"
+PORT="${ECOCUB_PORT:-3010}"
+KEEP="${ECOCUB_KEEP:-3}"
+HEALTH_PATHS="${ECOCUB_HEALTH_PATHS:-/ /portfolio /blog /sitemap.xml}"
+MAX_BYTES=$((400 * 1024 * 1024))   # сборка ~70 МБ; больше 400 — что-то не то
+
+log() { printf '[main-1] %s\n' "$*"; }
+die() { printf '[main-1] ОШИБКА: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" = 0 ] || die "нужен root"
+exec 9>/run/lock/ecocub-deploy.lock
+flock -w 600 9 || die "другая выкладка не закончилась за 10 минут"
+
+health() {
+  local ok=0 p code bad=0
+  for _ in $(seq 1 30); do
+    sleep 1
+    curl -sf -o /dev/null --max-time 5 "http://127.0.0.1:$PORT/" && { ok=1; break; }
+  done
+  [ "$ok" = 1 ] || { log "главная не ответила за 30 с"; return 1; }
+  for p in $HEALTH_PATHS; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "http://127.0.0.1:$PORT$p" || true)
+    log "  $p -> $code"
+    [ "$code" = 200 ] || bad=1
+  done
+  return $bad
+}
+
+switch_to() {  # $1 — имя релиза
+  ln -sfn "releases/$1" "$APP_DIR/current.new"
+  mv -T "$APP_DIR/current.new" "$APP_DIR/current"
+  systemctl restart "$SERVICE"
+}
+
+current_release() { basename "$(readlink "$APP_DIR/current" 2>/dev/null || true)"; }
+
+cmd_status() {
+  echo "служба: $(systemctl is-active "$SERVICE" || true)"
+  echo "current -> $(readlink "$APP_DIR/current" 2>/dev/null || echo 'нет')"
+  echo "релизы:"; ls -1 "$APP_DIR/releases" 2>/dev/null | sed 's/^/  /'
+}
+
+cmd_rollback() {
+  local cur prev
+  cur=$(current_release)
+  prev=$(ls -1 "$APP_DIR/releases" | grep -v '\.part$' | sort | grep -B1 -x "$cur" | head -n1)
+  [ -n "$prev" ] && [ "$prev" != "$cur" ] || die "нет релиза старше $cur"
+  log "откат $cur -> $prev"
+  switch_to "$prev"
+  health && log "готово, работает $prev" || die "после отката сайт не отвечает — нужны руки"
+}
+
+cmd_deploy() {
+  local release="${1:-}"
+  [[ "$release" =~ ^[0-9]{8}-[0-9]{6}-[0-9a-z]{4,40}(-dirty)?$ ]] \
+    || die "имя релиза вида 20261127-101500-abc1234, получено «$release»"
+  [ -e "$APP_DIR/releases/$release" ] && die "релиз $release уже есть"
+
+  local part="$APP_DIR/releases/$release.part"
+  rm -rf "$part"; mkdir -p "$part"
+  log "принимаю сборку $release"
+  head -c "$MAX_BYTES" | tar -xzf - -C "$part" --no-same-owner --no-same-permissions \
+    || { rm -rf "$part"; die "архив не распаковался"; }
+  [ -f "$part/server/index.mjs" ] && grep -q '"preset": "node-server"' "$part/nitro.json" \
+    || { rm -rf "$part"; die "приехала не та сборка (нужен node-server)"; }
+  chown -R "$RUN_USER:$RUN_USER" "$part"
+  mv -T "$part" "$APP_DIR/releases/$release"
+
+  local prev; prev=$(current_release)
+  log "было: ${prev:-нет}, становится: $release"
+  switch_to "$release"
+
+  if ! health; then
+    if [ -n "$prev" ] && [ -d "$APP_DIR/releases/$prev" ]; then
+      log "новый релиз не поднялся — возвращаю $prev"
+      switch_to "$prev"
+      # Сломанный релиз не храним: иначе он займёт место в KEEP и попадётся rollback.
+      rm -rf "${APP_DIR:?}/releases/$release"
+      health && { log "откат выполнен, работает $prev; сломанный $release удалён"; exit 2; }
+      log "после отката сайт всё ещё не отвечает — нужны руки"; exit 3
+    fi
+    log "новый релиз не поднялся, откатываться не на что — нужны руки"; exit 3
+  fi
+  log "сайт отвечает, релиз $release работает"
+
+  # Чистка: оставляем KEEP последних, текущий и предыдущий не трогаем никогда.
+  ls -1 "$APP_DIR/releases" | grep -v '\.part$' | sort | head -n -"$KEEP" | while read -r r; do
+    { [ "$r" = "$release" ] || [ "$r" = "$prev" ]; } && continue
+    rm -rf "${APP_DIR:?}/releases/$r" && log "удалён старый релиз $r"
+  done
+  rm -rf "$APP_DIR"/releases/*.part
+}
+
+case "${1:-}" in
+  deploy) cmd_deploy "${2:-}" ;;
+  rollback) cmd_rollback ;;
+  status) cmd_status ;;
+  *) die "команда: deploy <релиз> | rollback | status" ;;
+esac

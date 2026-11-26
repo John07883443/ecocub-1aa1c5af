@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#
+# Принудительная команда для ключа выкладки (пользователь deploy-ecocub на
+# main-1). Ставится в /usr/local/bin/ecocub-deploy-ssh и прописывается в
+# authorized_keys:
+#
+#   command="/usr/local/bin/ecocub-deploy-ssh",restrict ssh-ed25519 AAAA... github-actions-ecocub
+#
+# Что бы ни прислал клиент, выполнится только одна из трёх команд выкладки.
+# Аргументы проверяются здесь и ещё раз в самом ecocub-deploy.
+
+set -euo pipefail
+read -r -a args <<<"${SSH_ORIGINAL_COMMAND:-}"
+
+case "${args[0]:-}:${#args[@]}" in
+  deploy:2)
+    [[ "${args[1]}" =~ ^[0-9]{8}-[0-9]{6}-[0-9a-z]{4,40}(-dirty)?$ ]] || { echo "плохое имя релиза" >&2; exit 64; }
+    exec sudo -n /usr/local/sbin/ecocub-deploy deploy "${args[1]}" ;;
+  rollback:1|status:1)
+    exec sudo -n /usr/local/sbin/ecocub-deploy "${args[0]}" ;;
+  *)
+    echo "разрешено: deploy <релиз> | rollback | status" >&2; exit 64 ;;
+esac
