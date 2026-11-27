@@ -39,7 +39,7 @@ export function Footer() {
             {/* Курсор намеренно обычный: пасхалка не должна выглядеть ссылкой. */}
             <img
               src={logoWhite}
-              alt="EcoCub"
+              alt="EcoCub (ЭкоКуб)"
               className="mb-5 h-9 w-auto select-none"
               onClick={handleLogoTap}
             />
@@ -141,7 +141,7 @@ export function Footer() {
         </Reveal>
 
         <div className="mt-8 flex flex-col gap-2 text-xs text-primary-foreground/50 sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} EcoCub. Все права защищены.</span>
+          <span>© {new Date().getFullYear()} EcoCub (ЭкоКуб). Все права защищены.</span>
           <span>Современные дома в Подмосковье</span>
         </div>
       </Container>

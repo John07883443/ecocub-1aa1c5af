@@ -103,6 +103,9 @@ const orgJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "HomeAndConstructionBusiness",
   name: "EcoCub",
+  // Бренд ищут и кириллицей (владелец 28.11): поисковики склеивают эти
+  // написания с сайтом.
+  alternateName: ["ЭкоКуб", "Эко Куб", "Экокуб"],
   url: "https://eco-cub.ru",
   logo: "https://eco-cub.ru/favicon.ico",
   telephone: "+7 980 875-86-43",

@@ -37,7 +37,9 @@ function ContactsPage() {
         <Container>
           <Reveal>
             <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent">Контакты</p>
-            <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">Связаться с EcoCub</h1>
+            <h1 className="mt-3 text-4xl font-bold uppercase md:text-6xl">
+              Связаться с EcoCub (ЭкоКуб)
+            </h1>
             <p className="mt-6 max-w-2xl text-base text-muted-foreground">
               Ответим на любой вопрос о проектах, технологиях и условиях. Расчёт стоимости — в
               течение часа.
