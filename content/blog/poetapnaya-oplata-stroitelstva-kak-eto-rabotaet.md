@@ -2,13 +2,13 @@
 title: "Поэтапная оплата строительства: как это работает"
 slug: poetapnaya-oplata-stroitelstva-kak-eto-rabotaet
 date: 2025-12-30
-category: cases
+category: guides
 tags: ["участок", "коммуникации"]
 excerpt: "'Поэтапная оплата"
-cover: /images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet.png
+cover: /images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet.webp
 readingTime: 5
 seoTitle: "Поэтапная оплата строительства: гарантия прозрачности"
-seoDescription: "Поэтапная оплата строительства дома: принципы, этапы, привязка платежей к актам приёмки. Как избежать финансовых рисков, проверить качество и сохранить доверие на всех стадиях — от фундамента до сдачи «под ключ»."
+seoDescription: "Поэтапная оплата строительства дома: принципы, этапы, привязка платежей к актам приёмки."
 legacyUid: lhai82diu1
 ---
 
@@ -42,9 +42,9 @@ legacyUid: lhai82diu1
 
 ## Как это работает: не схема, а договорённость
 
-![](https://static.tildacdn.com/tild3835-3662-4163-b731-656635376131/Flux_Dev_Closeup_a_h.jpg)
+![Поэтапная оплата строительства: как это работает: иллюстрация](/images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet-1.webp)
 
-![](https://static.tildacdn.com/tild3737-3132-4231-a531-313533643537/Flux_Dev_Closeup_a_h.jpg)
+![Поэтапная оплата строительства: как это работает: иллюстрация (2)](/images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet-2.webp)
 
 Ключевой документ здесь — не договор как формальность, а как карта взаимного уважения. В нём прописаны не только сроки и суммы, но и — что важнее — критерии завершения этапа.
 
@@ -62,7 +62,7 @@ legacyUid: lhai82diu1
 
 ## Этапы строительства: не сроки, а состояния
 
-![](https://static.tildacdn.com/tild3862-6438-4461-a334-393536343163/Flux_Dev_A_builders_.jpg)
+![Поэтапная оплата строительства: как это работает: иллюстрация (3)](/images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet-3.webp)
 
 Многие представляют этапы как календарные вехи: «фундамент — март, стены — апрель». Но погода, логистика, согласования не подчиняются календарю.
 
@@ -84,7 +84,7 @@ legacyUid: lhai82diu1
 
 ## Как прозрачность процесса реализуется на практике
 
-![](https://static.tildacdn.com/tild6639-3539-4630-a666-303966333966/Flux_Dev_A_client_in.jpg)
+![Поэтапная оплата строительства: как это работает: иллюстрация (4)](/images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet-4.webp)
 
 Любой клиент хочет быть уверен, что каждый модуль отлит правильно, до того, как тот уедет с завода.
 
@@ -118,7 +118,7 @@ legacyUid: lhai82diu1
 
 ## Деньги как язык уважения
 
-![](https://static.tildacdn.com/tild3936-3132-4566-b939-336633393736/Flux_Dev_Evening_on_.jpg)
+![Поэтапная оплата строительства: как это работает: иллюстрация (5)](/images/blog/poetapnaya-oplata-stroitelstva-kak-eto-rabotaet-5.webp)
 
 Поэтапная оплата строительства — это не финансовый инструмент.
 

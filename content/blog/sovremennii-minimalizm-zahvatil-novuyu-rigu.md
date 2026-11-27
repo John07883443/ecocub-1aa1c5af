@@ -2,7 +2,7 @@
 title: "Современный минимализм захватил Новую Ригу"
 slug: sovremennii-minimalizm-zahvatil-novuyu-rigu
 date: 2025-06-01
-category: comparison
+category: news
 tags: ["тепло и отопление", "архитектура"]
 excerpt: "Как на стыке эпох и культур в России 2025 начал набирать популярность стиль современный минимализм или в простонародии хайтек"
 cover: /images/blog/sovremennii-minimalizm-zahvatil-novuyu-rigu.webp
