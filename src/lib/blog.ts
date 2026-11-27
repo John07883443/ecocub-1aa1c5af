@@ -18,6 +18,7 @@ export const BLOG_CATEGORIES = {
   comparison: "Сравнения",
   cases: "Кейсы",
   news: "Новости",
+  guides: "Гайды",
 } as const;
 
 export type BlogCategory = keyof typeof BLOG_CATEGORIES;
@@ -39,6 +40,22 @@ export type BlogPost = {
   legacyUid: string | null;
   /** id материала в Медиамашине — по нему файл и лента не задваиваются */
   sourceId?: string | null;
+  /** Подпись к обложке; нет — берётся заголовок. */
+  coverAlt?: string;
+  /** Ключевые слова для разметки Article и meta keywords (из ленты ММ). */
+  keywords?: string[];
+  /** ISO-дата обновления, YYYY-MM-DD (dateModified, lastmod в карте сайта). */
+  updated?: string;
+  /** Превью для соцсетей 1200×630 на нашем домене; нет — берётся обложка. */
+  ogImage?: string | null;
+  /** Размеры кадров на нашем домене: src → width/height для <img>. */
+  imageSizes?: Record<string, { width: number; height: number }>;
+  /**
+   * updatedAt материала ММ, из которого синк сделал файл. Есть только у
+   * файлов нового синка: такой файл лента может обновить (та же статья,
+   * тот же адрес). У 36 старых статей поля нет — их лента не трогает никогда.
+   */
+  mmUpdatedAt?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -61,7 +78,7 @@ function parseFrontMatter(raw: string): { data: Record<string, string | string[]
     const sep = line.indexOf(":");
     if (sep === -1) continue;
     const key = line.slice(0, sep).trim();
-    let value = line.slice(sep + 1).trim();
+    const value = line.slice(sep + 1).trim();
     if (!key) continue;
 
     if (value.startsWith("[") && value.endsWith("]")) {
@@ -78,7 +95,11 @@ function parseFrontMatter(raw: string): { data: Record<string, string | string[]
 }
 
 function unquote(value: string): string {
-  if (value.length > 1 && value[0] === value[value.length - 1] && (value[0] === '"' || value[0] === "'")) {
+  if (
+    value.length > 1 &&
+    value[0] === value[value.length - 1] &&
+    (value[0] === '"' || value[0] === "'")
+  ) {
     return value.slice(1, -1);
   }
   return value;
@@ -129,13 +150,19 @@ function buildPosts(): BlogPost[] {
       category: asCategory(data.category),
       tags: Array.isArray(data.tags) ? data.tags : data.tags ? [data.tags] : [],
       date: asString(data.date),
-      readingTime: Number.isFinite(declaredReading) && declaredReading > 0
-        ? declaredReading
-        : Math.max(2, Math.round(words / 900)),
+      readingTime:
+        Number.isFinite(declaredReading) && declaredReading > 0
+          ? declaredReading
+          : Math.max(2, Math.round(words / 900)),
       seoTitle: asString(data.seoTitle, title),
       seoDescription: asString(data.seoDescription, asString(data.excerpt)),
       legacyUid: asString(data.legacyUid) || null,
       sourceId: asString(data.sourceId) || null,
+      ...(asString(data.coverAlt) ? { coverAlt: asString(data.coverAlt) } : {}),
+      ...(Array.isArray(data.keywords) && data.keywords.length ? { keywords: data.keywords } : {}),
+      ...(asString(data.updated) ? { updated: asString(data.updated) } : {}),
+      ...(asString(data.ogImage) ? { ogImage: asString(data.ogImage) } : {}),
+      ...(asString(data.mmUpdatedAt) ? { mmUpdatedAt: asString(data.mmUpdatedAt) } : {}),
     });
   }
 
@@ -184,7 +211,9 @@ export function getCategories(
 }
 
 /** Все теги с количеством статей, по убыванию частоты. */
-export function getTags(posts: BlogPost[] = allPosts): Array<{ tag: string; slug: string; count: number }> {
+export function getTags(
+  posts: BlogPost[] = allPosts,
+): Array<{ tag: string; slug: string; count: number }> {
   const counts = new Map<string, number>();
   for (const post of posts) {
     for (const tag of post.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
@@ -200,10 +229,39 @@ export function getTags(posts: BlogPost[] = allPosts): Array<{ tag: string; slug
  * в отличие от процентной кодировки.
  */
 const TRANSLIT: Record<string, string> = {
-  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z",
-  и: "i", й: "i", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r",
-  с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "ts", ч: "ch", ш: "sh",
-  щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+  а: "a",
+  б: "b",
+  в: "v",
+  г: "g",
+  д: "d",
+  е: "e",
+  ё: "e",
+  ж: "zh",
+  з: "z",
+  и: "i",
+  й: "i",
+  к: "k",
+  л: "l",
+  м: "m",
+  н: "n",
+  о: "o",
+  п: "p",
+  р: "r",
+  с: "s",
+  т: "t",
+  у: "u",
+  ф: "f",
+  х: "h",
+  ц: "ts",
+  ч: "ch",
+  ш: "sh",
+  щ: "sch",
+  ъ: "",
+  ы: "y",
+  ь: "",
+  э: "e",
+  ю: "yu",
+  я: "ya",
 };
 
 export function tagToSlug(tag: string): string {
@@ -224,7 +282,11 @@ export function getTagBySlug(slug: string, posts: BlogPost[] = allPosts): string
  * Похожие статьи: сначала совпадение по тегам, затем по категории.
  * Нужны для перелинковки — без неё статьи не передают друг другу вес.
  */
-export function getRelatedPosts(post: BlogPost, limit = 3, posts: BlogPost[] = allPosts): BlogPost[] {
+export function getRelatedPosts(
+  post: BlogPost,
+  limit = 3,
+  posts: BlogPost[] = allPosts,
+): BlogPost[] {
   const scored = posts
     .filter((p) => p.slug !== post.slug)
     .map((p) => ({

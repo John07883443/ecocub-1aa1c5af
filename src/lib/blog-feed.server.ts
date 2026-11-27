@@ -27,33 +27,20 @@
  * MM_FEED — адрес ленты, если нужно переопределить.
  */
 
-import { getAllPosts, sortPosts, type BlogCategory, type BlogPost } from "./blog";
+import { getAllPosts, sortPosts, type BlogPost } from "./blog";
+import { buildMmPost, type MmArticle } from "./mm-article";
+import { localizeFeedImage, mediaSizes, ogImageFor, prewarmMedia } from "./blog-media.server";
 
 const FEED = process.env.MM_FEED ?? "https://mediamachina.ru/api/site/v1/articles";
 const LIMIT = 50;
 const FRESH_MS = 5 * 60_000;
 const TIMEOUT_MS = 2_500;
-const CATEGORY: BlogCategory = "news";
-const MAX_TAGS = 3;
 
-type FeedArticle = {
-  id?: string | number;
-  slug?: string;
-  title?: string;
-  description?: string;
-  paragraphs?: string[];
-  cover?: string | null;
-  images?: string[];
-  tags?: string[];
-  publishedAt?: string;
-};
+type FeedArticle = MmArticle;
 
 let cache: { at: number; posts: BlogPost[] } | null = null;
 let inflight: Promise<void> | null = null;
 let lastProblem = "";
-
-const normalize = (value: unknown) =>
-  String(value ?? "").toLowerCase().replace(/[#\s_-]+/g, "").replace(/ё/g, "е");
 
 function tagVocabulary(local: BlogPost[]): Map<string, string> {
   const vocabulary = new Map<string, string>();
@@ -61,68 +48,44 @@ function tagVocabulary(local: BlogPost[]): Map<string, string> {
   return vocabulary;
 }
 
-function mapTags(feedTags: string[] | undefined, vocabulary: Map<string, string>): string[] {
-  const picked: string[] = [];
-  for (const feedTag of feedTags ?? []) {
-    const key = normalize(feedTag);
-    for (const [norm, tag] of vocabulary) {
-      if ((key === norm || key.includes(norm)) && !picked.includes(tag)) picked.push(tag);
-    }
-  }
-  return picked.slice(0, MAX_TAGS);
-}
+const normalize = (value: unknown) =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/[#\s_-]+/g, "")
+    .replace(/ё/g, "е");
 
-const SAFE_SLUG = /^[a-z0-9][a-z0-9-]{0,150}$/;
-const isHttpUrl = (value: unknown): value is string =>
-  typeof value === "string" && /^https:\/\/[^\s"'<>()]+$/.test(value);
-
-/** Материал ленты → статья блога. null — не берём (те же правила, что у синка). */
-export function feedArticleToPost(article: FeedArticle, vocabulary: Map<string, string>): BlogPost | null {
+/**
+ * Материал ленты → статья блога. null — не берём (те же правила, что у синка).
+ * Разбор — общий с синком (mm-article.ts); кадры — на наш домен.
+ */
+export function feedArticleToPost(
+  article: FeedArticle,
+  vocabulary: Map<string, string>,
+): BlogPost | null {
   const slug = String(article.slug ?? "");
-  const title = String(article.title ?? "").trim();
-  if (!SAFE_SLUG.test(slug) || !title || !isHttpUrl(article.cover)) return null;
-
-  // Текст ленты — обычные абзацы, не разметка: экранируем то, что
-  // ReactMarkdown с rehype-raw иначе принял бы за HTML.
-  const paragraphs = (article.paragraphs ?? [])
-    .filter((p): p is string => typeof p === "string" && p.trim() !== "")
-    .map((p) => p.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;"));
-  const lead = normalize(article.description);
-  while (paragraphs.length && [normalize(title), lead].includes(normalize(paragraphs[0]))) paragraphs.shift();
-  if (paragraphs.length === 0) return null;
-
-  // Кадры между абзацами, как у синка: иначе они читаются приложением.
-  const inline = (article.images ?? []).filter((src) => isHttpUrl(src) && src !== article.cover);
-  const alt = title.replace(/[[\]]/g, "");
-  const step = inline.length > 0 ? Math.max(2, Math.floor(paragraphs.length / (inline.length + 1))) : 0;
-  const body: string[] = [];
-  let placed = 0;
-  paragraphs.forEach((paragraph, index) => {
-    body.push(paragraph);
-    if (step > 0 && placed < inline.length && index > 0 && (index + 1) % step === 0) {
-      body.push(`![${alt}](${inline[placed++]})`);
-    }
+  const built = buildMmPost(article, {
+    vocabulary,
+    localize: (url, index) => localizeFeedImage(slug, index, url),
   });
-  while (placed < inline.length) body.push(`![${alt}](${inline[placed++]})`);
-
-  const words = paragraphs.join(" ").split(/\s+/).filter(Boolean).length;
-  const description = String(article.description || article.paragraphs?.[0] || "").trim().replace(/\s+/g, " ");
-  const date = String(article.publishedAt ?? "").slice(0, 10);
-
+  if (!built) return null;
   return {
-    slug,
-    title,
-    excerpt: description.slice(0, 300),
-    content: body.join("\n\n"),
-    cover: article.cover,
-    category: CATEGORY,
-    tags: mapTags(article.tags, vocabulary),
-    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
-    readingTime: Math.max(1, Math.round(words / 180)),
-    seoTitle: title.slice(0, 70),
-    seoDescription: description.slice(0, 160),
+    slug: built.slug,
+    title: built.title,
+    excerpt: built.excerpt,
+    content: built.content,
+    cover: built.cover,
+    coverAlt: built.coverAlt,
+    category: built.category,
+    tags: built.tags,
+    keywords: built.keywords,
+    date: built.date,
+    ...(built.updated ? { updated: built.updated } : {}),
+    readingTime: built.readingTime,
+    seoTitle: built.seoTitle,
+    seoDescription: built.seoDescription,
     legacyUid: null,
-    sourceId: article.id != null ? String(article.id) : null,
+    sourceId: built.sourceId,
+    ogImage: ogImageFor(built.cover),
   };
 }
 
@@ -145,10 +108,12 @@ async function refresh(): Promise<void> {
       .filter((post): post is BlogPost => post !== null);
     cache = { at: Date.now(), posts };
     lastProblem = "";
+    prewarmMedia();
   } catch (error) {
     const problem = error instanceof Error ? error.message : String(error);
     // В журнал службы — один раз на смену причины, а не на каждый запрос.
-    if (problem !== lastProblem) console.warn(`[blog-feed] ${problem}; блог работает на файлах и прошлом ответе`);
+    if (problem !== lastProblem)
+      console.warn(`[blog-feed] ${problem}; блог работает на файлах и прошлом ответе`);
     lastProblem = problem;
     // Неудача тоже обновляет метку: следующая попытка — не раньше чем через FRESH_MS.
     cache = { at: Date.now(), posts: cache?.posts ?? [] };
@@ -163,22 +128,63 @@ async function feedPosts(): Promise<BlogPost[]> {
   if (stale && !inflight) inflight = refresh().finally(() => (inflight = null));
   if (cache) return cache.posts; // устаревший отдаём сразу, обновление идёт в фоне
   let timer: ReturnType<typeof setTimeout> | undefined;
-  await Promise.race([inflight, new Promise((resolve) => (timer = setTimeout(resolve, TIMEOUT_MS)))]);
+  await Promise.race([
+    inflight,
+    new Promise((resolve) => (timer = setTimeout(resolve, TIMEOUT_MS))),
+  ]);
   clearTimeout(timer);
   // cache мог появиться, пока ждали; TypeScript этого не видит после `if (cache)` выше.
   return currentPosts();
 }
 
-/** Итоговый список блога: файлы + новые статьи ленты, свежие сверху. */
+/** Размеры готовых кадров ленты — для width/height у <img>. */
+function withSizes(post: BlogPost): BlogPost {
+  if (!post.cover?.startsWith("/media/")) return post;
+  const srcs = [
+    post.cover,
+    ...[...post.content.matchAll(/\]\((\/media\/blog\/[^)\s]+)\)/g)].map((m) => m[1]),
+  ];
+  const imageSizes = mediaSizes(srcs);
+  return Object.keys(imageSizes).length ? { ...post, imageSizes } : post;
+}
+
+/**
+ * Итоговый список блога: файлы + новые статьи ленты, свежие сверху.
+ *
+ * Файл главнее ленты (владелец 27.11: старые адреса не меняются, лента
+ * только добавляет). Одно исключение: файл, который сделал новый синк
+ * (есть mmUpdatedAt), лента может обновить, если материал в ММ правили
+ * позже, — та же статья под адресом файла. У 36 старых статей mmUpdatedAt
+ * нет, их лента не трогает никогда.
+ */
 export async function getLivePosts(): Promise<BlogPost[]> {
   const local = getAllPosts();
   const fromFeed = await feedPosts();
   if (fromFeed.length === 0) return local;
 
+  const feedById = new Map(
+    fromFeed.filter((p) => p.sourceId).map((p) => [p.sourceId as string, p]),
+  );
+  let changed = false;
+  const merged = local.map((file) => {
+    const fresh = file.mmUpdatedAt && file.sourceId ? feedById.get(file.sourceId) : undefined;
+    if (!fresh?.updated || fresh.updated <= (file.mmUpdatedAt as string).slice(0, 10)) return file;
+    changed = true;
+    return withSizes({
+      ...fresh,
+      slug: file.slug,
+      legacyUid: file.legacyUid,
+      mmUpdatedAt: file.mmUpdatedAt,
+    });
+  });
+
   const slugs = new Set(local.map((p) => p.slug));
   const sourceIds = new Set(local.map((p) => p.sourceId).filter(Boolean));
-  const extra = fromFeed.filter((p) => !slugs.has(p.slug) && !(p.sourceId && sourceIds.has(p.sourceId)));
-  return extra.length === 0 ? local : sortPosts([...local, ...extra]);
+  const extra = fromFeed
+    .filter((p) => !slugs.has(p.slug) && !(p.sourceId && sourceIds.has(p.sourceId)))
+    .map(withSizes);
+  if (extra.length === 0 && !changed) return local;
+  return sortPosts([...merged, ...extra]);
 }
 
 /** Для проверки на сервере: что сейчас с лентой. */

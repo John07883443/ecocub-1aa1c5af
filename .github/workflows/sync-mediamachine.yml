@@ -31,11 +31,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+
+      # sharp нужен, чтобы кадры легли на сайт в WebP ≤ 300 КБ.
+      - name: Установка зависимостей
+        run: npm ci
 
       - name: Забрать новые статьи
         env:
           MM_KEY: ${{ secrets.MM_SITE_KEY }}
-        run: node scripts/sync-mediamachine.mjs
+        run: node --experimental-strip-types scripts/sync-mediamachine.mjs
 
       - name: Закоммитить и запустить деплой
         env:

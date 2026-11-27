@@ -44,7 +44,9 @@ export const Route = createFileRoute("/sitemap.xml")({
         const { getLivePosts } = await import("@/lib/blog-feed.server");
         const posts = await getLivePosts();
         for (const post of posts) {
-          urls.push(url(`/blog/${post.slug}`, post.date, "monthly", "0.7"));
+          // lastmod — дата обновления, если материал правили после публикации.
+          const lastmod = post.updated && post.updated > post.date ? post.updated : post.date;
+          urls.push(url(`/blog/${post.slug}`, lastmod || undefined, "monthly", "0.7"));
         }
         for (const category of getCategories(posts)) {
           urls.push(url(`/blog/category/${category.key}`, undefined, "weekly", "0.5"));

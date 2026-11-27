@@ -53,6 +53,12 @@ jobs:
           test -f .output/server/index.mjs || { echo "нет .output/server/index.mjs"; exit 1; }
           grep -q '"preset": "node-server"' .output/nitro.json || {
             echo "ОШИБКА: цель сборки не node-server"; cat .output/nitro.json; exit 1; }
+          # Кадры ленты Медиамашины перегоняет в WebP sharp (родной модуль):
+          # он должен лечь в сборку под Linux, иначе обложки новых статей не отдадутся.
+          (cd .output/server && node --input-type=module -e "
+            const sharp = (await import('sharp')).default;
+            await sharp({ create: { width: 2, height: 2, channels: 3, background: '#fff' } }).webp().toBuffer();
+            console.log('sharp в сборке работает');")
 
       # Собранный сервер поднимается прямо здесь и отвечает на запросы.
       # Переменных базы в CI нет намеренно: заодно проверяется, что при

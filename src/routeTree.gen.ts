@@ -44,6 +44,7 @@ import { Route as ApiPilotLeadRouteImport } from './routes/api.pilot.lead'
 import { Route as ApiPilotRenderRouteImport } from './routes/api.pilot.render'
 import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
 import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
+import { Route as MediaBlogFileRouteImport } from './routes/media.blog.$file'
 import { Route as ApiDesignCoverIdRouteImport } from './routes/api.design.cover.$id'
 import { Route as ApiDesignOauthCallbackRouteImport } from './routes/api.design.oauth.callback'
 import { Route as ApiDesignOauthStartRouteImport } from './routes/api.design.oauth.start'
@@ -224,6 +225,11 @@ const BlogTagTagRoute = BlogTagTagRouteImport.update({
   path: '/blog/tag/$tag',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MediaBlogFileRoute = MediaBlogFileRouteImport.update({
+  id: '/media/blog/$file',
+  path: '/media/blog/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDesignCoverIdRoute = ApiDesignCoverIdRouteImport.update({
   id: '/api/design/cover/$id',
   path: '/api/design/cover/$id',
@@ -281,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
+  '/media/blog/$file': typeof MediaBlogFileRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
   '/api/design/oauth/callback': typeof ApiDesignOauthCallbackRoute
   '/api/design/oauth/start': typeof ApiDesignOauthStartRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
+  '/media/blog/$file': typeof MediaBlogFileRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
   '/api/design/oauth/callback': typeof ApiDesignOauthCallbackRoute
   '/api/design/oauth/start': typeof ApiDesignOauthStartRoute
@@ -364,6 +372,7 @@ export interface FileRoutesById {
   '/api/pilot/render': typeof ApiPilotRenderRoute
   '/blog/category/$category': typeof BlogCategoryCategoryRoute
   '/blog/tag/$tag': typeof BlogTagTagRoute
+  '/media/blog/$file': typeof MediaBlogFileRoute
   '/api/design/cover/$id': typeof ApiDesignCoverIdRoute
   '/api/design/oauth/callback': typeof ApiDesignOauthCallbackRoute
   '/api/design/oauth/start': typeof ApiDesignOauthStartRoute
@@ -407,6 +416,7 @@ export interface FileRouteTypes {
     | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
+    | '/media/blog/$file'
     | '/api/design/cover/$id'
     | '/api/design/oauth/callback'
     | '/api/design/oauth/start'
@@ -448,6 +458,7 @@ export interface FileRouteTypes {
     | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
+    | '/media/blog/$file'
     | '/api/design/cover/$id'
     | '/api/design/oauth/callback'
     | '/api/design/oauth/start'
@@ -489,6 +500,7 @@ export interface FileRouteTypes {
     | '/api/pilot/render'
     | '/blog/category/$category'
     | '/blog/tag/$tag'
+    | '/media/blog/$file'
     | '/api/design/cover/$id'
     | '/api/design/oauth/callback'
     | '/api/design/oauth/start'
@@ -529,6 +541,7 @@ export interface RootRouteChildren {
   ApiPilotRenderRoute: typeof ApiPilotRenderRoute
   BlogCategoryCategoryRoute: typeof BlogCategoryCategoryRoute
   BlogTagTagRoute: typeof BlogTagTagRoute
+  MediaBlogFileRoute: typeof MediaBlogFileRoute
   ApiDesignCoverIdRoute: typeof ApiDesignCoverIdRoute
   ApiDesignOauthCallbackRoute: typeof ApiDesignOauthCallbackRoute
   ApiDesignOauthStartRoute: typeof ApiDesignOauthStartRoute
@@ -781,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogTagTagRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/media/blog/$file': {
+      id: '/media/blog/$file'
+      path: '/media/blog/$file'
+      fullPath: '/media/blog/$file'
+      preLoaderRoute: typeof MediaBlogFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/design/cover/$id': {
       id: '/api/design/cover/$id'
       path: '/api/design/cover/$id'
@@ -871,6 +891,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPilotRenderRoute: ApiPilotRenderRoute,
   BlogCategoryCategoryRoute: BlogCategoryCategoryRoute,
   BlogTagTagRoute: BlogTagTagRoute,
+  MediaBlogFileRoute: MediaBlogFileRoute,
   ApiDesignCoverIdRoute: ApiDesignCoverIdRoute,
   ApiDesignOauthCallbackRoute: ApiDesignOauthCallbackRoute,
   ApiDesignOauthStartRoute: ApiDesignOauthStartRoute,

@@ -14,8 +14,16 @@ import { analytics } from "@/lib/analytics";
 import { useEffect } from "react";
 import { BLOG_CATEGORIES, formatDate, tagToSlug } from "@/lib/blog";
 import { fetchBlogPost } from "@/lib/blog-live";
+import { extractFaq } from "@/lib/mm-article";
 
 const SITE_URL = "https://eco-cub.ru";
+
+const absolute = (src: string | null | undefined): string | null =>
+  src
+    ? src.startsWith("http")
+      ? src
+      : `${SITE_URL}${src.startsWith("/") ? "" : "/"}${src}`
+    : null;
 
 export const Route = createFileRoute("/blog/$slug")({
   // Файлы + живая лента Медиамашины (см. blog-live.ts).
@@ -33,20 +41,36 @@ export const Route = createFileRoute("/blog/$slug")({
     // Telegram была общая картинка сайта, а не из статьи). Относительный
     // og:image Telegram и соцсети игнорируют и берут twitter:image из
     // __root — там общая заглавная вилла.
-    const cover = post.cover ? (post.cover.startsWith("http") ? post.cover : `${SITE_URL}${post.cover.startsWith("/") ? "" : "/"}${post.cover}`) : null;
+    const cover = absolute(post.ogImage) ?? absolute(post.cover);
+    const images = [
+      ...new Set([absolute(post.ogImage), absolute(post.cover)].filter(Boolean)),
+    ] as string[];
+    const description = post.seoDescription || post.excerpt || post.title;
+    const modified = post.updated && post.updated > post.date ? post.updated : post.date;
+    const keywords = post.keywords?.length ? post.keywords : post.tags;
+    const faq = extractFaq(post.content);
 
     return {
       meta: [
         { title: `${post.seoTitle} | EcoCub` },
-        { name: "description", content: post.seoDescription || post.excerpt || post.title },
+        { name: "description", content: description },
+        ...(post.keywords?.length ? [{ name: "keywords", content: post.keywords.join(", ") }] : []),
         { property: "og:url", content: url },
         { property: "og:type", content: "article" },
         { property: "og:title", content: post.title },
-        { property: "og:description", content: post.excerpt },
-        ...(cover ? [{ property: "og:image", content: cover }, { name: "twitter:image", content: cover }] : []),
+        { property: "og:description", content: description },
+        ...(cover
+          ? [
+              { property: "og:image", content: cover },
+              { name: "twitter:image", content: cover },
+            ]
+          : []),
         { name: "twitter:title", content: post.title },
-        { name: "twitter:description", content: post.seoDescription || post.excerpt || post.title },
+        { name: "twitter:description", content: description },
         { property: "article:published_time", content: post.date },
+        ...(modified !== post.date
+          ? [{ property: "article:modified_time", content: modified }]
+          : []),
         { property: "article:section", content: BLOG_CATEGORIES[post.category] },
         ...post.tags.map((tag) => ({ property: "article:tag", content: tag })),
         { name: "twitter:card", content: post.cover ? "summary_large_image" : "summary" },
@@ -60,12 +84,12 @@ export const Route = createFileRoute("/blog/$slug")({
             "@type": "Article",
             mainEntityOfPage: { "@type": "WebPage", "@id": url },
             headline: post.title,
-            description: post.seoDescription || post.excerpt,
-            ...(cover ? { image: [cover] } : {}),
+            description,
+            ...(images.length ? { image: images } : {}),
             datePublished: post.date,
-            dateModified: post.date,
+            dateModified: modified,
             articleSection: BLOG_CATEGORIES[post.category],
-            keywords: post.tags.join(", "),
+            keywords: keywords.join(", "),
             inLanguage: "ru-RU",
             author: { "@type": "Organization", name: "EcoCub", url: SITE_URL },
             publisher: {
@@ -88,6 +112,23 @@ export const Route = createFileRoute("/blog/$slug")({
             ],
           }),
         },
+        // FAQPage — из раздела «Вопросы и ответы» в тексте (лента ММ ставит его сама).
+        ...(faq.length
+          ? [
+              {
+                type: "application/ld+json",
+                children: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "FAQPage",
+                  mainEntity: faq.map((item) => ({
+                    "@type": "Question",
+                    name: item.question,
+                    acceptedAnswer: { "@type": "Answer", text: item.answer },
+                  })),
+                }),
+              },
+            ]
+          : []),
       ],
     };
   },
@@ -167,7 +208,10 @@ function BlogPostPage() {
             >
               <img
                 src={post.cover}
-                alt={post.title}
+                alt={post.coverAlt || post.title}
+                width={post.imageSizes?.[post.cover]?.width}
+                height={post.imageSizes?.[post.cover]?.height}
+                fetchPriority="high"
                 className="h-full w-full object-cover"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -177,7 +221,27 @@ function BlogPostPage() {
           )}
 
           <article className="prose prose-neutral mt-10 max-w-none prose-headings:font-bold prose-headings:uppercase prose-h2:text-2xl prose-a:text-accent prose-strong:text-foreground prose-table:text-sm">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={{
+                // Кадры в тексте — лениво и с размерами, если они известны (лента ММ).
+                img: ({ node: _node, src, alt, ...rest }) => {
+                  const size = typeof src === "string" ? post.imageSizes?.[src] : undefined;
+                  return (
+                    <img
+                      {...rest}
+                      src={src}
+                      alt={alt ?? ""}
+                      loading="lazy"
+                      decoding="async"
+                      width={size?.width ?? rest.width}
+                      height={size?.height ?? rest.height}
+                    />
+                  );
+                },
+              }}
+            >
               {post.content}
             </ReactMarkdown>
           </article>
