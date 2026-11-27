@@ -25,21 +25,28 @@ SSH=(ssh -i "$ROOT_KEY" -o BatchMode=yes -o LogLevel=ERROR "root@$HOST")
 case "${1:-put}" in
 put)
   read -r -s -p "Ключ Медиамашины, ввод не виден: " key; echo
-  [[ "$key" =~ ^[A-Za-z0-9_.-]{10,200}$ ]] || { echo "Не похоже на ключ — ничего не менял."; exit 1; }
-  printf '%s\n' "$key" | "${SSH[@]}" 'set -euo pipefail
-    read -r key
-    tmp=$(mktemp); trap "rm -f $tmp" EXIT
-    code=$(curl -s -o "$tmp" -w "%{http_code}" --max-time 20 \
-      -K - <<<"url = \"https://mediamachina.ru/api/site/v1/articles?limit=50&key=$key\"")
-    if [ "$code" != 200 ]; then echo "[main-1] лента ответила $code на этот ключ — никуда не записал"; exit 1; fi
-    umask 077; printf "%s\n" "$key" > /etc/ecocub-mm-key.pending
-    node -e "
-      const a = JSON.parse(require(\"fs\").readFileSync(process.argv[1], \"utf8\")).articles ?? [];
-      const out = [\"проверено: \" + new Date().toISOString(), \"статей в ленте: \" + a.length];
-      for (const x of a.slice(0, 15)) out.push(\"- \" + String(x.publishedAt ?? \"\").slice(0, 10) + \" | \" + x.slug + \" | \" + x.title);
-      require(\"fs\").writeFileSync(\"/var/lib/ecocub-mm-check.txt\", out.join(\"\\n\") + \"\\n\");
-    " "$tmp"
-    echo "[main-1] лента 200, ключ отложен на проверку (сайт его ещё не видит). Статей: $(sed -n 2p /var/lib/ecocub-mm-check.txt | grep -o "[0-9]*$")"'
+  # Вставка из буфера иногда приносит пробелы и невидимый \r по краям.
+  key=$(printf '%s' "$key" | tr -d '\r\n\t ')
+  if [ "${#key}" -lt 10 ] || [ "${#key}" -gt 500 ] || [[ "$key" == *[\"\'\\$\`]* ]]; then
+    echo "Не похоже на ключ (длина ${#key}) — ничего не менял. Скопируйте ключ ещё раз целиком."; exit 1
+  fi
+  # Ключ уходит на сервер через stdin; там его читает node и подставляет
+  # в адрес через encodeURIComponent — любые символы ключа безопасны.
+  printf '%s\n' "$key" | "${SSH[@]}" 'node -e '"'"'
+    const fs = require("fs");
+    const key = fs.readFileSync(0, "utf8").trim();
+    (async () => {
+      const r = await fetch("https://mediamachina.ru/api/site/v1/articles?limit=50&key=" + encodeURIComponent(key),
+        { signal: AbortSignal.timeout(20000) }).catch((e) => ({ status: "сеть: " + e.message }));
+      if (r.status !== 200) { console.log("[main-1] лента ответила " + r.status + " на этот ключ — никуда не записал"); process.exit(1); }
+      const a = (await r.json()).articles ?? [];
+      fs.writeFileSync("/etc/ecocub-mm-key.pending", key + "\n", { mode: 0o600 });
+      const out = ["проверено: " + new Date().toISOString(), "статей в ленте: " + a.length];
+      for (const x of a.slice(0, 15)) out.push("- " + String(x.publishedAt ?? "").slice(0, 10) + " | " + x.slug + " | " + x.title);
+      fs.writeFileSync("/var/lib/ecocub-mm-check.txt", out.join("\n") + "\n");
+      console.log("[main-1] лента 200, ключ отложен на проверку (сайт его ещё не видит). Статей: " + a.length);
+    })();
+  '"'"
   echo "Готово. Агент сверит, что статьи ЭкоКуба, и включит ключ сам."
   ;;
 activate)
