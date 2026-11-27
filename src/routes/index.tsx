@@ -25,7 +25,7 @@ import { site } from "@/lib/site";
 import { formatRubSpaced, homeSnippet, priceLabel } from "@/lib/seo";
 import { NO_FINISH_NOTE, PRICE_SCOPE } from "@/lib/site";
 import { QuickQuiz } from "@/components/QuickQuiz";
-import { getAllPosts } from "@/lib/blog";
+import { fetchBlogList } from "@/lib/blog-live";
 import { fetchProjects } from "@/lib/projects";
 import { analytics } from "@/lib/analytics";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
@@ -50,11 +50,11 @@ export const Route = createFileRoute("/")({
     ],
     links: [{ rel: "canonical", href: "https://eco-cub.ru" }],
   }),
-  // Статьи — из файлов репозитория, проекты — из базы через серверную функцию.
-  loader: async () => ({
-    projects: (await fetchProjects()).slice(0, 6) as ProjectCardData[],
-    posts: getAllPosts().slice(0, 3),
-  }),
+  // Статьи — файлы + живая лента Медиамашины, проекты — из базы; обе через серверные функции.
+  loader: async () => {
+    const [projects, posts] = await Promise.all([fetchProjects(), fetchBlogList()]);
+    return { projects: projects.slice(0, 6) as ProjectCardData[], posts: posts.slice(0, 3) };
+  },
   errorComponent: ({ error, reset }: { error: Error; reset: () => void }) => (
     <PageLayout>
       <Container className="py-32 text-center">

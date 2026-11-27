@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getAllPosts } from "@/lib/blog";
 
 const SITE_URL = "https://eco-cub.ru";
 const TITLE = "Блог EcoCub";
@@ -24,8 +23,10 @@ function rfc822(iso: string): string {
 export const Route = createFileRoute("/rss.xml")({
   server: {
     handlers: {
-      GET: () => {
-        const posts = getAllPosts();
+      GET: async () => {
+        // Файлы + живая лента Медиамашины; лента лежит — только файлы.
+        const { getLivePosts } = await import("@/lib/blog-feed.server");
+        const posts = await getLivePosts();
         const lastBuild = rfc822(posts[0]?.date ?? "");
 
         const items = posts

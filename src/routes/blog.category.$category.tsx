@@ -5,6 +5,7 @@ import { Container, Section } from "@/components/Container";
 import { BlogCard } from "@/components/BlogCard";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { BLOG_CATEGORIES, getPostsByCategory, type BlogCategory } from "@/lib/blog";
+import { fetchBlogList } from "@/lib/blog-live";
 
 const SITE_URL = "https://eco-cub.ru";
 
@@ -17,10 +18,10 @@ const descriptions: Record<BlogCategory, string> = {
 };
 
 export const Route = createFileRoute("/blog/category/$category")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const key = params.category as BlogCategory;
     if (!(key in BLOG_CATEGORIES)) throw notFound();
-    const posts = getPostsByCategory(key);
+    const posts = getPostsByCategory(key, await fetchBlogList());
     if (posts.length === 0) throw notFound();
     return { category: key, posts };
   },

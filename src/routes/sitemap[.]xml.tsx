@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getAllPosts, getCategories, getTags } from "@/lib/blog";
+import { getCategories, getTags } from "@/lib/blog";
 import { fetchProjects } from "@/lib/projects";
 import { fetchPublishedHouses } from "@/lib/house-projects";
 
@@ -39,15 +39,17 @@ export const Route = createFileRoute("/sitemap.xml")({
           urls.push(url(route, undefined, "weekly", route === "" ? "1.0" : "0.8"));
         }
 
-        // Блог — из локальных файлов. Не зависит ни от сети, ни от базы:
-        // если внешний сервис лежит, карта сайта всё равно полная по статьям.
-        for (const post of getAllPosts()) {
+        // Блог — файлы + живая лента Медиамашины. Лента не ответила —
+        // остаются файлы: карта сайта по статьям не пустеет никогда.
+        const { getLivePosts } = await import("@/lib/blog-feed.server");
+        const posts = await getLivePosts();
+        for (const post of posts) {
           urls.push(url(`/blog/${post.slug}`, post.date, "monthly", "0.7"));
         }
-        for (const category of getCategories()) {
+        for (const category of getCategories(posts)) {
           urls.push(url(`/blog/category/${category.key}`, undefined, "weekly", "0.5"));
         }
-        for (const tag of getTags()) {
+        for (const tag of getTags(posts)) {
           urls.push(url(`/blog/tag/${tag.slug}`, undefined, "weekly", "0.4"));
         }
 

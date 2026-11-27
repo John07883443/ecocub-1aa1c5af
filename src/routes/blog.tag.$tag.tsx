@@ -5,14 +5,16 @@ import { Container, Section } from "@/components/Container";
 import { BlogCard } from "@/components/BlogCard";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { getPostsByTag, getTagBySlug } from "@/lib/blog";
+import { fetchBlogList } from "@/lib/blog-live";
 
 const SITE_URL = "https://eco-cub.ru";
 
 export const Route = createFileRoute("/blog/tag/$tag")({
-  loader: ({ params }) => {
-    const tag = getTagBySlug(params.tag);
+  loader: async ({ params }) => {
+    const all = await fetchBlogList();
+    const tag = getTagBySlug(params.tag, all);
     if (!tag) throw notFound();
-    const posts = getPostsByTag(tag);
+    const posts = getPostsByTag(tag, all);
     if (posts.length === 0) throw notFound();
     return { tag, tagSlug: params.tag, posts };
   },

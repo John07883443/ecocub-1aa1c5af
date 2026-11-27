@@ -4,13 +4,16 @@ import { Container, Section } from "@/components/Container";
 import { BlogCard } from "@/components/BlogCard";
 import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
-import { getAllPosts, getCategories, getTags } from "@/lib/blog";
+import { getCategories, getTags } from "@/lib/blog";
+import { fetchBlogList } from "@/lib/blog-live";
 
 const SITE_URL = "https://eco-cub.ru";
 
 export const Route = createFileRoute("/blog/")({
-  head: () => {
-    const posts = getAllPosts();
+  // Файлы + живая лента Медиамашины (см. blog-live.ts).
+  loader: async () => ({ posts: await fetchBlogList() }),
+  head: ({ loaderData }) => {
+    const posts = loaderData?.posts ?? [];
     return {
       meta: [
         { title: "Блог EcoCub — статьи о монолитно-модульных домах из бетона" },
@@ -63,9 +66,9 @@ export const Route = createFileRoute("/blog/")({
 
 function BlogPage() {
   usePageEngagement("blog");
-  const posts = getAllPosts();
-  const categories = getCategories();
-  const tags = getTags();
+  const { posts } = Route.useLoaderData();
+  const categories = getCategories(posts);
+  const tags = getTags(posts);
 
   return (
     <PageLayout>

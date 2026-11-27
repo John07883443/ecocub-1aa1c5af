@@ -12,15 +12,17 @@ import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { analytics } from "@/lib/analytics";
 import { useEffect } from "react";
-import { BLOG_CATEGORIES, formatDate, getPostBySlug, getRelatedPosts, tagToSlug } from "@/lib/blog";
+import { BLOG_CATEGORIES, formatDate, tagToSlug } from "@/lib/blog";
+import { fetchBlogPost } from "@/lib/blog-live";
 
 const SITE_URL = "https://eco-cub.ru";
 
 export const Route = createFileRoute("/blog/$slug")({
-  loader: ({ params }) => {
-    const post = getPostBySlug(params.slug);
-    if (!post) throw notFound();
-    return { post, related: getRelatedPosts(post) };
+  // Файлы + живая лента Медиамашины (см. blog-live.ts).
+  loader: async ({ params }) => {
+    const found = await fetchBlogPost({ data: params.slug });
+    if (!found) throw notFound();
+    return found;
   },
 
   head: ({ loaderData }) => {

@@ -1,10 +1,12 @@
 /**
- * Блог на локальных файлах.
+ * Блог: статьи из файлов + живая лента Медиамашины.
  *
- * Единственный источник статей — каталог content/blog/*.md.
- * Никакой базы данных и никакой внешней CMS здесь нет и быть не должно:
- * статьи попадают на сайт коммитом, версионируются вместе с кодом
- * и собираются в статику на этапе сборки.
+ * Здесь — файловая часть: каталог content/blog/*.md, собранный в бандл.
+ * Это гарантированный минимум: он есть всегда, даже если лента лежит.
+ * Живая лента (новые статьи без коммита и пересборки) подмешивается на
+ * сервере в blog-feed.server.ts, маршруты получают итоговый список через
+ * серверные функции из blog-live.ts. Все выборки ниже принимают список
+ * статей параметром — по умолчанию файловый.
  *
  * Файлы читаются через import.meta.glob с eager: true — то есть на этапе
  * сборки, а не в рантайме. В собранном бандле остаются готовые данные,
@@ -35,6 +37,8 @@ export type BlogPost = {
   seoDescription: string;
   /** uid статьи в Тильде — нужен для 301-редиректов со старых адресов /tpost/ */
   legacyUid: string | null;
+  /** id материала в Медиамашине — по нему файл и лента не задваиваются */
+  sourceId?: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -131,12 +135,11 @@ function buildPosts(): BlogPost[] {
       seoTitle: asString(data.seoTitle, title),
       seoDescription: asString(data.seoDescription, asString(data.excerpt)),
       legacyUid: asString(data.legacyUid) || null,
+      sourceId: asString(data.sourceId) || null,
     });
   }
 
-  // Свежие сверху. При равных датах — по алфавиту, чтобы порядок был
-  // детерминированным и сборка воспроизводимой.
-  return posts.sort((a, b) => (b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug)));
+  return sortPosts(posts);
 }
 
 const allPosts = buildPosts();
@@ -149,34 +152,41 @@ export function getAllPosts(): BlogPost[] {
   return allPosts;
 }
 
-export function getPostBySlug(slug: string): BlogPost | undefined {
-  return allPosts.find((p) => p.slug === slug);
+export function getPostBySlug(slug: string, posts: BlogPost[] = allPosts): BlogPost | undefined {
+  return posts.find((p) => p.slug === slug);
 }
 
-export function getPostsByCategory(category: string): BlogPost[] {
-  return allPosts.filter((p) => p.category === category);
+export function getPostsByCategory(category: string, posts: BlogPost[] = allPosts): BlogPost[] {
+  return posts.filter((p) => p.category === category);
 }
 
-export function getPostsByTag(tag: string): BlogPost[] {
+export function getPostsByTag(tag: string, posts: BlogPost[] = allPosts): BlogPost[] {
   const needle = tag.toLowerCase();
-  return allPosts.filter((p) => p.tags.some((t) => t.toLowerCase() === needle));
+  return posts.filter((p) => p.tags.some((t) => t.toLowerCase() === needle));
+}
+
+/** Свежие сверху; при равных датах — по адресу, чтобы порядок не прыгал. */
+export function sortPosts(posts: BlogPost[]): BlogPost[] {
+  return posts.sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug));
 }
 
 /** Категории, в которых реально есть статьи, с количеством. */
-export function getCategories(): Array<{ key: BlogCategory; label: string; count: number }> {
+export function getCategories(
+  posts: BlogPost[] = allPosts,
+): Array<{ key: BlogCategory; label: string; count: number }> {
   return (Object.keys(BLOG_CATEGORIES) as BlogCategory[])
     .map((key) => ({
       key,
       label: BLOG_CATEGORIES[key],
-      count: allPosts.filter((p) => p.category === key).length,
+      count: posts.filter((p) => p.category === key).length,
     }))
     .filter((c) => c.count > 0);
 }
 
 /** Все теги с количеством статей, по убыванию частоты. */
-export function getTags(): Array<{ tag: string; slug: string; count: number }> {
+export function getTags(posts: BlogPost[] = allPosts): Array<{ tag: string; slug: string; count: number }> {
   const counts = new Map<string, number>();
-  for (const post of allPosts) {
+  for (const post of posts) {
     for (const tag of post.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
   return [...counts.entries()]
@@ -206,16 +216,16 @@ export function tagToSlug(tag: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function getTagBySlug(slug: string): string | undefined {
-  return getTags().find((t) => t.slug === slug)?.tag;
+export function getTagBySlug(slug: string, posts: BlogPost[] = allPosts): string | undefined {
+  return getTags(posts).find((t) => t.slug === slug)?.tag;
 }
 
 /**
  * Похожие статьи: сначала совпадение по тегам, затем по категории.
  * Нужны для перелинковки — без неё статьи не передают друг другу вес.
  */
-export function getRelatedPosts(post: BlogPost, limit = 3): BlogPost[] {
-  const scored = allPosts
+export function getRelatedPosts(post: BlogPost, limit = 3, posts: BlogPost[] = allPosts): BlogPost[] {
+  const scored = posts
     .filter((p) => p.slug !== post.slug)
     .map((p) => ({
       post: p,
@@ -230,7 +240,7 @@ export function getRelatedPosts(post: BlogPost, limit = 3): BlogPost[] {
 
   // Добираем свежими, если по тегам не хватило.
   if (result.length < limit) {
-    for (const p of allPosts) {
+    for (const p of posts) {
       if (result.length >= limit) break;
       if (p.slug !== post.slug && !result.includes(p)) result.push(p);
     }
