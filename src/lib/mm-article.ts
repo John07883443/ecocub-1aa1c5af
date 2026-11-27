@@ -41,6 +41,8 @@ export type MmArticle = {
   imageAlts?: Record<string, string>;
   publishedAt?: string;
   updatedAt?: string;
+  /** Тип материала ММ (news, guide, review…), если рубрики нет. */
+  type?: string;
 };
 
 export type FaqEntry = { question: string; answer: string };
@@ -109,6 +111,42 @@ function normalizeBlock(raw: string): string {
   if (!match || text.includes("\n")) return text;
   const level = Math.min(3, Math.max(2, match[1].length));
   return `${"#".repeat(level)} ${match[2].replace(/\s*#+\s*$/, "").trim()}`;
+}
+
+/**
+ * Описание собрано ММ автоматически из начала текста, а не написано отдельно:
+ * совпадает с началом абзацев (без пробелов и регистра) или обрезано «…»
+ * на полуслове внутри текста.
+ */
+export function isAutoDescription(description: string, paragraphs: unknown[]): boolean {
+  const text = description.replace(/(…|\.\.\.)\s*$/, "");
+  const key = normalizeTag(text);
+  if (!key) return false;
+  const list = paragraphs.filter((p): p is string => typeof p === "string");
+  // Описание, равное первому абзацу целиком, — написанный лид (его просто не повторяем).
+  if (list.length && key === normalizeTag(list[0])) return false;
+  const body = normalizeTag(list.join(" "));
+  if (body.startsWith(key)) return true;
+  return /(…|\.\.\.)\s*$/.test(description) && key.length > 40 && body.includes(key.slice(-40));
+}
+
+/** Короткая строка без точки в конце — надзаголовок, а не абзац. */
+function isDek(block: string): boolean {
+  return (
+    !isHeading(block) &&
+    !block.startsWith("![") &&
+    !block.includes("\n") &&
+    block.length <= 140 &&
+    !/[.!?…:;»"]$/.test(block.trim())
+  );
+}
+
+/** Первое предложение абзаца и остаток. null — абзац не делится (одно предложение без точки). */
+function splitFirstSentence(block: string): { sentence: string; rest: string } | null {
+  if (block.includes("\n") || /^[-*+]\s|^\d+\.\s/.test(block)) return null;
+  const match = /^(.{20,}?[.!?…])(?:\s+)(?=[«"(A-ZА-ЯЁ0-9])/.exec(block);
+  if (!match) return /[.!?…]$/.test(block) ? { sentence: block, rest: "" } : null;
+  return { sentence: match[1], rest: block.slice(match[0].length).trim() };
 }
 
 /** Обрезка по границе слова, с многоточием, если пришлось резать. */
@@ -265,8 +303,18 @@ export function buildMmPost(article: MmArticle, options: BuildOptions): MmPost |
     .filter((p): p is string => typeof p === "string" && p.trim() !== "")
     .map(normalizeBlock);
 
+  // Описание, которое ММ собрала сама из начала текста (подзаголовок + обрезанный
+  // первый абзац с «…»), — не описание: берём своё из текста.
+  const rawDescription = String(article.description ?? "").trim();
+  const autoDescription = isAutoDescription(rawDescription, article.paragraphs ?? []);
+  const ownDescription = autoDescription ? "" : rawDescription.replace(/\s+/g, " ");
+
+  // Подзаголовок-«надзаголовок» первой строкой (короткий, без точки) — это не
+  // абзац: на странице он склеивался с анонсом. Убираем из текста.
+  if (blocks.length > 1 && isDek(blocks[0]) && !isHeading(blocks[1])) blocks.shift();
+
   // Повтор заголовка или лида в первом абзаце — на странице он уже в шапке.
-  const lead = normalizeTag(article.description);
+  const lead = normalizeTag(ownDescription);
   while (
     blocks.length &&
     !isHeading(blocks[0]) &&
@@ -281,8 +329,26 @@ export function buildMmPost(article: MmArticle, options: BuildOptions): MmPost |
     normalizeTag(plainText(blocks[0])) === normalizeTag(title)
   )
     blocks.shift();
-  const textBlocks = blocks.filter((block) => !isHeading(block));
+  let textBlocks = blocks.filter((block) => !isHeading(block));
   if (textBlocks.length === 0) return null;
+
+  // Без своего описания анонс под заголовком — первое предложение текста,
+  // и в тексте оно второй раз не повторяется.
+  let leadSentence = "";
+  if (!ownDescription) {
+    const firstIndex = blocks.findIndex((block) => !isHeading(block) && !block.startsWith("!["));
+    const split = firstIndex === -1 ? null : splitFirstSentence(blocks[firstIndex]);
+    if (split) {
+      leadSentence = plainText(split.sentence);
+      const rest = blocks.filter((block) => !isHeading(block)).length > 1 || split.rest;
+      if (rest) {
+        blocks = split.rest
+          ? blocks.map((block, index) => (index === firstIndex ? split.rest : block))
+          : blocks.filter((_, index) => index !== firstIndex);
+        textBlocks = blocks.filter((block) => !isHeading(block));
+      }
+    }
+  }
 
   const cover = options.localize(article.cover, 0);
   if (!cover) return null;
@@ -367,9 +433,12 @@ export function buildMmPost(article: MmArticle, options: BuildOptions): MmPost |
   }
 
   const firstText = plainText(textBlocks[0]);
-  const description = String(article.description ?? "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const description = ownDescription;
+  const announce = description || leadSentence || firstText;
+  // Для поиска нужно 140–160 знаков: короткий анонс дополняем текстом.
+  const searchText =
+    description ||
+    clip([leadSentence, ...textBlocks.map(plainText)].filter(Boolean).join(" "), 160);
   const words = textBlocks.map(plainText).join(" ").split(/\s+/).filter(Boolean).length;
   const date = isoDay(article.publishedAt);
   const updated = isoDay(article.updatedAt);
@@ -377,13 +446,17 @@ export function buildMmPost(article: MmArticle, options: BuildOptions): MmPost |
   return {
     slug,
     title,
-    excerpt: clip(description || firstText, 300),
+    excerpt: clip(announce, 300),
     seoTitle: clip(title, 70),
-    seoDescription: clip(description || firstText, 160),
+    seoDescription: clip(searchText, 160),
     content: body.join("\n\n"),
     cover,
     coverAlt: altFor(article.cover, 0),
-    category: rubricToCategory(article.rubric, options.fallbackCategory ?? "news"),
+    // Рубрики нет — по типу материала; без типа это статья, а не новость.
+    category: rubricToCategory(
+      article.rubric || article.type,
+      options.fallbackCategory ?? "guides",
+    ),
     tags: mapTags(article.tags, options.vocabulary),
     keywords: parseKeywords(article.keywords),
     date,

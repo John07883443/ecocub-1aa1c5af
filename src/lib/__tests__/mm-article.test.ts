@@ -181,7 +181,7 @@ test("старый формат ленты (без новых полей) по-�
     },
     { localize, vocabulary },
   )!;
-  assert.equal(post.category, "news");
+  assert.equal(post.category, "guides");
   assert.deepEqual(post.keywords, []);
   assert.equal(post.content, "Текст.");
 });
@@ -223,4 +223,40 @@ test("images[] объектами {url, alt, caption}, кадр строкой �
     post.content,
     /!\[Свой alt\]\(\/media\/blog\/x-2[^)]* "Создано ИИ"\)\n\n## Раздел два/,
   );
+});
+
+test("первая статья ММ: авто-описание и надзаголовок не склеиваются, анонс не дублируется, без рубрики — «Гайды»", () => {
+  const p1 =
+    "Вы выбрали или уже купили участок в Подмосковье и хотите капитальный дом из заводских бетонных модулей. Модули приезжают с завода, и кажется, что остаётся немного.";
+  const post = buildMmPost(
+    {
+      ...base,
+      rubric: undefined,
+      faq: undefined,
+      keywords: undefined,
+      imageAlts: undefined,
+      images: [],
+      description: `Участок нельзя доделать потом: пять шагов до приезда модулей
+
+${p1.slice(0, 120)}…`,
+      paragraphs: [
+        "Участок нельзя доделать потом: пять шагов до приезда модулей",
+        p1,
+        "Но в модульной стройке участок нельзя «доделать потом».",
+      ],
+    },
+    { localize, vocabulary },
+  )!;
+  assert.equal(
+    post.excerpt,
+    "Вы выбрали или уже купили участок в Подмосковье и хотите капитальный дом из заводских бетонных модулей.",
+  );
+  assert.doesNotMatch(post.excerpt, /пять шагов|…/);
+  assert.ok(post.content.startsWith("Модули приезжают с завода"));
+  assert.doesNotMatch(post.content, /Участок нельзя доделать потом: пять шагов/);
+  assert.doesNotMatch(post.content, /Вы выбрали или уже купили/);
+  assert.ok(post.seoDescription.length > 100 && post.seoDescription.length <= 160);
+  assert.equal(post.category, "guides");
+  const news = buildMmPost({ ...base, rubric: undefined, type: "news" }, { localize, vocabulary })!;
+  assert.equal(news.category, "news");
 });
