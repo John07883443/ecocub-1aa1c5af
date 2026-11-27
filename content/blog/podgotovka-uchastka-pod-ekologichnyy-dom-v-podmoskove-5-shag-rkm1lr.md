@@ -3,7 +3,7 @@ title: "Подготовка участка под экологичный дом
 slug: podgotovka-uchastka-pod-ekologichnyy-dom-v-podmoskove-5-shag-rkm1lr
 date: 2026-11-27
 category: guides
-tags: []
+tags: ["участок"]
 excerpt: "Вы выбрали или уже купили участок в Подмосковье и хотите капитальный дом из заводских бетонных модулей."
 cover: /images/blog/podgotovka-uchastka-pod-ekologichnyy-dom-v-podmoskove-5-shag-cover-a04b1abf.webp
 coverAlt: "Обложка статьи: Подготовка участка под экологичный дом в Подмосковье: 5 шагов"

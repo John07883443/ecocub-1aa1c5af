@@ -13,6 +13,8 @@
  * обращений к файловой системе на боевом сервере не происходит.
  */
 
+import { pickRelated } from "./related";
+
 export const BLOG_CATEGORIES = {
   tech: "Технология",
   comparison: "Сравнения",
@@ -279,35 +281,16 @@ export function getTagBySlug(slug: string, posts: BlogPost[] = allPosts): string
 }
 
 /**
- * Похожие статьи: сначала совпадение по тегам, затем по категории.
- * Нужны для перелинковки — без неё статьи не передают друг другу вес.
+ * «Читать дальше»: самые близкие по смыслу статьи из всех статей сайта
+ * (старые файлы и лента ММ вместе). Формула и порог — в related.ts
+ * (перенос из эталона media-block); без общего признака — добор свежими.
  */
 export function getRelatedPosts(
   post: BlogPost,
   limit = 3,
   posts: BlogPost[] = allPosts,
 ): BlogPost[] {
-  const scored = posts
-    .filter((p) => p.slug !== post.slug)
-    .map((p) => ({
-      post: p,
-      score:
-        p.tags.filter((t) => post.tags.includes(t)).length * 2 +
-        (p.category === post.category ? 1 : 0),
-    }))
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score || b.post.date.localeCompare(a.post.date));
-
-  const result = scored.slice(0, limit).map((x) => x.post);
-
-  // Добираем свежими, если по тегам не хватило.
-  if (result.length < limit) {
-    for (const p of posts) {
-      if (result.length >= limit) break;
-      if (p.slug !== post.slug && !result.includes(p)) result.push(p);
-    }
-  }
-  return result;
+  return pickRelated(post, posts, limit);
 }
 
 /** Карта старых адресов Тильды на новые — для 301-редиректов. */

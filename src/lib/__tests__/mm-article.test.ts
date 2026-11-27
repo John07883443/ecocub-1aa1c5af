@@ -260,3 +260,16 @@ ${p1.slice(0, 120)}…`,
   const news = buildMmPost({ ...base, rubric: undefined, type: "news" }, { localize, vocabulary })!;
   assert.equal(news.category, "news");
 });
+
+test("хэштеги ММ слитно и в другом падеже попадают в теги блога", () => {
+  const vocab = new Map([
+    ["участок", "участок"],
+    ["ценаисмета", "цена и смета"],
+    ["монолит", "монолит"],
+  ]);
+  const post = buildMmPost(
+    { ...base, tags: ["ПодготовкаУчастка", "ЭкологичныйДом", "СметаИЦена", "ДомВПодмосковье"] },
+    { localize, vocabulary: vocab },
+  )!;
+  assert.deepEqual(post.tags, ["участок", "цена и смета"]);
+});

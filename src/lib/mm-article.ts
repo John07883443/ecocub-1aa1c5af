@@ -193,13 +193,29 @@ export function rubricToCategory(rubric: unknown, fallback: MmCategory = "news")
   return fallback;
 }
 
+/**
+ * Хэштег ММ слитно и в другом падеже («ПодготовкаУчастка») ↔ тег блога
+ * («участок»): все значимые слова тега (от 4 букв) должны встретиться в
+ * хэштеге своей основой — первыми 5 буквами.
+ */
+function stemsMatch(key: string, tag: string): boolean {
+  const words = tag
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .split(/[^a-zа-я0-9]+/)
+    .filter((w) => w.length >= 4);
+  return words.length > 0 && words.every((w) => key.includes(w.slice(0, 5)));
+}
+
 export function mapTags(feedTags: string[] | undefined, vocabulary: Map<string, string>): string[] {
   const picked: string[] = [];
   for (const feedTag of feedTags ?? []) {
     const key = normalizeTag(feedTag);
     if (!key) continue;
     for (const [norm, tag] of vocabulary) {
-      if ((key === norm || key.includes(norm)) && !picked.includes(tag)) picked.push(tag);
+      if ((key === norm || key.includes(norm) || stemsMatch(key, tag)) && !picked.includes(tag)) {
+        picked.push(tag);
+      }
     }
   }
   return picked.slice(0, MAX_TAGS);
