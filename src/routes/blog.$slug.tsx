@@ -18,6 +18,9 @@ import { extractFaq } from "@/lib/mm-article";
 
 const SITE_URL = "https://eco-cub.ru";
 
+/** JSON-LD без «</»: текст ленты не может закрыть <script>. */
+const ld = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
+
 const absolute = (src: string | null | undefined): string | null =>
   src
     ? src.startsWith("http")
@@ -79,7 +82,7 @@ export const Route = createFileRoute("/blog/$slug")({
       scripts: [
         {
           type: "application/ld+json",
-          children: JSON.stringify({
+          children: ld({
             "@context": "https://schema.org",
             "@type": "Article",
             mainEntityOfPage: { "@type": "WebPage", "@id": url },
@@ -102,7 +105,7 @@ export const Route = createFileRoute("/blog/$slug")({
         },
         {
           type: "application/ld+json",
-          children: JSON.stringify({
+          children: ld({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
@@ -117,7 +120,7 @@ export const Route = createFileRoute("/blog/$slug")({
           ? [
               {
                 type: "application/ld+json",
-                children: JSON.stringify({
+                children: ld({
                   "@context": "https://schema.org",
                   "@type": "FAQPage",
                   mainEntity: faq.map((item) => ({
@@ -225,6 +228,36 @@ function BlogPostPage() {
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
               components={{
+                // Ссылки: свои — как есть, чужие https — в новой вкладке; опасные
+                // (javascript:, data:) react-markdown обнуляет — тогда просто текст.
+                a: ({ node: _node, href, children, ...rest }) => {
+                  if (!href) return <span>{children}</span>;
+                  const external = /^https?:\/\//.test(href) && !href.startsWith(SITE_URL);
+                  return (
+                    <a
+                      {...rest}
+                      href={href}
+                      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    >
+                      {children}
+                    </a>
+                  );
+                },
+                // Кадр с подписью отдельной строкой — <figure> с <figcaption>.
+                p: ({ node, children, ...rest }) => {
+                  const only = node?.children?.length === 1 ? node.children[0] : null;
+                  const title =
+                    only && only.type === "element" && only.tagName === "img"
+                      ? String(only.properties?.title ?? "")
+                      : "";
+                  if (!title) return <p {...rest}>{children}</p>;
+                  return (
+                    <figure>
+                      {children}
+                      <figcaption>{title}</figcaption>
+                    </figure>
+                  );
+                },
                 // Кадры в тексте — лениво и с размерами, если они известны (лента ММ).
                 img: ({ node: _node, src, alt, ...rest }) => {
                   const size = typeof src === "string" ? post.imageSizes?.[src] : undefined;

@@ -192,3 +192,35 @@ test("имя файла кадра латиницей и устойчиво", ()
   assert.equal(name, imageBaseName("podgotovka-uchastka-rkm1lr", 0, "https://x/c.png"));
   assert.equal(clip("короткий", 10), "короткий");
 });
+
+test("images[] объектами {url, alt, caption}, кадр строкой в тексте — на наш домен", () => {
+  const post = buildMmPost(
+    {
+      ...base,
+      images: [
+        {
+          url: "https://mediamachina.ru/gallery-images/o.png",
+          alt: "Свой alt",
+          caption: "Создано ИИ",
+        },
+      ],
+      imageAlts: {},
+      paragraphs: [
+        "Первый абзац.",
+        "## Раздел один",
+        "Текст.",
+        "![подпись ленты](https://mediamachina.ru/gallery-images/i.png)",
+        "## Раздел два",
+        "Текст два.",
+      ],
+    },
+    { localize, vocabulary },
+  )!;
+  assert.doesNotMatch(post.content, /mediamachina\.ru/);
+  assert.match(post.content, /!\[подпись ленты\]\(\/media\/blog\/x-1/);
+  // кадр из images[] — перед вторым H2, с подписью
+  assert.match(
+    post.content,
+    /!\[Свой alt\]\(\/media\/blog\/x-2[^)]* "Создано ИИ"\)\n\n## Раздел два/,
+  );
+});

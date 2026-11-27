@@ -23,6 +23,8 @@
 
 export type MmFaqItem = { question?: string; answer?: string; q?: string; a?: string };
 
+export type MmImage = { url?: string; alt?: string; caption?: string };
+
 export type MmArticle = {
   id?: string | number;
   slug?: string;
@@ -30,7 +32,8 @@ export type MmArticle = {
   description?: string;
   paragraphs?: string[];
   cover?: string | null;
-  images?: string[];
+  /** Адрес или {url, alt, caption}. */
+  images?: Array<string | MmImage>;
   tags?: string[];
   keywords?: string[] | string;
   rubric?: string;
@@ -87,6 +90,9 @@ export const isHttpsUrl = (value: unknown): value is string =>
 
 /** Текст ленты — обычные абзацы, не HTML: экранируем то, что rehype-raw принял бы за разметку. */
 const escapeHtml = (text: string) => text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const INLINE_IMAGE = /^!\[([^\]]*)\]\((\S+?)(?:\s+"([^"]*)")?\)$/;
+const escapeCaption = (text: string) =>
+  text.replace(/["\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 const escapeAlt = (text: string) =>
   text
     .replace(/[[\]\n]/g, " ")
@@ -288,29 +294,67 @@ export function buildMmPost(article: MmArticle, options: BuildOptions): MmPost |
 
   blocks = linkConstructor(blocks);
 
-  // Кадры — между абзацами, а не в конце и не сразу под подзаголовком.
-  const inline: Array<{ src: string; alt: string }> = [];
-  for (const url of article.images ?? []) {
-    if (!isHttpsUrl(url) || url === article.cover) continue;
-    const src = options.localize(url, inline.length + 1);
-    if (src) inline.push({ src, alt: altFor(url, inline.length + 1) });
+  // Кадры, стоящие в тексте строкой «![alt](url)», — тоже на наш домен.
+  let nextIndex = 1;
+  const usedUrls = new Set<string>([article.cover]);
+  const imageMd = (img: { src: string; alt: string; caption: string }) =>
+    `![${img.alt}](${img.src}${img.caption ? ` "${img.caption}"` : ""})`;
+  blocks = blocks.flatMap((block) => {
+    const match = INLINE_IMAGE.exec(block);
+    if (!match) return [block];
+    const url = match[2].replace(/&amp;/g, "&");
+    if (!isHttpsUrl(url)) return [];
+    const src = usedUrls.has(url) ? null : options.localize(url, nextIndex);
+    if (!src) return [];
+    usedUrls.add(url);
+    const alt = escapeAlt(String(alts[url] ?? "")) || escapeAlt(match[1]) || altFor(url, nextIndex);
+    nextIndex += 1;
+    return [imageMd({ src, alt, caption: escapeCaption(match[3] ?? "") })];
+  });
+
+  // Кадры из images[]: перед 2-м, 3-м… подзаголовком H2 (эталон media-block);
+  // если подзаголовков мало — между абзацами, не сразу под подзаголовком.
+  const inline: Array<{ src: string; alt: string; caption: string }> = [];
+  for (const item of article.images ?? []) {
+    const url = typeof item === "string" ? item : item?.url;
+    if (!isHttpsUrl(url) || usedUrls.has(url)) continue;
+    const src = options.localize(url, nextIndex);
+    if (!src) continue;
+    usedUrls.add(url);
+    const own = typeof item === "string" ? "" : escapeAlt(String(item.alt ?? ""));
+    inline.push({
+      src,
+      alt: escapeAlt(String(alts[url] ?? "")) || own || altFor(url, nextIndex),
+      caption: typeof item === "string" ? "" : escapeCaption(String(item.caption ?? "")),
+    });
+    nextIndex += 1;
   }
-  const step =
-    inline.length > 0 ? Math.max(2, Math.floor(textBlocks.length / (inline.length + 1))) : 0;
   const body: string[] = [];
   let placed = 0;
-  let seenText = 0;
-  for (const block of blocks) {
-    body.push(block);
-    if (isHeading(block)) continue;
-    seenText += 1;
-    if (step > 0 && placed < inline.length && seenText > 1 && seenText % step === 0) {
-      body.push(`![${inline[placed].alt}](${inline[placed].src})`);
-      placed += 1;
+  const h2Count = blocks.filter((block) => /^## /.test(block)).length;
+  if (h2Count >= 2) {
+    let h2Seen = 0;
+    for (const block of blocks) {
+      if (/^## /.test(block)) {
+        h2Seen += 1;
+        if (h2Seen >= 2 && placed < inline.length) body.push(imageMd(inline[placed++]));
+      }
+      body.push(block);
+    }
+  } else {
+    const step =
+      inline.length > 0 ? Math.max(2, Math.floor(textBlocks.length / (inline.length + 1))) : 0;
+    let seenText = 0;
+    for (const block of blocks) {
+      body.push(block);
+      if (isHeading(block)) continue;
+      seenText += 1;
+      if (step > 0 && placed < inline.length && seenText > 1 && seenText % step === 0) {
+        body.push(imageMd(inline[placed++]));
+      }
     }
   }
-  for (; placed < inline.length; placed += 1)
-    body.push(`![${inline[placed].alt}](${inline[placed].src})`);
+  for (; placed < inline.length; placed += 1) body.push(imageMd(inline[placed]));
 
   // Вопросы и ответы — отдельным разделом в конце, если ММ не поставила его сама.
   const faq = parseFaq(article.faq);

@@ -36,6 +36,7 @@ type Size = { width: number; height: number };
 const sources = new Map<string, string>(); // имя файла → адрес ММ
 const sizes = new Map<string, Size>(); // имя файла → размеры готового кадра
 const inflight = new Map<string, Promise<Buffer | null>>();
+const failed = new Set<string>(); // имя файла: кадр не скачался или не перегнался
 let lastProblem = "";
 
 /** Кадр ленты → адрес на нашем домене. index 0 — обложка (для неё же готовим og). */
@@ -51,6 +52,16 @@ export function ogImageFor(cover: string | null): string | null {
   if (!cover?.startsWith(MEDIA_PREFIX) || !cover.endsWith(".webp")) return null;
   const og = `${cover.slice(MEDIA_PREFIX.length, -".webp".length)}-og.jpg`;
   return sources.has(og) ? `${MEDIA_PREFIX}${og}` : null;
+}
+
+/**
+ * Кадр не удалось перегнать (слишком большой, битый, ММ не отдала) — адрес
+ * на ММ, чтобы читатель видел картинку, а не дыру. Иначе null.
+ */
+export function mediaFallback(src: string): string | null {
+  if (!src.startsWith(MEDIA_PREFIX)) return null;
+  const file = src.slice(MEDIA_PREFIX.length);
+  return failed.has(file) ? (sources.get(file) ?? null) : null;
 }
 
 /** Размеры готового кадра (для width/height), если он уже перегнан. */
@@ -102,12 +113,14 @@ async function produce(file: string): Promise<Buffer | null> {
     const size = { width: converted.width, height: converted.height };
     await writeFile(sidecar, JSON.stringify(size));
     sizes.set(file, size);
+    failed.delete(file);
     lastProblem = "";
     return converted.data;
   } catch (error) {
     const problem = error instanceof Error ? error.message : String(error);
     if (problem !== lastProblem) console.warn(`[blog-media] ${file}: ${problem}`);
     lastProblem = problem;
+    failed.add(file);
     return null;
   }
 }

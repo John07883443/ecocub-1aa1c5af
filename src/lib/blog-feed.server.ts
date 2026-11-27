@@ -29,7 +29,13 @@
 
 import { getAllPosts, sortPosts, type BlogPost } from "./blog";
 import { buildMmPost, type MmArticle } from "./mm-article";
-import { localizeFeedImage, mediaSizes, ogImageFor, prewarmMedia } from "./blog-media.server";
+import {
+  localizeFeedImage,
+  mediaFallback,
+  mediaSizes,
+  ogImageFor,
+  prewarmMedia,
+} from "./blog-media.server";
 
 const FEED = process.env.MM_FEED ?? "https://mediamachina.ru/api/site/v1/articles";
 const LIMIT = 50;
@@ -137,15 +143,29 @@ async function feedPosts(): Promise<BlogPost[]> {
   return currentPosts();
 }
 
-/** Размеры готовых кадров ленты — для width/height у <img>. */
+/**
+ * Размеры готовых кадров ленты — для width/height у <img>. Кадр, который не
+ * удалось перегнать, показываем с адреса ММ, а не дырой.
+ */
 function withSizes(post: BlogPost): BlogPost {
   if (!post.cover?.startsWith("/media/")) return post;
   const srcs = [
     post.cover,
-    ...[...post.content.matchAll(/\]\((\/media\/blog\/[^)\s]+)\)/g)].map((m) => m[1]),
+    ...[...post.content.matchAll(/\]\((\/media\/blog\/[^)\s]+)/g)].map((m) => m[1]),
   ];
+  let next = post;
+  for (const src of srcs) {
+    const fallback = mediaFallback(src);
+    if (!fallback) continue;
+    next = {
+      ...next,
+      cover: next.cover === src ? fallback : next.cover,
+      ogImage: next.cover === src ? null : next.ogImage,
+      content: next.content.split(`](${src}`).join(`](${fallback}`),
+    };
+  }
   const imageSizes = mediaSizes(srcs);
-  return Object.keys(imageSizes).length ? { ...post, imageSizes } : post;
+  return Object.keys(imageSizes).length ? { ...next, imageSizes } : next;
 }
 
 /**
