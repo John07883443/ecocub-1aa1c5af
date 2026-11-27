@@ -50,10 +50,10 @@ put)
       if (r.status !== 200) { console.log("[main-1] лента ответила " + r.status + " на этот ключ — никуда не записал"); process.exit(1); }
       const a = (await r.json()).articles ?? [];
       fs.writeFileSync("/etc/ecocub-mm-key.pending", key + "\n", { mode: 0o600 });
-      const out = ["проверено: " + new Date().toISOString(), "статей в ленте: " + a.length];
+      const out = ["проверено: " + new Date().toISOString(), "статей в ленте: " + a.length, "хвост ключа: …" + key.slice(-4)];
       for (const x of a.slice(0, 15)) out.push("- " + String(x.publishedAt ?? "").slice(0, 10) + " | " + x.slug + " | " + x.title);
       fs.writeFileSync("/var/lib/ecocub-mm-check.txt", out.join("\n") + "\n");
-      console.log("[main-1] лента 200, ключ отложен на проверку (сайт его ещё не видит). Статей: " + a.length);
+      console.log("[main-1] лента 200, ключ …" + key.slice(-4) + " отложен на проверку (сайт его ещё не видит). Статей: " + a.length);
     })();
   '"'"
   # Ключ в буфере больше не нужен — чистим, чтобы его случайно не вставили куда-то ещё.
@@ -66,7 +66,9 @@ activate)
     [ -s "$p" ] || { echo "[main-1] ключа на проверке нет"; exit 1; }
     cp -p "$f" "$f.bak-mm"
     { grep -v "^MM_SITE_KEY=" "$f" || true; printf "MM_SITE_KEY=%s\n" "$(cat "$p")"; } > "$f.new"
-    chmod 600 "$f.new"; chown --reference="$f" "$f.new"; mv "$f.new" "$f"; rm -f "$p"
+    chmod 600 "$f.new"; chown --reference="$f" "$f.new"; mv "$f.new" "$f"
+    echo "[main-1] включаю ключ …$(tr -d "
+" < "$p" | tail -c 4)"; rm -f "$p"
     systemctl restart ecocub
     for i in $(seq 1 30); do sleep 1; curl -sf -o /dev/null http://127.0.0.1:3010/blog && break; done
     echo "[main-1] ключ включён, сайт перезапущен: /blog $(curl -s -o /dev/null -w %{http_code} http://127.0.0.1:3010/blog)"'
