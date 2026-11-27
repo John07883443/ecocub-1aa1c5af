@@ -21,11 +21,11 @@ const a = post("a", "Подготовка участка под модульны
   keywords: ["Подготовка  участка", "фундамент модульного дома"],
 });
 
-test("баллы формулы: 3·keywords + 3·теги + 1·слова тем + 1·основы заголовка + 1·рубрика", () => {
+test("баллы формулы без редкости: 3·keywords + 1·слова тем (теги) + 1·основы заголовка + 1·рубрика; моделей у сайта нет", () => {
   const kw = post("kw", "Другое", { keywords: ["подготовка участка"] });
   assert.equal(relatedScore(a, kw), 3);
   const tag = post("tag", "Другое", { tags: ["участок"] });
-  assert.equal(relatedScore(a, tag), 3 + 1);
+  assert.equal(relatedScore(a, tag), 1);
   const title = post("t", "Как выбрать участок");
   assert.equal(relatedScore(a, title), 1);
   const kind = post("k", "Другое", { category: "guides" });
@@ -35,8 +35,8 @@ test("баллы формулы: 3·keywords + 3·теги + 1·слова те�
     tags: ["участок"],
     keywords: ["фундамент модульного дома"],
   });
-  // keywords 3 + тег 3 + слово темы 1 + основы «модул», «участ» 2 + рубрика 1
-  assert.equal(relatedScore(a, full), 10);
+  // keywords 3 + слово темы 1 + основы «модул», «участ» 2 + рубрика 1
+  assert.equal(relatedScore(a, full), 7);
 });
 
 test("порядок по баллу, при равном — свежее; одна рубрика — не тема, добор свежими", () => {
@@ -73,5 +73,31 @@ test("стоп-слова и короткие слова не считаются
       post("q", "Сколько стоит баня", { category: "news" }),
     ),
     0,
+  );
+});
+
+test("общий тег сайта не перевешивает редкое слово заголовка (случай ЭкоКуба)", () => {
+  // «монолит» и «участок» — почти у всех; «выбрать» и «участок» в заголовке — редкость.
+  const filler = Array.from({ length: 20 }, (_, i) =>
+    post(`f${i}`, `Статья ${i} про бетон`, {
+      tags: ["монолит", "участок"],
+      date: `2025-01-${String(i + 1).padStart(2, "0")}`,
+    }),
+  );
+  const choose = post("choose", "Как выбрать участок под модульный дом", {
+    tags: ["участок", "монолит"],
+  });
+  const plot = post("plot", "Участок под дом: как выбрать без ошибок", {
+    tags: ["участок"],
+    date: "2024-01-01",
+  });
+  const market = post("market", "Рынок загородной недвижимости", {
+    tags: ["монолит", "участок", "цена и смета"],
+    date: "2026-08-01",
+  });
+  const picked = pickRelated(choose, [choose, plot, market, ...filler], 1);
+  assert.deepEqual(
+    picked.map((p) => p.slug),
+    ["plot"],
   );
 });
