@@ -67,8 +67,7 @@ activate)
     cp -p "$f" "$f.bak-mm"
     { grep -v "^MM_SITE_KEY=" "$f" || true; printf "MM_SITE_KEY=%s\n" "$(cat "$p")"; } > "$f.new"
     chmod 600 "$f.new"; chown --reference="$f" "$f.new"; mv "$f.new" "$f"
-    echo "[main-1] включаю ключ …$(tr -d "
-" < "$p" | tail -c 4)"; rm -f "$p"
+    echo "[main-1] включаю ключ …$(tr -d "\n" < "$p" | tail -c 4)"; rm -f "$p"
     systemctl restart ecocub
     for i in $(seq 1 30); do sleep 1; curl -sf -o /dev/null http://127.0.0.1:3010/blog && break; done
     echo "[main-1] ключ включён, сайт перезапущен: /blog $(curl -s -o /dev/null -w %{http_code} http://127.0.0.1:3010/blog)"'
