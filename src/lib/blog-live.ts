@@ -16,18 +16,29 @@ import { getPostBySlug, getRelatedPosts, type BlogPost } from "./blog";
 const withoutContent = (post: BlogPost): BlogPost => ({ ...post, content: "" });
 
 /** Все статьи блога (без текстов), свежие сверху. */
-export const fetchBlogList = createServerFn({ method: "GET" }).handler(async (): Promise<BlogPost[]> => {
-  const { getLivePosts } = await import("./blog-feed.server");
-  return (await getLivePosts()).map(withoutContent);
-});
+export const fetchBlogList = createServerFn({ method: "GET" }).handler(
+  async (): Promise<BlogPost[]> => {
+    const { getLivePosts } = await import("./blog-feed.server");
+    return (await getLivePosts()).map(withoutContent);
+  },
+);
 
 /** Одна статья целиком и похожие (без текстов). null — такой статьи нет. */
 export const fetchBlogPost = createServerFn({ method: "GET" })
   .inputValidator((slug: unknown) => String(slug ?? "").slice(0, 200))
-  .handler(async ({ data: slug }): Promise<{ post: BlogPost; related: BlogPost[] } | null> => {
-    const { getLivePosts } = await import("./blog-feed.server");
-    const posts = await getLivePosts();
-    const post = getPostBySlug(slug, posts);
-    if (!post) return null;
-    return { post, related: getRelatedPosts(post, 3, posts).map(withoutContent) };
-  });
+  .handler(
+    async ({
+      data: slug,
+    }): Promise<{ post: BlogPost; related: BlogPost[] } | { withdrawn: true } | null> => {
+      const { getLivePosts, isWithdrawnSlug } = await import("./blog-feed.server");
+      // Снята с публикации в ММ. При первой загрузке 410 отдаёт обработчик
+      // маршрута; сюда попадают переходы внутри сайта — показываем «снят».
+      if (await isWithdrawnSlug(slug)) {
+        return { withdrawn: true };
+      }
+      const posts = await getLivePosts();
+      const post = getPostBySlug(slug, posts);
+      if (!post) return null;
+      return { post, related: getRelatedPosts(post, 3, posts).map(withoutContent) };
+    },
+  );

@@ -28,7 +28,14 @@
  */
 
 import { getAllPosts, sortPosts, type BlogPost } from "./blog";
-import { buildMmPost, type MmArticle } from "./mm-article";
+import {
+  buildMmPost,
+  dropWithdrawn,
+  isWithdrawn,
+  parseWithdrawn,
+  type MmArticle,
+  type Withdrawn,
+} from "./mm-article";
 import {
   localizeFeedImage,
   mediaFallback,
@@ -44,7 +51,9 @@ const TIMEOUT_MS = 2_500;
 
 type FeedArticle = MmArticle;
 
-let cache: { at: number; posts: BlogPost[] } | null = null;
+let cache: { at: number; posts: BlogPost[]; withdrawn: Withdrawn } | null = null;
+const NONE: Withdrawn = { slugs: new Set(), ids: new Set() };
+const warnedProtected = new Set<string>(); // в журнал — один раз на адрес
 let inflight: Promise<void> | null = null;
 let lastProblem = "";
 
@@ -107,12 +116,12 @@ async function refresh(): Promise<void> {
       headers: { accept: "application/json" },
     });
     if (!response.ok) throw new Error(`лента ответила ${response.status}`);
-    const json = (await response.json()) as { articles?: FeedArticle[] };
+    const json = (await response.json()) as { articles?: FeedArticle[]; withdrawn?: unknown };
     const vocabulary = tagVocabulary(getAllPosts());
     const posts = (Array.isArray(json.articles) ? json.articles : [])
       .map((article) => feedArticleToPost(article, vocabulary))
       .filter((post): post is BlogPost => post !== null);
-    cache = { at: Date.now(), posts };
+    cache = { at: Date.now(), posts, withdrawn: parseWithdrawn(json.withdrawn) };
     lastProblem = "";
     prewarmMedia();
   } catch (error) {
@@ -122,7 +131,7 @@ async function refresh(): Promise<void> {
       console.warn(`[blog-feed] ${problem}; блог работает на файлах и прошлом ответе`);
     lastProblem = problem;
     // Неудача тоже обновляет метку: следующая попытка — не раньше чем через FRESH_MS.
-    cache = { at: Date.now(), posts: cache?.posts ?? [] };
+    cache = { at: Date.now(), posts: cache?.posts ?? [], withdrawn: cache?.withdrawn ?? NONE };
   }
 }
 
@@ -177,7 +186,36 @@ function withSizes(post: BlogPost): BlogPost {
  * позже, — та же статья под адресом файла. У 36 старых статей mmUpdatedAt
  * нет, их лента не трогает никогда.
  */
+/**
+ * Защищённые от снятия: файлы, что были на сайте до 27.11 (у них нет
+ * mmUpdatedAt). Владелец 27.11: их адреса не меняются; снять такую статью
+ * может только он сам. Всё остальное ММ снимает через withdrawn[].
+ */
+const isProtected = (post: BlogPost) => !post.mmUpdatedAt && getAllPosts().includes(post);
+
+/** Адрес снят с публикации (для ответа 410). */
+export async function isWithdrawnSlug(slug: string): Promise<boolean> {
+  await feedPosts();
+  const withdrawn = cache?.withdrawn ?? NONE;
+  if (!withdrawn.slugs.size && !withdrawn.ids.size) return false;
+  const file = getAllPosts().find((post) => post.slug === slug);
+  if (file && isProtected(file)) {
+    if (isWithdrawn(file, withdrawn) && !warnedProtected.has(slug) && warnedProtected.add(slug))
+      console.warn(
+        `[blog-feed] ММ сняла ${slug}, но это одна из старых статей — оставляю (решение владельца 27.11)`,
+      );
+    return false;
+  }
+  const feed = (cache?.posts ?? []).find((post) => post.slug === slug);
+  return isWithdrawn(file ?? feed ?? { slug }, withdrawn);
+}
+
 export async function getLivePosts(): Promise<BlogPost[]> {
+  const withdrawn = () => cache?.withdrawn ?? NONE;
+  return dropWithdrawn(await mergedPosts(), withdrawn(), isProtected);
+}
+
+async function mergedPosts(): Promise<BlogPost[]> {
   const local = getAllPosts();
   const fromFeed = await feedPosts();
   if (fromFeed.length === 0) return local;

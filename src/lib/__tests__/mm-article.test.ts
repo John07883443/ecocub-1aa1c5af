@@ -283,3 +283,28 @@ test("хэштеги ММ слитно и в другом падеже попа�
   )!;
   assert.deepEqual(post.tags, ["участок", "цена и смета"]);
 });
+
+test("снятие: withdrawn[] убирает статью ленты и файл нового синка, мусорный slug не проходит, 36 старых защищены", async () => {
+  const { parseWithdrawn, dropWithdrawn } = await import("../mm-article.ts");
+  const w = parseWithdrawn([
+    "gone-abc123",
+    { slug: "../etc/passwd", id: "id-9" },
+    { slug: "Bad Slug" },
+    42,
+    null,
+  ]);
+  assert.deepEqual([...w.slugs], ["gone-abc123"]);
+  assert.deepEqual([...w.ids], ["id-9"]);
+  const posts = [
+    { slug: "gone-abc123", sourceId: "x", file: false },
+    { slug: "by-id", sourceId: "id-9", file: true, mmUpdatedAt: "2026-11-28" },
+    { slug: "old-protected", sourceId: "id-9", file: true },
+    { slug: "stays", sourceId: "y", file: false },
+  ];
+  const left = dropWithdrawn(posts, w, (p) => p.file && !("mmUpdatedAt" in p));
+  assert.deepEqual(
+    left.map((p) => p.slug),
+    ["old-protected", "stays"],
+  );
+  assert.equal(dropWithdrawn(posts, parseWithdrawn(undefined), () => false).length, 4);
+});

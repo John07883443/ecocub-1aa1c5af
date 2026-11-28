@@ -542,3 +542,46 @@ export function imageBaseName(slug: string, index: number, url: string): string 
     .replace(/-+$/, "");
   return `${base}-${index === 0 ? "cover" : index}-${shortHash(url)}`;
 }
+
+/* ------------------------------------------------------------------ */
+/* Снятие с публикации (эталон media-block, «Снятие статьи», 28.11)    */
+/* ------------------------------------------------------------------ */
+
+export type Withdrawn = { slugs: Set<string>; ids: Set<string> };
+
+const WITHDRAWN_SLUG = /^[a-z0-9][a-z0-9-]{0,150}$/;
+
+/** withdrawn[] ленты: строки-slug или {slug, id, at}. Мусорный slug (пути, «../») отбрасывается. */
+export function parseWithdrawn(value: unknown): Withdrawn {
+  const out: Withdrawn = { slugs: new Set(), ids: new Set() };
+  if (!Array.isArray(value)) return out;
+  for (const item of value) {
+    const slug = typeof item === "string" ? item : (item as { slug?: unknown })?.slug;
+    const id = typeof item === "object" && item ? (item as { id?: unknown }).id : undefined;
+    if (typeof slug === "string" && WITHDRAWN_SLUG.test(slug)) out.slugs.add(slug);
+    if ((typeof id === "string" || typeof id === "number") && String(id).trim())
+      out.ids.add(String(id));
+  }
+  return out;
+}
+
+export function isWithdrawn(
+  post: { slug: string; sourceId?: string | null },
+  withdrawn: Withdrawn,
+): boolean {
+  return withdrawn.slugs.has(post.slug) || (!!post.sourceId && withdrawn.ids.has(post.sourceId));
+}
+
+/**
+ * Убрать снятые статьи. Снятие главнее файла (эталон), КРОМЕ защищённых:
+ * у ЭкоКуба 36 статей, бывших на сайте до 27.11, не меняют адресов по
+ * решению владельца — их снять может только он сам (isProtected → true).
+ */
+export function dropWithdrawn<T extends { slug: string; sourceId?: string | null }>(
+  posts: T[],
+  withdrawn: Withdrawn,
+  isProtected: (post: T) => boolean,
+): T[] {
+  if (withdrawn.slugs.size === 0 && withdrawn.ids.size === 0) return posts;
+  return posts.filter((post) => isProtected(post) || !isWithdrawn(post, withdrawn));
+}

@@ -29,10 +29,17 @@
  * По расписанию — .github/workflows/sync-mediamachine.yml.
  */
 
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { buildMmPost, imageBaseName, isHttpsUrl, normalizeTag } from "../src/lib/mm-article.ts";
+import {
+  buildMmPost,
+  imageBaseName,
+  isHttpsUrl,
+  isWithdrawn,
+  normalizeTag,
+  parseWithdrawn,
+} from "../src/lib/mm-article.ts";
 import { toOgJpeg, toWebp } from "../src/lib/image-webp.ts";
 
 const FEED = process.env.MM_FEED ?? "https://mediamachina.ru/api/site/v1/articles";
@@ -121,7 +128,8 @@ async function main() {
     console.error(`Выдача ответила ${response.status}`);
     process.exit(1);
   }
-  const { articles = [] } = await response.json();
+  const { articles = [], withdrawn: rawWithdrawn } = await response.json();
+  const withdrawn = parseWithdrawn(rawWithdrawn);
   console.log(`Получено материалов: ${articles.length}`);
 
   await mkdir(POSTS_DIR, { recursive: true });
@@ -137,10 +145,39 @@ async function main() {
   }
   const vocabulary = await blogTagVocabulary(files);
 
+  // Снятые в ММ статьи (withdrawn[]) — файл удаляется, но только файл нового
+  // синка (есть mmUpdatedAt). Статьи, бывшие на сайте до 27.11, не трогаем:
+  // их адреса не меняются по решению владельца.
+  let removed = 0;
+  for (const file of files) {
+    const text = await readFile(path.join(POSTS_DIR, file), "utf8");
+    const post = { slug: file.replace(/\.md$/, ""), sourceId: field(text, "sourceId") || null };
+    if (!isWithdrawn(post, withdrawn)) continue;
+    if (!field(text, "mmUpdatedAt")) {
+      console.warn(`  ММ сняла ${file}, но это старая статья — оставляю (решение владельца 27.11)`);
+      continue;
+    }
+    if (!DRY) await unlink(path.join(POSTS_DIR, file));
+    if (post.sourceId) byId.delete(post.sourceId);
+    existing.delete(file);
+    removed += 1;
+    console.log(`  ${DRY ? "снял бы" : "снял"}: ${file}`);
+  }
+
   let added = 0;
   let updated = 0;
   let skipped = 0;
   for (const article of articles) {
+    if (
+      isWithdrawn(
+        {
+          slug: String(article.slug ?? ""),
+          sourceId: article.id != null ? String(article.id) : null,
+        },
+        withdrawn,
+      )
+    )
+      continue;
     const known = article.id != null ? byId.get(String(article.id)) : undefined;
     const feedUpdated = String(article.updatedAt ?? "").slice(0, 10);
     let file = `${article.slug}.md`;
@@ -227,7 +264,7 @@ async function main() {
   console.log(
     DRY
       ? "Пробный прогон, файлы не тронуты."
-      : `Добавлено: ${added}, обновлено: ${updated}, пропущено: ${skipped}`,
+      : `Добавлено: ${added}, обновлено: ${updated}, снято: ${removed}, пропущено: ${skipped}`,
   );
 }
 

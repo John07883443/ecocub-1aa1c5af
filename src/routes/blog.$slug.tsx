@@ -12,7 +12,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { usePageEngagement } from "@/hooks/usePageEngagement";
 import { analytics } from "@/lib/analytics";
 import { useEffect } from "react";
-import { BLOG_CATEGORIES, formatDate, tagToSlug } from "@/lib/blog";
+import { BLOG_CATEGORIES, formatDate, tagToSlug, type BlogPost } from "@/lib/blog";
 import { fetchBlogPost } from "@/lib/blog-live";
 import { extractFaq } from "@/lib/mm-article";
 
@@ -28,7 +28,25 @@ const absolute = (src: string | null | undefined): string | null =>
       : `${SITE_URL}${src.startsWith("/") ? "" : "/"}${src}`
     : null;
 
+const WITHDRAWN_HTML = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Материал снят с публикации — EcoCub</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;color:#1a1a1a}a{color:#b5651d}</style></head><body><main style="text-align:center;padding:2rem"><h1>Материал снят с публикации</h1><p><a href="/blog">Все статьи EcoCub</a></p></main></body></html>`;
+
 export const Route = createFileRoute("/blog/$slug")({
+  // Снятая в МедиаМашине статья — 410 Gone с noindex (эталон media-block),
+  // до отрисовки страницы. Остальное — обычная страница (next()).
+  server: {
+    handlers: {
+      GET: async ({ params, next }) => {
+        const { isWithdrawnSlug } = await import("@/lib/blog-feed.server");
+        if (await isWithdrawnSlug(params.slug)) {
+          return new Response(WITHDRAWN_HTML, {
+            status: 410,
+            headers: { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" },
+          });
+        }
+        return next();
+      },
+    },
+  },
   // Файлы + живая лента Медиамашины (см. blog-live.ts).
   loader: async ({ params }) => {
     const found = await fetchBlogPost({ data: params.slug });
@@ -38,6 +56,15 @@ export const Route = createFileRoute("/blog/$slug")({
 
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: "Статья — EcoCub" }] };
+    // Снята с публикации в ММ: ответ 410 ставит серверная функция.
+    if ("withdrawn" in loaderData) {
+      return {
+        meta: [
+          { title: "Материал снят с публикации — EcoCub" },
+          { name: "robots", content: "noindex" },
+        ],
+      };
+    }
     const { post } = loaderData;
     const url = `${SITE_URL}/blog/${post.slug}`;
     // Абсолютный адрес обложки (владелец 28.09.2026: в превью ссылки в
@@ -163,7 +190,26 @@ export const Route = createFileRoute("/blog/$slug")({
 });
 
 function BlogPostPage() {
-  const { post, related } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  if ("withdrawn" in data) return <WithdrawnPage />;
+  return <BlogPostView post={data.post} related={data.related} />;
+}
+
+/** Статья снята с публикации в МедиаМашине (эталон media-block: 410 + noindex). */
+function WithdrawnPage() {
+  return (
+    <PageLayout>
+      <Container className="py-32 text-center">
+        <h1 className="text-3xl font-bold">Материал снят с публикации</h1>
+        <Link to="/blog" className="mt-4 inline-block text-accent hover:underline">
+          ← Все статьи
+        </Link>
+      </Container>
+    </PageLayout>
+  );
+}
+
+function BlogPostView({ post, related }: { post: BlogPost; related: BlogPost[] }) {
   usePageEngagement(`article:${post.slug}`);
 
   useEffect(() => {
