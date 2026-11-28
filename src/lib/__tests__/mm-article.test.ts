@@ -101,12 +101,22 @@ test("FAQ — разделом в конце, пустые пункты отбр
   ]);
 });
 
-test("FAQ не дублируется, если раздел уже есть в тексте", () => {
-  const post = buildMmPost(
-    { ...base, paragraphs: [...base.paragraphs!, "## Вопросы и ответы", "### Вопрос?", "Ответ."] },
-    { localize, vocabulary },
-  )!;
-  assert.equal(post.content.match(/Вопросы и ответы/g)?.length, 1);
+test("FAQ не дублируется: раздел в тексте вырезается, блок — из faq[]; без faq[] текст не трогаем", () => {
+  const paragraphs = [
+    ...base.paragraphs!,
+    "## Часто задаваемые вопросы",
+    "### Старый вопрос?",
+    "Старый ответ.",
+    "## Итог",
+    "Вывод.",
+  ];
+  const post = buildMmPost({ ...base, paragraphs }, { localize, vocabulary })!;
+  assert.equal(post.content.match(/Вопросы и ответы|Часто задаваемые/g)?.length, 1);
+  assert.doesNotMatch(post.content, /Старый вопрос/);
+  assert.match(post.content, /## Итог\n\nВывод\./);
+  assert.match(post.content, /### Нужна ли геология\?/);
+  const noFaq = buildMmPost({ ...base, faq: undefined, paragraphs }, { localize, vocabulary })!;
+  assert.match(noFaq.content, /Старый вопрос/);
 });
 
 test("alt из imageAlts, кадры на нашем домене, обложка не повторяется в тексте", () => {

@@ -76,6 +76,10 @@ export type MmPost = {
 export type Localize = (url: string, index: number) => string | null;
 
 export const FAQ_HEADING = "Вопросы и ответы";
+const FAQ_HEADINGS = [FAQ_HEADING, "FAQ", "Частые вопросы", "Часто задаваемые вопросы"];
+const isFaqHeading = (block: string) =>
+  /^##\s/.test(block) &&
+  FAQ_HEADINGS.some((h) => normalizeTag(plainText(block)) === normalizeTag(h));
 const MAX_TAGS = 3;
 const MAX_KEYWORDS = 10;
 const MAX_FAQ = 10;
@@ -439,11 +443,17 @@ export function buildMmPost(article: MmArticle, options: BuildOptions): MmPost |
   for (; placed < inline.length; placed += 1) body.push(imageMd(inline[placed]));
 
   // Вопросы и ответы — отдельным разделом в конце, если ММ не поставила его сама.
+  // Вопросы и ответы — из faq[]. Если ММ вдобавок написала такой раздел в
+  // тексте, он вырезается до следующего «## » (эталон media-block,
+  // strip_faq_section), чтобы блок не повторялся. Без faq[] текст не трогаем.
   const faq = parseFaq(article.faq);
-  const hasFaqSection = body.some(
-    (block) => /^##\s+/.test(block) && normalizeTag(plainText(block)) === normalizeTag(FAQ_HEADING),
-  );
-  if (faq.length > 0 && !hasFaqSection) {
+  if (faq.length > 0) {
+    const start = body.findIndex((block) => isFaqHeading(block));
+    if (start !== -1) {
+      let end = body.findIndex((block, index) => index > start && /^##\s/.test(block));
+      if (end === -1) end = body.length;
+      body.splice(start, end - start);
+    }
     body.push(`## ${FAQ_HEADING}`);
     for (const item of faq) body.push(`### ${escapeHtml(item.question)}`, escapeHtml(item.answer));
   }

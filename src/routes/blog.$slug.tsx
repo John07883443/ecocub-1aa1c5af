@@ -55,7 +55,8 @@ export const Route = createFileRoute("/blog/$slug")({
 
     return {
       meta: [
-        { title: `${post.seoTitle} | EcoCub` },
+        // «| EcoCub» — только к коротким заголовкам (эталон media-block: title 50–65 знаков).
+        { title: post.seoTitle.length <= 52 ? `${post.seoTitle} | EcoCub` : post.seoTitle },
         { name: "description", content: description },
         ...(post.keywords?.length ? [{ name: "keywords", content: post.keywords.join(", ") }] : []),
         { property: "og:url", content: url },
